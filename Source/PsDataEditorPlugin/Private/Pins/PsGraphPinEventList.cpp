@@ -1,0 +1,85 @@
+// Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
+
+#include "PsDataEditorPlugin.h"
+#include "Pins/PsGraphPinEventList.h"
+#include "ScopedTransaction.h"
+
+FString GenerateName(TSharedPtr<FEventPath> Event)
+{
+	if (Event->bSelf)
+	{
+		return Event->Type;
+	}
+	return *FString::Printf(TEXT("%s (%s)"), *Event->Type, *Event->Path);
+}
+
+void SPsGraphPinEventList::Construct(const FArguments& InArgs, UEdGraphPin* InGraphPinObj, const TArray<TSharedPtr<FEventPath>>& InEventList)
+{
+	EventList = InEventList;
+	
+	for(auto EventPtr : EventList)
+	{
+		NameList.Add(MakeShareable(new FName(*GenerateName(EventPtr))));
+	}
+	
+	SGraphPin::Construct(SGraphPin::FArguments(), InGraphPinObj);
+}
+
+TSharedRef<SWidget>	SPsGraphPinEventList::GetDefaultValueWidget()
+{
+	TSharedPtr<FName> CurrentlySelectedName;
+	
+	if (GraphPinObj)
+	{
+		// Preserve previous selection, or set to first in list
+		FString PreviousSelection = GraphPinObj->GetDefaultAsString();
+		for(int32 i = 0; i < EventList.Num(); ++i)
+		{
+			auto EventPtr = EventList[i];
+			if (PreviousSelection == EventPtr->Type)
+			{
+				CurrentlySelectedName = NameList[i];
+				break;
+			}
+
+		}
+	}
+	
+	// Create widget
+	return SAssignNew(ComboBox, SNameComboBox)
+	.ContentPadding(FMargin(6.0f, 2.0f))
+	.OptionsSource(&NameList)
+	.InitiallySelectedItem(CurrentlySelectedName)
+	.OnSelectionChanged(this, &SPsGraphPinEventList::ComboBoxSelectionChanged)
+	.Visibility(this, &SGraphPin::GetDefaultValueVisibility);
+}
+
+void SPsGraphPinEventList::ComboBoxSelectionChanged(TSharedPtr<FName> NameItem, ESelectInfo::Type SelectInfo)
+{
+	if (auto Schema = (GraphPinObj ? GraphPinObj->GetSchema() : NULL))
+	{
+		FName Name = NameItem.IsValid() ? *NameItem : NAME_None;
+		FString NameAsString = Name.ToString();
+		
+		TSharedPtr<FEventPath> Event;
+		
+		for(auto EventPtr : EventList)
+		{
+			if (NameAsString == GenerateName(EventPtr))
+			{
+				Event = EventPtr;
+				break;
+			}
+		}
+		
+		if (Event.IsValid())
+		{
+			if(GraphPinObj->GetDefaultAsString() != Event->Type)
+			{
+				GraphPinObj->Modify();
+				Schema->TrySetDefaultValue(*GraphPinObj, Event->Type);
+			}
+		}
+	}
+}
+
