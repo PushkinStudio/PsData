@@ -37,6 +37,7 @@ struct EDataMetaType
 	static const FString Event;
 	static const FString Bubbles;
 	static const FString Alias;
+	static const FString Deprecated;
 };
 
 /** see UPsData::Set{Type}Property UPsData::Get{Type}Property */
@@ -48,6 +49,7 @@ struct FDataMeta
 	bool bStrict;
 	bool bEvent;
 	bool bBubbles;
+	bool bDeprecated;
 	FString Alias;
 	FString EventType;
 	
@@ -55,6 +57,7 @@ struct FDataMeta
 	: bStrict(false)
 	, bEvent(false)
 	, bBubbles(false)
+	, bDeprecated(false)
 	, Alias()
 	, EventType()
 	{}
@@ -613,19 +616,28 @@ namespace FDataReflectionTools
 	}
 }
 
-#define TOKENPASTE(x, y, z) x ## y ## z
-#define TOKENPASTE2(x, y, z) TOKENPASTE(x, y, z)
-#define UNIQUE(prefix, postfix) TOKENPASTE2(prefix, __LINE__, postfix)
+/** Private macros */
+
+#define _TOKENPASTE(x, y, z) x ## y ## z
+#define _TOKENPASTE2(x, y, z) _TOKENPASTE(x, y, z)
+#define _UNIQUE(prefix, postfix) _TOKENPASTE2(prefix, __LINE__, postfix)
+
+/** Public macros */
+
 #define COMMA ,
 
 #define DMETA(...) \
 private: \
-	struct UNIQUE(__zmeta_, _struct) { \
-		UNIQUE(__zmeta_, _struct)() { \
+	struct _UNIQUE(__zmeta_, _struct) { \
+		_UNIQUE(__zmeta_, _struct)() { \
 			if (FDataReflection::InQueue()) \
 				FDataReflection::DeclareMeta(TEXT(#__VA_ARGS__)); \
 		} \
-} UNIQUE(__zmeta_, _inst);
+} _UNIQUE(__zmeta_, _inst);
+
+#define DMAP(Class, Type, Name) DPROP(Class, TMap<FString COMMA Type>, Name)
+
+#define DMAP_DEPRECATED(Class, Type, Name) DPROP_DEPRECATED(Class, TMap<FString COMMA Type>, Name)
 
 #define DPROP(Class, Type, Name) \
 private: \
@@ -643,15 +655,43 @@ public: \
 	} \
 	\
 private: \
-	struct UNIQUE(__zprop_, _struct) { \
-		UNIQUE(__zprop_, _struct)() { \
+	struct _UNIQUE(__zprop_, _struct) { \
+		_UNIQUE(__zprop_, _struct)() { \
 			if (FDataReflection::InQueue(Class::StaticClass())) { \
 				FDataReflectionTools::DeclareField<Type>(Class::StaticClass(), TEXT(#Name), offsetof(Class, Name), sizeof(Type)); \
 			} \
 			FDataReflection::ClearMeta(); \
 		} \
-	} UNIQUE(__zprop_, _inst);
+	} _UNIQUE(__zprop_, _inst);
 
+#define DPROP_DEPRECATED(Class, Type, Name) \
+	DMETA(Deprecated) \
+private: \
+	DEPRECATED(0, "Property was marked as deprecated") \
+	Type Name; \
+	\
+public: \
+	DEPRECATED(0, "Property was marked as deprecated") \
+	Type Get##Name() const \
+	{ \
+		return Name; \
+	} \
+	\
+	DEPRECATED(0, "Property was marked as deprecated") \
+	void Set##Name(Type& Value) \
+	{ \
+		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
+	} \
+	\
+private: \
+	struct _UNIQUE(__zprop_, _struct) { \
+		_UNIQUE(__zprop_, _struct)() { \
+			if (FDataReflection::InQueue(Class::StaticClass())) { \
+				FDataReflectionTools::DeclareField<Type>(Class::StaticClass(), TEXT(#Name), offsetof(Class, Name), sizeof(Type)); \
+			} \
+			FDataReflection::ClearMeta(); \
+		} \
+	} _UNIQUE(__zprop_, _inst);
 
 
 

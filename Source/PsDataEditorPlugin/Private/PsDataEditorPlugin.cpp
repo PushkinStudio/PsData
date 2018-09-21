@@ -11,14 +11,6 @@ void FPsDataEditorPluginModule::StartupModule()
 {
 	TSharedPtr<FPsDataPinFactory> PinFactory = MakeShareable(new FPsDataPinFactory());
 	FEdGraphUtilities::RegisterVisualPinFactory(PinFactory);
-	
-//	for (UClass* Class : TObjectRange<UClass>())
-//	{
-//		if (FDataReflection::HasClass(Class))
-//		{
-//			Class->ClassFlags |=
-//		}
-//	}
 }
 
 void FPsDataEditorPluginModule::ShutdownModule()

@@ -6,6 +6,8 @@ const FString EDataMetaType::Strict = TEXT("strict");
 const FString EDataMetaType::Event = TEXT("event");
 const FString EDataMetaType::Bubbles = TEXT("bubbles");
 const FString EDataMetaType::Alias = TEXT("alias");
+const FString EDataMetaType::Deprecated = TEXT("deprecated");
+
 
 TMap<UClass*, TMap<FString, FDataFieldDescription>> FDataReflection::Fields;
 TArray<UClass*> FDataReflection::ClassQueue;
@@ -210,6 +212,10 @@ void FDataFieldDescription::ParseMeta(TArray<FString>& Collection)
 		{
 			Meta.Alias = Value;
 		}
+		else if (Key.Equals(EDataMetaType::Deprecated, ESearchCase::CaseSensitive))
+		{
+			Meta.bDeprecated = true;
+		}
 		else
 		{
 			UE_LOG(LogData, Error, TEXT("Unknown meta \"%s\" in %s::%s"), *Key, *FDataReflection::ClassQueue.Last()->GetName(), *Name)
@@ -259,10 +265,7 @@ void FDataReflection::DeclareMeta(FString Meta)
 
 void FDataReflection::ClearMeta()
 {
-	if (MetaCollection.Num() > 0)
-	{
-		MetaCollection.Reset();
-	}
+	MetaCollection.Reset();
 }
 
 

@@ -32,6 +32,16 @@ FSlateIcon UPsDataNode_Property::GetIconAndTint(FLinearColor& ColorOut) const
 	return FSlateIcon("EditorStyle", "Kismet.AllClasses.FunctionIcon");
 }
 
+bool UPsDataNode_Property::IsDeprecated() const
+{
+	const FDataFieldDescription* Field = GetProperty();
+	if (Field)
+	{
+		return Field->Meta.bDeprecated;
+	}
+	return true;
+}
+
 void UPsDataNode_Property::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
 {
 	struct GetMenuActions_Utils
