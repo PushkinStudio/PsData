@@ -8,7 +8,7 @@ const FString EDataMetaType::Bubbles = TEXT("bubbles");
 const FString EDataMetaType::Alias = TEXT("alias");
 const FString EDataMetaType::Deprecated = TEXT("deprecated");
 
-
+IPsDataAccess* FDataReflection::DataAccess = nullptr;
 TMap<UClass*, TMap<FString, FDataFieldDescription>> FDataReflection::Fields;
 TArray<UClass*> FDataReflection::ClassQueue;
 TArray<FString> FDataReflection::MetaCollection;
@@ -50,6 +50,16 @@ FString FDataReflection::GenerateChangePropertyEventTypeName(const FDataFieldDes
 		return Field.Meta.EventType;
 	}
 	return FString::Printf(TEXT("%sСhanged"), *Field.Name);
+}
+
+void FDataReflection::AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataFieldType Type, EDataContainerType ContainerType)
+{
+	FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(Type, ContainerType, Name, Offset, Size, MetaCollection));
+}
+
+void FDataReflection::AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, UClass* Type, EDataContainerType ContainerType)
+{
+	FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(Type, ContainerType, Name, Offset, Size, MetaCollection));
 }
 
 void FDataReflection::AddToQueue(UPsData* Instance)
@@ -143,6 +153,15 @@ bool FDataReflection::InQueue()
 	return ClassQueue.Num() > 0;
 }
 
+UClass* FDataReflection::GetLastClassInQueue()
+{
+	if (ClassQueue.Num() > 0)
+	{
+		return ClassQueue.Last();
+	}
+	return nullptr;
+}
+
 bool FDataReflection::HasClass(const UClass* StaticClass)
 {
 	return Fields.Contains(StaticClass);
@@ -218,7 +237,7 @@ void FDataFieldDescription::ParseMeta(TArray<FString>& Collection)
 		}
 		else
 		{
-			UE_LOG(LogData, Error, TEXT("Unknown meta \"%s\" in %s::%s"), *Key, *FDataReflection::ClassQueue.Last()->GetName(), *Name)
+			UE_LOG(LogData, Error, TEXT("Unknown meta \"%s\" in %s::%s"), *Key, *FDataReflection::GetLastClassInQueue()->GetName(), *Name)
 		}
 	}
 	
@@ -228,7 +247,7 @@ void FDataFieldDescription::ParseMeta(TArray<FString>& Collection)
 		Meta.bBubbles = false;
 		Meta.EventType = TEXT("");
 		
-		UE_LOG(LogData, Error, TEXT("Property %s::%s with strict meta can't broadcast event"), *FDataReflection::ClassQueue.Last()->GetName(), *Name)
+		UE_LOG(LogData, Error, TEXT("Property %s::%s with strict meta can't broadcast event"), *FDataReflection::GetLastClassInQueue()->GetName(), *Name)
 	}
 	
 	if (ContainerType != EDataContainerType::DCT_None)
@@ -236,7 +255,7 @@ void FDataFieldDescription::ParseMeta(TArray<FString>& Collection)
 		if (Meta.bStrict)
 		{
 			Meta.bStrict = false;
-			UE_LOG(LogData, Error, TEXT("Container %s::%s can't have strict meta"), *FDataReflection::ClassQueue.Last()->GetName(), *Name)
+			UE_LOG(LogData, Error, TEXT("Container %s::%s can't have strict meta"), *FDataReflection::GetLastClassInQueue()->GetName(), *Name)
 		}
 	}
 	
@@ -266,6 +285,17 @@ void FDataReflection::DeclareMeta(FString Meta)
 void FDataReflection::ClearMeta()
 {
 	MetaCollection.Reset();
+}
+
+void FDataReflection::SetDataAccess(IPsDataAccess* DataAccessInterface)
+{
+	check(DataAccessInterface)
+	DataAccess = DataAccessInterface;
+}
+
+IPsDataAccess* FDataReflection::GetDataAccess()
+{
+	return DataAccess;
 }
 
 

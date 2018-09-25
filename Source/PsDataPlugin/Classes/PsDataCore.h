@@ -5,7 +5,9 @@
 #include "CoreMinimal.h"
 #include "PsData.h"
 #include "PsEvent.h"
+#include "PsDataAccess.h"
 #include "UObject/UObjectThreadContext.h"
+#include "Async/Async.h"
 #include <type_traits>
 
 enum class EDataFieldType : uint8
@@ -84,8 +86,8 @@ struct FDataFieldDescription
 		ParseMeta(MetaCollection);
 	}
 	
-	FDataFieldDescription(const EDataFieldType& InType, const EDataContainerType& InContainerType, const FString& InName, const int32& InOffset, const int32& InSize, UClass* InClass, TArray<FString>& MetaCollection)
-	: Type(InType)
+	FDataFieldDescription(UClass* InClass, const EDataContainerType& InContainerType, const FString& InName, const int32& InOffset, const int32& InSize, TArray<FString>& MetaCollection)
+	: Type(EDataFieldType::DFT_Data)
 	, ContainerType(InContainerType)
 	, Name(InName)
 	, Offset(InOffset)
@@ -100,26 +102,35 @@ struct FDataFieldDescription
 
 struct PSDATAPLUGIN_API FDataReflection
 {
-public:
+private:
+	static IPsDataAccess* DataAccess;
 	static TMap<UClass*, TMap<FString, FDataFieldDescription>> Fields;
 	static TArray<UClass*> ClassQueue;
 	static TArray<FString> MetaCollection;
 	
+public:
 	static FString GetTypeAsString(EDataFieldType Type);
 	static FString GenerateGetFunctionName(const FDataFieldDescription& Field);
 	static FString GenerateSetFunctionName(const FDataFieldDescription& Field);
 	static FString GenerateChangePropertyEventTypeName(const FDataFieldDescription& Field);
+	
+	static void AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataFieldType Type, EDataContainerType ContainerType);
+	static void AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, UClass* Type, EDataContainerType ContainerType);
 	
 	static void AddToQueue(UPsData* Instance);
 	static void RemoveFromQueue(UPsData* Instance);
 	static void Fill(UPsData* Instance);
 	static bool InQueue(UClass* StaticClass);
 	static bool InQueue();
+	static UClass* GetLastClassInQueue();
 	
 	static bool HasClass(const UClass* StaticClass);
 	static const TMap<FString, FDataFieldDescription>& GetFields(const UClass* StaticClass);
 	static void DeclareMeta(FString Meta);
 	static void ClearMeta();
+	
+	static void SetDataAccess(IPsDataAccess* DataAccessInterface);
+	static IPsDataAccess* GetDataAccess();
 };
 
 namespace FDataReflectionTools
@@ -143,7 +154,7 @@ namespace FDataReflectionTools
 	{
 		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
 		{
-			FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(EDataFieldType::DFT_float, ContainerType, Name, Offset, Size, FDataReflection::MetaCollection));
+			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_float, ContainerType);
 		}
 		
 		static bool SetValue(UPsData* Instance, float& Value, float& NewValue)
@@ -174,7 +185,7 @@ namespace FDataReflectionTools
 	{
 		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
 		{
-			FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(EDataFieldType::DFT_int32, ContainerType, Name, Offset, Size, FDataReflection::MetaCollection));
+			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_int32, ContainerType);
 		}
 		
 		static bool SetValue(UPsData* Instance, int32& Value, int32& NewValue)
@@ -205,7 +216,7 @@ namespace FDataReflectionTools
 	{
 		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
 		{
-			FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(EDataFieldType::DFT_String, ContainerType, Name, Offset, Size, FDataReflection::MetaCollection));
+			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_String, ContainerType);
 		}
 		
 		static bool SetValue(UPsData* Instance, FString& Value, FString& NewValue)
@@ -236,7 +247,7 @@ namespace FDataReflectionTools
 	{
 		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
 		{
-			FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(EDataFieldType::DFT_bool, ContainerType, Name, Offset, Size, FDataReflection::MetaCollection));
+			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_bool, ContainerType);
 		}
 		
 		static bool SetValue(UPsData* Instance, bool& Value, bool& NewValue)
@@ -269,7 +280,7 @@ namespace FDataReflectionTools
 		
 		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
 		{
-			FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(EDataFieldType::DFT_Data, ContainerType, Name, Offset, Size, T::StaticClass(), FDataReflection::MetaCollection));
+			FDataReflection::AddField(StaticClass, Name, Offset, Size, T::StaticClass(), ContainerType);
 		}
 		
 		static bool SetValue(UPsData* Instance, T*& Value, T*& NewValue)
@@ -529,9 +540,9 @@ namespace FDataReflectionTools
 	{
 		if (!FDataReflection::InQueue(StaticClass))
 		{
-			if (FDataReflection::ClassQueue.Num() > 0)
+			if (FDataReflection::InQueue())
 			{
-				UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s because active class is: %s"), *StaticClass->GetName(), *Name, *FDataReflection::ClassQueue.Last()->GetName());
+				UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s another class is active: %s"), *StaticClass->GetName(), *Name, *FDataReflection::GetLastClassInQueue()->GetName());
 			}
 			else
 			{
@@ -559,11 +570,16 @@ namespace FDataReflectionTools
 	template<typename T>
 	void Set(UPsData* Instance, const FString& Name, const T& NewValue)
 	{
+		const bool bCanModify = FDataReflection::GetDataAccess() != nullptr && !FDataReflection::GetDataAccess()->CanModify();
+		if (bCanModify)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't edit property (see IPsDataAccess::CanModify())"))
+		}
+		
 		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
 		if (Find)
 		{
 			auto& ThreadContext = FUObjectThreadContext::Get();
-			
 			const FDataFieldDescription& Field = *Find;
 			if (Field.Meta.bStrict && ThreadContext.ConstructedObject != Instance)
 			{

@@ -2,6 +2,7 @@
 
 #include "PsData.h"
 #include "PsDataCore.h"
+#include "Async/Async.h"
 
 DEFINE_LOG_CATEGORY(LogData);
 
@@ -61,64 +62,24 @@ void UPsData::PostInitProperties()
 
 void UPsData::Broadcast(UPsEvent* Event)
 {
-	++BroadcastInProgress;
-	
-	if (Event->Target == nullptr)
+	const bool bDeferredEventProcessing = (FDataReflection::GetDataAccess() != nullptr && FDataReflection::GetDataAccess()->DeferredEventProcessing());
+	if (bDeferredEventProcessing)
 	{
-		Event->Target = this;
-	}
-	
-	if (!Event->bStopImmediate)
-	{
-		auto Find = DynamicDelegates.Find(Event->Type);
-		if (Find)
+		TWeakObjectPtr<UPsData> WeakPtr(this);
+		Event->AddToRoot();
+		AsyncTask(ENamedThreads::GameThread, [WeakPtr, Event]()
 		{
-			TSet<FPsDataDynamicDelegate> Copy = *Find;
-			for(FPsDataDynamicDelegate& Delegate : Copy)
+			Event->RemoveFromRoot();
+			if (WeakPtr.IsValid())
 			{
-				if (Delegate.IsBound())
-				{
-					Delegate.ExecuteIfBound(Event);
-					if (Event->bStopImmediate)
-					{
-						break;
-					}
-				}
+				WeakPtr->BroadcastInternal(Event);
 			}
-		}
+		});
 	}
-	
-	if (!Event->bStopImmediate)
+	else
 	{
-		auto Find = Delegates.Find(Event->Type);
-		if (Find)
-		{
-			TArray<FPsDataDelegate> Copy = *Find;
-			for(FPsDataDelegate& Delegate : Copy)
-			{
-				if (Delegate.IsBound())
-				{
-					Delegate.ExecuteIfBound(Event);
-					if (Event->bStopImmediate)
-					{
-						break;
-					}
-				}
-			}
-		}
+		BroadcastInternal(Event);
 	}
-	
-	if (!Event->bStop)
-	{
-		if (Event->bBubbles && Parent)
-		{
-			Parent->Broadcast(Event);
-		}
-	}
-	
-	--BroadcastInProgress;
-	
-	UpdateDelegates();
 }
 
 void UPsData::Bind(FString Type, const FPsDataDynamicDelegate& Delegate)
@@ -232,6 +193,68 @@ void UPsData::UpdateDelegates()
 			MapIt.RemoveCurrent();
 		}
 	}
+}
+
+void UPsData::BroadcastInternal(UPsEvent* Event)
+{
+	++BroadcastInProgress;
+	
+	if (Event->Target == nullptr)
+	{
+		Event->Target = this;
+	}
+	
+	if (!Event->bStopImmediate)
+	{
+		auto Find = DynamicDelegates.Find(Event->Type);
+		if (Find)
+		{
+			TSet<FPsDataDynamicDelegate> Copy = *Find;
+			for(FPsDataDynamicDelegate& Delegate : Copy)
+			{
+				if (Delegate.IsBound())
+				{
+					Delegate.ExecuteIfBound(Event);
+					if (Event->bStopImmediate)
+					{
+						break;
+					}
+				}
+			}
+		}
+	}
+	
+	if (!Event->bStopImmediate)
+	{
+		auto Find = Delegates.Find(Event->Type);
+		if (Find)
+		{
+			TArray<FPsDataDelegate> Copy = *Find;
+			for(FPsDataDelegate& Delegate : Copy)
+			{
+				if (Delegate.IsBound())
+				{
+					Delegate.ExecuteIfBound(Event);
+					if (Event->bStopImmediate)
+					{
+						break;
+					}
+				}
+			}
+		}
+	}
+	
+	if (!Event->bStop)
+	{
+		if (Event->bBubbles && Parent)
+		{
+			Parent->BroadcastInternal(Event);
+		}
+	}
+	
+	--BroadcastInProgress;
+	
+	UpdateDelegates();
 }
 
 /***********************************

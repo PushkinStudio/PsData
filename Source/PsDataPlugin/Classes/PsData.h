@@ -86,6 +86,9 @@ private:
 	/** Update delegates */
 	void UpdateDelegates();
 	
+	/** Broadcast internal */
+	void BroadcastInternal(UPsEvent* Event);
+	
 public:
 	/***********************************
 	 * Serialize
