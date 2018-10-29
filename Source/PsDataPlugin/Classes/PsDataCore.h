@@ -135,12 +135,31 @@ public:
 
 namespace FDataReflectionTools
 {
-	template <typename T> struct always_false : std::false_type {};
+	template <typename T> struct TAlwaysFalse : std::false_type {};
+	
+	template <typename T> struct TRemovePointer
+	{
+		typedef T NonPoinerType;
+		
+		static T& Get(T& Value)
+		{
+			return Value;
+		}
+	};
+	template <typename T> struct TRemovePointer<T*>
+	{
+		typedef T NonPoinerType;
+		
+		static T& Get(T*& Value)
+		{
+			return *Value;
+		}
+	};
 	
 	template<typename T>
 	struct TypeHandler
 	{
-		static_assert(always_false<T>::value, "Unsupported type");
+		static_assert(TAlwaysFalse<T>::value, "Unsupported type");
 		
 		static void DeclareField(UClass* StaticClass, const FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType);
 		static bool SetValue(UPsData* Instance, T& Value, T& NewValue);
@@ -556,9 +575,9 @@ namespace FDataReflectionTools
 	}
 	
 	template<typename T>
-	bool UnsafeSet(UPsData* Instance, T& Value, const T& NewValue)
+	bool UnsafeSet(UPsData* Instance, T& Value, T& NewValue)
 	{
-		return TypeHandler<T>::SetValue(Instance, Value, const_cast<T&>(NewValue));
+		return TypeHandler<T>::SetValue(Instance, Value, NewValue);
 	}
 	
 	template<typename T>
@@ -568,7 +587,7 @@ namespace FDataReflectionTools
 	}
 	
 	template<typename T>
-	void Set(UPsData* Instance, const FString& Name, const T& NewValue)
+	void Set(UPsData* Instance, const FString& Name, T& NewValue)
 	{
 		const bool bCanModify = FDataReflection::GetDataAccess() != nullptr && !FDataReflection::GetDataAccess()->CanModify();
 		if (bCanModify)
@@ -656,16 +675,26 @@ private: \
 #define DMAP_DEPRECATED(Class, Type, Name) DPROP_DEPRECATED(Class, TMap<FString COMMA Type>, Name)
 
 #define DPROP(Class, Type, Name) \
-private: \
+protected: \
 	Type Name; \
 	\
 public: \
+	const typename FDataReflectionTools::TRemovePointer< Type >::NonPoinerType& Get##Name##Ref() \
+	{ \
+		return FDataReflectionTools::TRemovePointer< Type >::Get(Name); \
+	} \
+	\
 	Type Get##Name() const \
 	{ \
 		return Name; \
 	} \
 	\
 	void Set##Name(Type& Value) \
+	{ \
+		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
+	} \
+	\
+	void Set##Name(Type&& Value) \
 	{ \
 		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
 	} \
@@ -682,7 +711,7 @@ private: \
 
 #define DPROP_DEPRECATED(Class, Type, Name) \
 	DMETA(Deprecated) \
-private: \
+protected: \
 	DEPRECATED(0, "Property was marked as deprecated") \
 	Type Name; \
 	\
@@ -695,6 +724,12 @@ public: \
 	\
 	DEPRECATED(0, "Property was marked as deprecated") \
 	void Set##Name(Type& Value) \
+	{ \
+		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
+	} \
+	\
+	DEPRECATED(0, "Property was marked as deprecated") \
+	void Set##Name(Type&& Value) \
 	{ \
 		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
 	} \

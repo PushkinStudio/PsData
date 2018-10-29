@@ -121,6 +121,12 @@ UEdGraphPin* UPsDataNode_Property::CreatePropertyPin(EEdGraphPinDirection Dir, b
 		{
 			UEdGraphPin* Pin = CreatePin(Dir, UEdGraphSchema_K2::PC_Wildcard, bShowName ? *PropertyName : TEXT(""));
 			bUnsupportedType = !GetDefault<UEdGraphSchema_K2>()->ConvertPropertyToPinType(Property, Pin->PinType);
+			
+			if (Field->Type == EDataFieldType::DFT_Data && Field->Class)
+			{
+				Pin->PinType.PinSubCategoryObject = Field->Class;
+			}
+			
 			return Pin;
 		}
 		else

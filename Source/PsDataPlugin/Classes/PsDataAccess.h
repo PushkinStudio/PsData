@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Interface.h"
 #include "PsDataAccess.generated.h"
 
 UINTERFACE(Blueprintable, meta = (CannotImplementInterfaceInBlueprint))

@@ -7,14 +7,14 @@
 #include "PsSerialization.h"
 #include "PsData.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogData, VeryVerbose, All);
+DEFINE_LOG_CATEGORY_STATIC(LogData, VeryVerbose, All);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FPsDataDynamicDelegate, UPsEvent*, Event); // TBaseDynamicDelegate
 DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsEvent*); // TBaseDelegate
 
 namespace FDataReflectionTools
 {
-	struct FPsDataFriend
+	struct PSDATAPLUGIN_API FPsDataFriend
 	{
 		static void ChangeDataName(class UPsData* Data, const FString& Name);
 		static void AddChild(class UPsData* Parent, class UPsData* Data);
@@ -74,15 +74,15 @@ public:
 	/** Bind */
 	void Unbind(FString Type, const FPsDataDelegate& Delegate);
 	
-private:
 	/** Blueprint bind */
-	UFUNCTION()
-	void BlueprintBind(FString Type, const FPsDataDynamicDelegate& Delegate);
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData"))
+	void BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate);
 	
 	/** Blueprint unbind */
-	UFUNCTION()
-	void BlueprintUnbind(FString Type, const FPsDataDynamicDelegate& Delegate);
-	
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Unbind", Category = "PsData"))
+	void BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate& Delegate);
+
+private:
 	/** Update delegates */
 	void UpdateDelegates();
 	
@@ -104,6 +104,14 @@ public:
 	/** Get name */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	FString GetName() const;
+	
+	/** Get parent */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	UPsData* GetParent() const;
+	
+	/** Get root */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	UPsData* GetRoot() const;
 	
 	/** Get data property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -135,7 +143,7 @@ public:
 	
 	/** Set string property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetStringProperty(const FString& PropertyName, const FString& Value);
+	void SetStringProperty(const FString& PropertyName, UPARAM(ref) FString& Value);
 	
 	/** Get bool property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -155,7 +163,7 @@ public:
 	
 	/** Set data array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetDataArrayProperty(const FString& PropertyName, const TArray<UPsData*>& Value);
+	void SetDataArrayProperty(const FString& PropertyName, UPARAM(ref) TArray<UPsData*>& Value);
 	
 	/** Get int array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -163,7 +171,7 @@ public:
 	
 	/** Set int array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetIntArrayProperty(const FString& PropertyName, const TArray<int32>& Value);
+	void SetIntArrayProperty(const FString& PropertyName, UPARAM(ref) TArray<int32>& Value);
 	
 	/** Get float array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -171,7 +179,7 @@ public:
 	
 	/** Set float array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetFloatArrayProperty(const FString& PropertyName, const TArray<float>& Value);
+	void SetFloatArrayProperty(const FString& PropertyName, UPARAM(ref) TArray<float>& Value);
 	
 	/** Get string array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -179,7 +187,7 @@ public:
 	
 	/** Set string array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetStringArrayProperty(const FString& PropertyName, const TArray<FString>& Value);
+	void SetStringArrayProperty(const FString& PropertyName, UPARAM(ref) TArray<FString>& Value);
 	
 	/** Get bool array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -187,7 +195,7 @@ public:
 	
 	/** Set bool array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetBoolArrayProperty(const FString& PropertyName, const TArray<bool>& Value);
+	void SetBoolArrayProperty(const FString& PropertyName, UPARAM(ref) TArray<bool>& Value);
 	
 	/***********************************
 	 * Map property
@@ -199,7 +207,7 @@ public:
 	
 	/** Set data map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetDataMapProperty(const FString& PropertyName, const TMap<FString, UPsData*>& Value);
+	void SetDataMapProperty(const FString& PropertyName, UPARAM(ref) TMap<FString, UPsData*>& Value);
 	
 	/** Get int map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -207,7 +215,7 @@ public:
 	
 	/** Set int map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetIntMapProperty(const FString& PropertyName, const TMap<FString, int32>& Value);
+	void SetIntMapProperty(const FString& PropertyName, UPARAM(ref) TMap<FString, int32>& Value);
 	
 	/** Get float map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -215,7 +223,7 @@ public:
 	
 	/** Set float map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetFloatMapProperty(const FString& PropertyName, const TMap<FString, float>& Value);
+	void SetFloatMapProperty(const FString& PropertyName, UPARAM(ref) TMap<FString, float>& Value);
 	
 	/** Get string map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -223,7 +231,7 @@ public:
 	
 	/** Set string map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetStringMapProperty(const FString& PropertyName, const TMap<FString, FString>& Value);
+	void SetStringMapProperty(const FString& PropertyName, UPARAM(ref) TMap<FString, FString>& Value);
 	
 	/** Get bool map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -231,6 +239,6 @@ public:
 	
 	/** Set bool map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	void SetBoolMapProperty(const FString& PropertyName, const TMap<FString, bool>& Value);
+	void SetBoolMapProperty(const FString& PropertyName, UPARAM(ref) TMap<FString, bool>& Value);
 	
 };

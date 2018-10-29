@@ -8,7 +8,24 @@
 #include "SGraphPin.h"
 #include "SNameComboBox.h"
 #include "PsData.h"
-#include "PsDataNode_Event.h"
+
+struct FEventPath
+{
+	/** Event type */
+	FString Type;
+
+	/** Event path */
+	FString Path;
+
+	/** Self */
+	bool bSelf;
+
+	FEventPath(FString InType, FString InPath, bool bInSelf)
+		: Type(InType)
+		, Path(InPath)
+		, bSelf(bInSelf)
+	{}
+};
 
 class PSDATAEDITORPLUGIN_API SPsGraphPinEventList : public SGraphPin
 {
