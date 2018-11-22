@@ -6,7 +6,6 @@
 #include "PsData.h"
 #include "PsEvent.h"
 #include "PsDataAccess.h"
-#include "UObject/UObjectThreadContext.h"
 #include "Async/Async.h"
 #include <type_traits>
 
@@ -39,6 +38,7 @@ struct EDataMetaType
 	static const FString Event;
 	static const FString Bubbles;
 	static const FString Alias;
+	static const FString Link;
 	static const FString Deprecated;
 };
 
@@ -52,6 +52,8 @@ struct FDataMeta
 	bool bEvent;
 	bool bBubbles;
 	bool bDeprecated;
+	bool bLink;
+	FString LinkPath;
 	FString Alias;
 	FString EventType;
 	
@@ -60,6 +62,8 @@ struct FDataMeta
 	, bEvent(false)
 	, bBubbles(false)
 	, bDeprecated(false)
+	, bLink(false)
+	, LinkPath()
 	, Alias()
 	, EventType()
 	{}
@@ -146,6 +150,7 @@ namespace FDataReflectionTools
 			return Value;
 		}
 	};
+	
 	template <typename T> struct TRemovePointer<T*>
 	{
 		typedef T NonPoinerType;
@@ -574,6 +579,10 @@ namespace FDataReflectionTools
 		TypeHandler<T>::DeclareField(StaticClass, Name, Offset, Size, EDataContainerType::DCT_None);
 	}
 	
+	/***********************************
+	 * UNSAFE SET/GET
+	 ***********************************/
+	
 	template<typename T>
 	bool UnsafeSet(UPsData* Instance, T& Value, T& NewValue)
 	{
@@ -586,23 +595,32 @@ namespace FDataReflectionTools
 		return (T*)((char*)Instance + Offset);
 	}
 	
+	/***********************************
+	 * SET
+	 ***********************************/
+	
 	template<typename T>
-	void Set(UPsData* Instance, const FString& Name, T& NewValue)
+	void Set(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset, T& NewValue, bool bCreate = false)
 	{
-		const bool bCanModify = FDataReflection::GetDataAccess() != nullptr && !FDataReflection::GetDataAccess()->CanModify();
-		if (bCanModify)
+		UE_LOG(LogData, Fatal, TEXT("Not supported"));
+	}
+	
+	template<typename T>
+	void Set(UPsData* Instance, const FString& Name, T& NewValue, bool bCreate = false)
+	{
+		IPsDataAccess* DataAccess = FDataReflection::GetDataAccess();
+		if (DataAccess != nullptr && !DataAccess->CanModify())
 		{
-			UE_LOG(LogData, Fatal, TEXT("Can't edit property (see IPsDataAccess::CanModify())"))
+			UE_LOG(LogData, Fatal, TEXT("You can't edit property (see IPsDataAccess::CanModify())"))
 		}
 		
 		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
 		if (Find)
 		{
-			auto& ThreadContext = FUObjectThreadContext::Get();
 			const FDataFieldDescription& Field = *Find;
-			if (Field.Meta.bStrict && ThreadContext.ConstructedObject != Instance)
+			if (Field.Meta.bStrict && !Instance->HasAnyFlags(EObjectFlags::RF_NeedInitialization))
 			{
-				UE_LOG(LogData, Error, TEXT("Can't set strict %s::%s property"), *Instance->GetClass()->GetName(), *Field.Name)
+				UE_LOG(LogData, Error, TEXT("Can't set strict %s::%s property"), *Instance->GetClass()->GetName(), *Field.Name);
 				return;
 			}
 			
@@ -616,39 +634,323 @@ namespace FDataReflectionTools
 					{
 						Instance->Broadcast(UPsEvent::ConstructEvent(FDataReflection::GenerateChangePropertyEventTypeName(Field), Field.Meta.bBubbles));
 					}
+					
+					if (!FPsDataFriend::IsChanged(Instance))
+					{
+						FPsDataFriend::SetIsChanged(Instance, true);
+						TWeakObjectPtr<UPsData> InstanceWeakPtr(Instance);
+						AsyncTask(ENamedThreads::GameThread, [InstanceWeakPtr]()
+						{
+							if (InstanceWeakPtr.IsValid())
+							{
+								FPsDataFriend::SetIsChanged(InstanceWeakPtr.Get(), false);
+								InstanceWeakPtr->Broadcast(UPsEvent::ConstructEvent(TEXT("Changed"), false));
+							}
+						});
+					}
 				}
 			}
 			else
 			{
-				UE_LOG(LogData, Error, TEXT("Property %s::%s has another type"), *Instance->GetClass()->GetName(), *Field.Name)
+				UE_LOG(LogData, Error, TEXT("Property %s::%s has another type"), *Instance->GetClass()->GetName(), *Field.Name);
 			}
 			return;
 		}
-		
-		UE_LOG(LogData, Error, TEXT("Property %s::%s not found"), *Instance->GetClass()->GetName(), *Name)
-	}
-	
-	template<typename T>
-	T& Get(UPsData* Instance, const FString& Name, T& Default)
-	{
-		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
-		if (Find)
+		else
 		{
-			const FDataFieldDescription& Field = *Find;
-			if (TypeHandler<T>::CheckType(Field.Type) && TypeHandler<T>::CheckContainerType(Field.ContainerType))
+			TArray<FString> Path;
+			Name.ParseIntoArray(Path, TEXT("."));
+			if (Path.Num() > 1)
 			{
-				return *UnsafeGet<T>(Instance, Field.Offset);
-			}
-			else
-			{
-				UE_LOG(LogData, Error, TEXT("Property %s::%s has another type"), *Instance->GetClass()->GetName(), *Field.Name)
-				return Default;
+				Set<T>(Instance, Path, 0, NewValue, bCreate);
+				return;
 			}
 		}
 		
-		UE_LOG(LogData, Error, TEXT("Property %s::%s not found"), *Instance->GetClass()->GetName(), *Name)
-		return Default;
+		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
 	}
+	
+	/***********************************
+	 * GET
+	 ***********************************/
+	
+	template<typename T>
+	bool Get(UPsData* Instance, const FDataFieldDescription& Field, T*& OutValue)
+	{
+		check(Instance);
+		
+		if (TypeHandler<T>::CheckType(Field.Type) && TypeHandler<T>::CheckContainerType(Field.ContainerType))
+		{
+			OutValue = UnsafeGet<T>(Instance, Field.Offset);
+			return true;
+		}
+		else
+		{
+			OutValue = nullptr;
+			
+			UE_LOG(LogData, Error, TEXT("Property %s::%s has another type"), *Instance->GetClass()->GetName(), *Field.Name);
+			return false;
+		}
+		
+		OutValue = nullptr;
+		
+		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Field.Name);
+		return false;
+	}
+	
+	template<typename T>
+	bool Get(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset, int32 PathLength, T*& OutValue)
+	{
+		const int32 Delta = PathLength - PathOffset;
+		OutValue = nullptr;
+		
+		check(PathLength <= Path.Num());
+		check(Delta > 0);
+		check(Instance);
+		
+		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Path[PathOffset]);
+		if (Find)
+		{
+			const FDataFieldDescription& Field = *Find;
+			if (Delta == 1)
+			{
+				return Get<T>(Instance, Field, OutValue);
+			}
+			else if (Delta > 1)
+			{
+				if (Field.ContainerType == EDataContainerType::DCT_None)
+				{
+					if (Field.Type == EDataFieldType::DFT_Data)
+					{
+						UPsData** DataPtr = nullptr;
+						if (Get<UPsData*>(Instance, Path, PathOffset, PathOffset + 1, DataPtr))
+						{
+							UPsData* Data = *DataPtr;
+							if (Data)
+							{
+								return Get<T>(Data, Path, PathOffset + 1, Path.Num(), OutValue);
+							}
+							else
+							{
+								UE_LOG(LogData, Error, TEXT("Property %s::%s is null"), *Instance->GetClass()->GetName(), *Field.Name);
+								return false;
+							}
+						}
+						else
+						{
+							return false;
+						}
+					}
+					else
+					{
+						UE_LOG(LogData, Error, TEXT("Property %s::%s doesn't contain children"), *Instance->GetClass()->GetName(), *Field.Name);
+						return false;
+					}
+				}
+				else if (Field.ContainerType == EDataContainerType::DCT_Array)
+				{
+					if (Field.Type == EDataFieldType::DFT_Data)
+					{
+						TArray<UPsData*>* ArrayPtr = nullptr;
+						if (Get<TArray<UPsData*>>(Instance, Field, ArrayPtr))
+						{
+							TArray<UPsData*>& Array = *ArrayPtr;
+							const FString& StringArrayIndex = Path[PathOffset + 1];
+							if (StringArrayIndex.IsNumeric())
+							{
+								const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
+								if (Array.IsValidIndex(ArrayIndex))
+								{
+									if (Array[ArrayIndex])
+									{
+										return Get<T>(Array[ArrayIndex], Path, PathOffset + 2, Path.Num(), OutValue);
+									}
+									else
+									{
+										UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is null"), *Instance->GetClass()->GetName(), *Field.Name, ArrayIndex);
+										return false;
+									}
+								}
+								else
+								{
+									UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field.Name, ArrayIndex);
+									return false;
+								}
+							}
+							else
+							{
+								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field.Name, *StringArrayIndex);
+								return false;
+							}
+						}
+						else
+						{
+							return false;
+						}
+					}
+					else
+					{
+						TArray<T>* ArrayPtr = nullptr;
+						if (Get<TArray<T>>(Instance, Field, ArrayPtr))
+						{
+							TArray<T>& Array = *ArrayPtr;
+							const FString& StringArrayIndex = Path[PathOffset + 1];
+							if (StringArrayIndex.IsNumeric())
+							{
+								const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
+								if (Array.IsValidIndex(ArrayIndex))
+								{
+									OutValue = &Array[ArrayIndex];
+									return true;
+								}
+								else
+								{
+									UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field.Name, ArrayIndex);
+									return false;
+								}
+							}
+							else
+							{
+								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field.Name, *StringArrayIndex);
+								return false;
+							}
+						}
+						else
+						{
+							return false;
+						}
+					}
+				}
+				else if (Field.ContainerType == EDataContainerType::DCT_Map)
+				{
+					if (Field.Type == EDataFieldType::DFT_Data)
+					{
+						TMap<FString, UPsData*>* MapPtr = nullptr;
+						if (Get<TMap<FString, UPsData*>>(Instance, Field, MapPtr))
+						{
+							TMap<FString, UPsData*>& Map = *MapPtr;
+							const FString& Key = Path[PathOffset + 1];
+							UPsData** DataPtr = Map.Find(Key);
+							if (DataPtr)
+							{
+								return Get<T>(*DataPtr, Path, PathOffset + 2, Path.Num(), OutValue);
+							}
+							else
+							{
+								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field.Name, *Key);
+								return false;
+							}
+
+						}
+						else
+						{
+							return false;
+						}
+					}
+					else
+					{
+						TMap<FString, T>* MapPtr = nullptr;
+						if (Get<TMap<FString, T>>(Instance, Field, MapPtr))
+						{
+							TMap<FString, T>& Map = *MapPtr;
+							const FString& Key = Path[PathOffset + 1];
+							T* ValuePtr = Map.Find(Key);
+							if (ValuePtr)
+							{
+								OutValue = ValuePtr;
+								return true;
+							}
+							else
+							{
+								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field.Name, *Key);
+								return false;
+							}
+							
+						}
+						else
+						{
+							return false;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Path[PathOffset]);
+			return false;
+		}
+		
+		UE_LOG(LogData, Error, TEXT("Unknown error"));
+		return false;
+	}
+	
+	template<typename T>
+	bool Get(UPsData* Instance, const FString& Name, T*& OutValue)
+	{
+		check(Instance);
+		
+		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
+		if (Find)
+		{
+			return Get<T>(Instance, *Find, OutValue);
+		}
+		else
+		{
+			TArray<FString> Path;
+			Name.ParseIntoArray(Path, TEXT("."));
+			if (Path.Num() > 1)
+			{
+				return Get<T>(Instance, Path, 0, Path.Num(), OutValue);
+			}
+		}
+		
+		OutValue = nullptr;
+		
+		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
+		return false;
+	}
+	
+	/***********************************
+	 * Link Type trait
+	 ***********************************/
+	
+	template <typename T, typename K> struct TLinkType
+	{
+		typedef K ResultType;
+		
+		static void Get(UPsData* Instance, const FString& Property, const FString& Path)
+		{
+			static_assert(TAlwaysFalse<T>::value, "Unsupported type");
+		}
+	};
+	
+	template <typename K> struct TLinkType<FString, K>
+	{
+		typedef K* ResultType;
+
+		static ResultType Get(UPsData* Instance, const FString& Path, const FString& Property)
+		{
+			return Cast<K>(Instance->GetDataProperty_Link(Path, Property));
+		}
+	};
+
+	template <typename K> struct TLinkType<TArray<FString>, K>
+	{
+		typedef TArray<K*> ResultType;
+
+		static ResultType Get(UPsData* Instance, const FString& Path, const FString& Property)
+		{
+			TArray<UPsData*> Array = Instance->GetDataArrayProperty_Link(Path, Property);
+			ResultType ResultArray;
+			for(UPsData* Data : Array)
+			{
+				ResultArray.Add(Cast<K>(Data));
+			}
+			return ResultArray;
+		}
+	};
+	
 }
 
 /** Private macros */
@@ -670,9 +972,7 @@ private: \
 		} \
 } _UNIQUE(__zmeta_, _inst);
 
-#define DMAP(Class, Type, Name) DPROP(Class, TMap<FString COMMA Type>, Name)
-
-#define DMAP_DEPRECATED(Class, Type, Name) DPROP_DEPRECATED(Class, TMap<FString COMMA Type>, Name)
+/** DPROP */
 
 #define DPROP(Class, Type, Name) \
 protected: \
@@ -702,12 +1002,28 @@ public: \
 private: \
 	struct _UNIQUE(__zprop_, _struct) { \
 		_UNIQUE(__zprop_, _struct)() { \
-			if (FDataReflection::InQueue(Class::StaticClass())) { \
+			if (FDataReflection::InQueue(Class::StaticClass())) \
 				FDataReflectionTools::DeclareField<Type>(Class::StaticClass(), TEXT(#Name), offsetof(Class, Name), sizeof(Type)); \
-			} \
 			FDataReflection::ClearMeta(); \
 		} \
 	} _UNIQUE(__zprop_, _inst);
+
+/** DPROP with link */
+
+#define DPROP_LINK(Class, Type, Name, Path, ReturnType) \
+	static_assert(std::is_base_of<UPsData, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::value, "Only UPsData can be return type"); \
+	static_assert(std::is_base_of<FString, Type>::value || std::is_base_of<TArray<FString>, Type>::value, "Only FString or TArray<FString> property can be linked"); \
+	\
+	DMETA(Link=Type::Path::ReturnType) \
+	DPROP(Class, Type, Name) \
+	\
+public: \
+	FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::ResultType Get##Name##_Link() \
+	{ \
+		return FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::Get(this, TEXT(#Name), TEXT(#Path)); \
+	}
+
+/** DPROP deprecated */
 
 #define DPROP_DEPRECATED(Class, Type, Name) \
 	DMETA(Deprecated) \
@@ -737,17 +1053,26 @@ public: \
 private: \
 	struct _UNIQUE(__zprop_, _struct) { \
 		_UNIQUE(__zprop_, _struct)() { \
-			if (FDataReflection::InQueue(Class::StaticClass())) { \
+			if (FDataReflection::InQueue(Class::StaticClass())) \
 				FDataReflectionTools::DeclareField<Type>(Class::StaticClass(), TEXT(#Name), offsetof(Class, Name), sizeof(Type)); \
-			} \
 			FDataReflection::ClearMeta(); \
 		} \
 	} _UNIQUE(__zprop_, _inst);
 
+#define DPROP_LINK_DEPRECATED(Class, Type, Name, Path, ReturnType) \
+	static_assert(std::is_base_of<UPsData, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::value, "Only UPsData can be return type"); \
+	static_assert(std::is_base_of<FString, Type>::value || std::is_base_of<TArray<FString>, Type>::value, "Only FString or TArray<FString> property can be linked"); \
+	\
+	DMETA(Link=Type::Path::ReturnType) \
+	DPROP_DEPRECATED(Class, Type, Name) \
+	\
+public: \
+	DEPRECATED(0, "Property was marked as deprecated") \
+	FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::ResultType Get##Name##_Link()  \
+	{ \
+		return FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::Get(this, TEXT(#Name), TEXT(#Path)); \
+	}
 
+#define DMAP(Class, Type, Name) DPROP(Class, TMap<FString COMMA Type>, Name)
 
-
-
-
-
-
+#define DMAP_DEPRECATED(Class, Type, Name) DPROP_DEPRECATED(Class, TMap<FString COMMA Type>, Name)

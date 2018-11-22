@@ -6,6 +6,7 @@ const FString EDataMetaType::Strict = TEXT("strict");
 const FString EDataMetaType::Event = TEXT("event");
 const FString EDataMetaType::Bubbles = TEXT("bubbles");
 const FString EDataMetaType::Alias = TEXT("alias");
+const FString EDataMetaType::Link = TEXT("link");
 const FString EDataMetaType::Deprecated = TEXT("deprecated");
 
 IPsDataAccess* FDataReflection::DataAccess = nullptr;
@@ -137,7 +138,7 @@ void FDataReflection::Fill(UPsData* Instance)
 			if (Pair.Value.Meta.bStrict)
 			{
 				UPsData* NewObject = ::NewObject<UPsData>(Instance, Pair.Value.Class);
-				FDataReflectionTools::UnsafeSet<UPsData*>(Instance, Data, NewObject);
+				FDataReflectionTools::Set<UPsData*>(Instance, Pair.Value.Name, NewObject);
 			}
 		}
 	}
@@ -231,13 +232,18 @@ void FDataFieldDescription::ParseMeta(TArray<FString>& Collection)
 		{
 			Meta.Alias = Value;
 		}
+		else if (Key.Equals(EDataMetaType::Link, ESearchCase::CaseSensitive))
+		{
+			Meta.bLink = true;
+			Meta.LinkPath = Value;
+		}
 		else if (Key.Equals(EDataMetaType::Deprecated, ESearchCase::CaseSensitive))
 		{
 			Meta.bDeprecated = true;
 		}
 		else
 		{
-			UE_LOG(LogData, Error, TEXT("Unknown meta \"%s\" in %s::%s"), *Key, *FDataReflection::GetLastClassInQueue()->GetName(), *Name)
+			UE_LOG(LogData, Error, TEXT("Unknown meta \"%s\" in %s::%s (%s)"), *Key, *FDataReflection::GetLastClassInQueue()->GetName(), *Name, *Item)
 		}
 	}
 	
@@ -297,5 +303,3 @@ IPsDataAccess* FDataReflection::GetDataAccess()
 {
 	return DataAccess;
 }
-
-

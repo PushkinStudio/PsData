@@ -19,6 +19,8 @@ namespace FDataReflectionTools
 		static void ChangeDataName(class UPsData* Data, const FString& Name);
 		static void AddChild(class UPsData* Parent, class UPsData* Data);
 		static void RemoveChild(class UPsData* Parent, class UPsData* Data);
+		static bool IsChanged(class UPsData* Data);
+		static void SetIsChanged(class UPsData* Data, bool NewValue);
 	};
 }
 
@@ -43,6 +45,9 @@ private:
 	
 	/** Broadcast in progress (necessary for correct iteration by delegates) */
 	int32 BroadcastInProgress;
+	
+	/** Changed flag */
+	bool bChanged;
 	
 	/** Map of dynamic delegates for blueprint */
 	TMap<FString, TSet<FPsDataDynamicDelegate>> DynamicDelegates;
@@ -98,7 +103,7 @@ public:
 	
 public:
 	/***********************************
-	 * Property
+	 * Data property
 	 ***********************************/
 	
 	/** Get name */
@@ -112,6 +117,11 @@ public:
 	/** Get root */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	UPsData* GetRoot() const;
+	
+public:
+	/***********************************
+	 * Property
+	 ***********************************/
 	
 	/** Get data property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -240,5 +250,17 @@ public:
 	/** Set bool map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	void SetBoolMapProperty(const FString& PropertyName, UPARAM(ref) TMap<FString, bool>& Value);
+
+	/***********************************
+	 * Link
+	 ***********************************/
 	
+	/** Get data property by Path */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	UPsData* GetDataProperty_Link(const FString& Path, const FString& PropertyNameWithPathAppend);
+
+	/** Get data array by Path */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	TArray<UPsData*> GetDataArrayProperty_Link(const FString& Path, const FString& PropertyNameWithPathAppend);
+
 };

@@ -29,7 +29,8 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 
 	Events.Add(MakeShareable(new FEventPath(TEXT("Added"), TEXT(""), true)));
 	Events.Add(MakeShareable(new FEventPath(TEXT("Removing"), TEXT(""), true)));
-
+	Events.Add(MakeShareable(new FEventPath(TEXT("Changed"), TEXT(""), true)));
+	
 	for (auto& Pair : FDataReflection::GetFields(TargetClass))
 	{
 		if (Pair.Value.Meta.bEvent)

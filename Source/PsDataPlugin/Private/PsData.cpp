@@ -37,8 +37,18 @@ namespace FDataReflectionTools
 		}
 		
 		Data->Broadcast(UPsEvent::ConstructEvent(TEXT("Removing"), true));
-		Data->Parent = nullptr;
 		Parent->Children.Remove(Data);
+		Data->Parent = nullptr;
+	}
+	
+	bool FPsDataFriend::IsChanged(class UPsData* Data)
+	{
+		return Data->bChanged;
+	}
+	
+	void FPsDataFriend::SetIsChanged(class UPsData* Data, bool NewValue)
+	{
+		Data->bChanged = NewValue;
 	}
 }
 
@@ -47,6 +57,7 @@ UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 , Name()
 , Parent(nullptr)
 , BroadcastInProgress(0)
+, bChanged(false)
 {
 	FDataReflection::AddToQueue(this);
 }
@@ -335,7 +346,7 @@ void UPsData::DataSerialize(FDataSerializer& Ser)
 }
 
 /***********************************
- * Property
+ * Data property
  ***********************************/
 
 FString UPsData::GetName() const
@@ -351,17 +362,28 @@ UPsData* UPsData::GetParent() const
 UPsData* UPsData::GetRoot() const
 {
 	UPsData* Root = const_cast<UPsData*>(this);
-	while (Root->GetParent() != nullptr)
+	while (Root->Parent != nullptr)
 	{
-		Root = Root->GetParent();
+		Root = Root->Parent;
 	}
 	return Root;
 }
 
+/***********************************
+ * Property
+ ***********************************/
+
 UPsData* UPsData::GetDataProperty(const FString& PropertyName)
 {
-	UPsData* Default = nullptr;
-	return FDataReflectionTools::Get<UPsData*>(this, PropertyName, Default);
+	UPsData** Result = nullptr;
+	if (FDataReflectionTools::Get<UPsData*>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 void UPsData::SetDataProperty(const FString& PropertyName, UPsData* Value)
@@ -371,8 +393,15 @@ void UPsData::SetDataProperty(const FString& PropertyName, UPsData* Value)
 
 int32 UPsData::GetIntProperty(const FString& PropertyName)
 {
-	int32 Default = 0;
-	return FDataReflectionTools::Get<int32>(this, PropertyName, Default);
+	int32* Result = nullptr;
+	if (FDataReflectionTools::Get<int32>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 void UPsData::SetIntProperty(const FString& PropertyName, int32 Value)
@@ -382,8 +411,15 @@ void UPsData::SetIntProperty(const FString& PropertyName, int32 Value)
 
 float UPsData::GetFloatProperty(const FString& PropertyName)
 {
-	float Default = 0.f;
-	return FDataReflectionTools::Get<float>(this, PropertyName, Default);
+	float* Result = nullptr;
+	if (FDataReflectionTools::Get<float>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return 0.f;
+	}
 }
 
 void UPsData::SetFloatProperty(const FString& PropertyName, float Value)
@@ -393,8 +429,15 @@ void UPsData::SetFloatProperty(const FString& PropertyName, float Value)
 
 FString UPsData::GetStringProperty(const FString& PropertyName)
 {
-	FString Default;
-	return FDataReflectionTools::Get<FString>(this, PropertyName, Default);
+	FString* Result = nullptr;
+	if (FDataReflectionTools::Get<FString>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TEXT("");
+	}
 }
 
 void UPsData::SetStringProperty(const FString& PropertyName, FString& Value)
@@ -404,8 +447,15 @@ void UPsData::SetStringProperty(const FString& PropertyName, FString& Value)
 
 bool UPsData::GetBoolProperty(const FString& PropertyName)
 {
-	bool Default = false;
-	return FDataReflectionTools::Get<bool>(this, PropertyName, Default);
+	bool* Result = nullptr;
+	if (FDataReflectionTools::Get<bool>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 void UPsData::SetBoolProperty(const FString& PropertyName, bool Value)
@@ -419,8 +469,15 @@ void UPsData::SetBoolProperty(const FString& PropertyName, bool Value)
 
 TArray<UPsData*> UPsData::GetDataArrayProperty(const FString& PropertyName)
 {
-	TArray<UPsData*> Default;
-	return FDataReflectionTools::Get<TArray<UPsData*>>(this, PropertyName, Default);
+	TArray<UPsData*>* Result = nullptr;
+	if (FDataReflectionTools::Get<TArray<UPsData*>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TArray<UPsData*>();
+	}
 }
 
 void UPsData::SetDataArrayProperty(const FString& PropertyName, TArray<UPsData*>& Value)
@@ -430,8 +487,15 @@ void UPsData::SetDataArrayProperty(const FString& PropertyName, TArray<UPsData*>
 
 TArray<int32> UPsData::GetIntArrayProperty(const FString& PropertyName)
 {
-	TArray<int32> Default;
-	return FDataReflectionTools::Get<TArray<int32>>(this, PropertyName, Default);
+	TArray<int32>* Result = nullptr;
+	if (FDataReflectionTools::Get<TArray<int32>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TArray<int32>();
+	}
 }
 
 void UPsData::SetIntArrayProperty(const FString& PropertyName, TArray<int32>& Value)
@@ -441,8 +505,15 @@ void UPsData::SetIntArrayProperty(const FString& PropertyName, TArray<int32>& Va
 
 TArray<float> UPsData::GetFloatArrayProperty(const FString& PropertyName)
 {
-	TArray<float> Default;
-	return FDataReflectionTools::Get<TArray<float>>(this, PropertyName, Default);
+	TArray<float>* Result = nullptr;
+	if (FDataReflectionTools::Get<TArray<float>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TArray<float>();
+	}
 }
 
 void UPsData::SetFloatArrayProperty(const FString& PropertyName, TArray<float>& Value)
@@ -452,8 +523,15 @@ void UPsData::SetFloatArrayProperty(const FString& PropertyName, TArray<float>& 
 
 TArray<FString> UPsData::GetStringArrayProperty(const FString& PropertyName)
 {
-	TArray<FString> Default;
-	return FDataReflectionTools::Get<TArray<FString>>(this, PropertyName, Default);
+	TArray<FString>* Result = nullptr;
+	if (FDataReflectionTools::Get<TArray<FString>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TArray<FString>();
+	}
 }
 
 void UPsData::SetStringArrayProperty(const FString& PropertyName, TArray<FString>& Value)
@@ -463,8 +541,15 @@ void UPsData::SetStringArrayProperty(const FString& PropertyName, TArray<FString
 
 TArray<bool> UPsData::GetBoolArrayProperty(const FString& PropertyName)
 {
-	TArray<bool> Default;
-	return FDataReflectionTools::Get<TArray<bool>>(this, PropertyName, Default);
+	TArray<bool>* Result = nullptr;
+	if (FDataReflectionTools::Get<TArray<bool>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TArray<bool>();
+	}
 }
 
 void UPsData::SetBoolArrayProperty(const FString& PropertyName, TArray<bool>& Value)
@@ -478,8 +563,15 @@ void UPsData::SetBoolArrayProperty(const FString& PropertyName, TArray<bool>& Va
 
 TMap<FString, UPsData*> UPsData::GetDataMapProperty(const FString& PropertyName)
 {
-	TMap<FString, UPsData*> Default;
-	return FDataReflectionTools::Get<TMap<FString, UPsData*>>(this, PropertyName, Default);
+	TMap<FString, UPsData*>* Result = nullptr;
+	if (FDataReflectionTools::Get<TMap<FString, UPsData*>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TMap<FString, UPsData*>();
+	}
 }
 
 void UPsData::SetDataMapProperty(const FString& PropertyName, TMap<FString, UPsData*>& Value)
@@ -489,8 +581,15 @@ void UPsData::SetDataMapProperty(const FString& PropertyName, TMap<FString, UPsD
 
 TMap<FString, int32> UPsData::GetIntMapProperty(const FString& PropertyName)
 {
-	TMap<FString, int32> Default;
-	return FDataReflectionTools::Get<TMap<FString, int32>>(this, PropertyName, Default);
+	TMap<FString, int32>* Result = nullptr;
+	if (FDataReflectionTools::Get<TMap<FString, int32>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TMap<FString, int32>();
+	}
 }
 
 void UPsData::SetIntMapProperty(const FString& PropertyName, TMap<FString, int32>& Value)
@@ -500,8 +599,15 @@ void UPsData::SetIntMapProperty(const FString& PropertyName, TMap<FString, int32
 
 TMap<FString, float> UPsData::GetFloatMapProperty(const FString& PropertyName)
 {
-	TMap<FString, float> Default;
-	return FDataReflectionTools::Get<TMap<FString, float>>(this, PropertyName, Default);
+	TMap<FString, float>* Result = nullptr;
+	if (FDataReflectionTools::Get<TMap<FString, float>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TMap<FString, float>();
+	}
 }
 
 void UPsData::SetFloatMapProperty(const FString& PropertyName, TMap<FString, float>& Value)
@@ -511,8 +617,15 @@ void UPsData::SetFloatMapProperty(const FString& PropertyName, TMap<FString, flo
 
 TMap<FString, FString> UPsData::GetStringMapProperty(const FString& PropertyName)
 {
-	TMap<FString, FString> Default;
-	return FDataReflectionTools::Get<TMap<FString, FString>>(this, PropertyName, Default);
+	TMap<FString, FString>* Result = nullptr;
+	if (FDataReflectionTools::Get<TMap<FString, FString>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TMap<FString, FString>();
+	}
 }
 
 void UPsData::SetStringMapProperty(const FString& PropertyName, TMap<FString, FString>& Value)
@@ -522,11 +635,69 @@ void UPsData::SetStringMapProperty(const FString& PropertyName, TMap<FString, FS
 
 TMap<FString, bool> UPsData::GetBoolMapProperty(const FString& PropertyName)
 {
-	TMap<FString, bool> Default;
-	return FDataReflectionTools::Get<TMap<FString, bool>>(this, PropertyName, Default);
+	TMap<FString, bool>* Result = nullptr;
+	if (FDataReflectionTools::Get<TMap<FString, bool>>(this, PropertyName, Result))
+	{
+		return *Result;
+	}
+	else
+	{
+		return TMap<FString, bool>();
+	}
 }
 
 void UPsData::SetBoolMapProperty(const FString& PropertyName, TMap<FString, bool>& Value)
 {
 	FDataReflectionTools::Set<TMap<FString, bool>>(this, PropertyName, Value);
+}
+
+UPsData* UPsData::GetDataProperty_Link(const FString& Path, const FString& PropertyNameWithPathAppend)
+{
+	FString* PropertyPtr = nullptr;
+	if (!FDataReflectionTools::Get<FString>(this, PropertyNameWithPathAppend, PropertyPtr))
+	{
+		return nullptr;
+	}
+	
+	TMap<FString, UPsData*>* MapPtr = nullptr;
+	if (!FDataReflectionTools::Get<TMap<FString, UPsData*>>(GetRoot(), Path, MapPtr))
+	{
+		return nullptr;
+	}
+	
+	UPsData** Find = MapPtr->Find(*PropertyPtr);
+	if (Find)
+	{
+		return *Find;
+	}
+	
+	return nullptr;
+}
+
+TArray<UPsData*> UPsData::GetDataArrayProperty_Link(const FString& Path, const FString& PropertyNameWithPathAppend)
+{
+	TArray<UPsData*> Result;
+	
+	TArray<FString>* PropertiesPtr = nullptr;
+	if (!FDataReflectionTools::Get<TArray<FString>>(this, PropertyNameWithPathAppend, PropertiesPtr))
+	{
+		return Result;
+	}
+	
+	TMap<FString, UPsData*>* MapPtr = nullptr;
+	if (!FDataReflectionTools::Get<TMap<FString, UPsData*>>(GetRoot(), Path, MapPtr))
+	{
+		return Result;
+	}
+	
+	for(const FString& Property : *PropertiesPtr)
+	{
+		UPsData** Find = MapPtr->Find(Property);
+		if (Find)
+		{
+			Result.Add(*Find);
+		}
+	}
+	
+	return Result;
 }

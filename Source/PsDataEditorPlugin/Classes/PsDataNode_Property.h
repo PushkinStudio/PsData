@@ -20,7 +20,7 @@ public:
 	UPROPERTY()
 	FString PropertyName;
 	
-private:
+protected:
 	/** Unsupported type flag */
 	bool bUnsupportedType;
 
@@ -41,10 +41,10 @@ public:
 	void CreateExecPin();
 	
 	/** Create target property pin */
-	UEdGraphPin* CreateTargetPin(EEdGraphPinDirection Dir, bool bShowName = true);
+	virtual UEdGraphPin* CreateTargetPin(EEdGraphPinDirection Dir, bool bShowName = true);
 	
 	/** Create property pin */
-	UEdGraphPin* CreatePropertyPin(EEdGraphPinDirection Dir, bool bShowName = true);
+	virtual UEdGraphPin* CreatePropertyPin(EEdGraphPinDirection Dir, bool bShowName = true);
 	
 	/** Has error */
 	bool HasError() const;
