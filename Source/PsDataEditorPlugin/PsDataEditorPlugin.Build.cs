@@ -6,6 +6,8 @@ namespace UnrealBuildTool.Rules
 	{
 		public PsDataEditorPlugin(ReadOnlyTargetRules Target) : base(Target)
 		{
+			PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
 			PrivateIncludePaths.AddRange(
 				new string[] {
 					"PsDataEditorPlugin/Private",

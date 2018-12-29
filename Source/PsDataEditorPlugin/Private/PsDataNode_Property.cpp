@@ -1,13 +1,16 @@
 // Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
 
-#include "PsDataEditorPlugin.h"
 #include "PsDataNode_Property.h"
+
+#include "UObject/Class.h"
+#include "UObject/UObjectIterator.h"
+#include "EdGraphSchema_K2.h"
 #include "BlueprintNodeSpawner.h"
 #include "Styling/SlateIconFinder.h"
 #include "BlueprintActionDatabaseRegistrar.h"
 
 UPsDataNode_Property::UPsDataNode_Property(const FObjectInitializer& ObjectInitializer)
-: Super(ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	bUnsupportedType = false;
 }
@@ -23,6 +26,7 @@ FLinearColor UPsDataNode_Property::GetNodeTitleColor() const
 	{
 		return FLinearColor::White;
 	}
+
 	return FLinearColor(0.f, 1.f, 0.f, 1.f);
 }
 

@@ -1,6 +1,5 @@
 // Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
 
-#include "PsDataEditorPlugin.h"
 #include "PsDataNode_SetProperty.h"
 #include "PsDataAPI.h"
 

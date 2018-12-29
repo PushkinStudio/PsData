@@ -1,6 +1,5 @@
 // Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
 
-#include "PsDataEditorPlugin.h"
 #include "Pins/PsGraphPinEventList.h"
 #include "ScopedTransaction.h"
 
