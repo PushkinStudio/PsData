@@ -148,10 +148,7 @@ struct FDataMemory : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<T>(Instance, Field, FDefaultValue<T>::GetDefault());
-		}
+		FDataReflectionTools::UnsafeSet<T>(Instance, Field, FDefaultValue<T>::GetDefault());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T& Value, const T& NewValue)
@@ -187,10 +184,7 @@ struct FDataMemory<TArray<T>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TArray<T>>(Instance, Field, TArray<T>());
-		}
+		FDataReflectionTools::UnsafeSet<TArray<T>>(Instance, Field, TArray<T>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<T>& Value, const TArray<T>& NewValue)
@@ -229,10 +223,7 @@ struct FDataMemory<TMap<FString, T>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TMap<FString, T>>(Instance, Field, TMap<FString, T>());
-		}
+		FDataReflectionTools::UnsafeSet<TMap<FString, T>>(Instance, Field, TMap<FString, T>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, T>& Value, const TMap<FString, T>& NewValue)
@@ -276,7 +267,11 @@ struct FDataMemory<T*> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
+		if (Field->Meta.bStrict)
+		{
+			FDataReflectionTools::UnsafeSet<T*>(Instance, Field, NewObject<T>(Instance, T::StaticClass()));
+		}
+		else
 		{
 			FDataReflectionTools::UnsafeSet<T*>(Instance, Field, nullptr);
 		}
@@ -328,10 +323,7 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TArray<T*>>(Instance, Field, TArray<T*>());
-		}
+		FDataReflectionTools::UnsafeSet<TArray<T*>>(Instance, Field, TArray<T*>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<T*>& Value, const TArray<T*>& NewValue)
@@ -390,10 +382,7 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TMap<FString, T*>>(Instance, Field, TMap<FString, T*>());
-		}
+		FDataReflectionTools::UnsafeSet<TMap<FString, T*>>(Instance, Field, TMap<FString, T*>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, T*>& Value, const TMap<FString, T*>& NewValue)
@@ -487,10 +476,7 @@ struct FDataMemory<TSoftObjectPtr<T>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TSoftObjectPtr<T>>(Instance, Field, TSoftObjectPtr<T>());
-		}
+		FDataReflectionTools::UnsafeSet<TSoftObjectPtr<T>>(Instance, Field, TSoftObjectPtr<T>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TSoftObjectPtr<T>& Value, const TSoftObjectPtr<T>& NewValue)
@@ -545,10 +531,7 @@ struct FDataMemory<TArray<TSoftObjectPtr<T>>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TArray<TSoftObjectPtr<T>>>(Instance, Field, TArray<TSoftObjectPtr<T>>());
-		}
+		FDataReflectionTools::UnsafeSet<TArray<TSoftObjectPtr<T>>>(Instance, Field, TArray<TSoftObjectPtr<T>>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<TSoftObjectPtr<T>>& Value, const TArray<TSoftObjectPtr<T>>& NewValue)
@@ -603,10 +586,7 @@ struct FDataMemory<TMap<FString, TSoftObjectPtr<T>>> : public FAbstractDataMemor
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TMap<FString, TSoftObjectPtr<T>>>(Instance, Field, TMap<FString, TSoftObjectPtr<T>>());
-		}
+		FDataReflectionTools::UnsafeSet<TMap<FString, TSoftObjectPtr<T>>>(Instance, Field, TMap<FString, TSoftObjectPtr<T>>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, TSoftObjectPtr<T>>& Value, const TMap<FString, TSoftObjectPtr<T>>& NewValue)
@@ -685,10 +665,7 @@ struct FDataMemory<FText> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<FText>(Instance, Field, FText());
-		}
+		FDataReflectionTools::UnsafeSet<FText>(Instance, Field, FText());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FText& Value, const FText& NewValue)
@@ -744,10 +721,7 @@ struct FDataMemory<TArray<FText>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TArray<FText>>(Instance, Field, TArray<FText>());
-		}
+		FDataReflectionTools::UnsafeSet<TArray<FText>>(Instance, Field, TArray<FText>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<FText>& Value, const TArray<FText>& NewValue)
@@ -802,10 +776,7 @@ struct FDataMemory<TMap<FString, FText>> : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<TMap<FString, FText>>(Instance, Field, TMap<FString, FText>());
-		}
+		FDataReflectionTools::UnsafeSet<TMap<FString, FText>>(Instance, Field, TMap<FString, FText>());
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, FText>& Value, const TMap<FString, FText>& NewValue)
@@ -883,10 +854,7 @@ struct FEnumDataMemory : public FAbstractDataMemory
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
 	{
-		if (!Field->Meta.bStrict)
-		{
-			FDataReflectionTools::UnsafeSet<T>(Instance, Field, static_cast<T>(0));
-		}
+		FDataReflectionTools::UnsafeSet<T>(Instance, Field, static_cast<T>(0));
 	}
 
 	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T& Value, const T& NewValue)

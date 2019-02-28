@@ -390,4 +390,5 @@ void UPsData::Reset()
 		const auto& Field = Pair.Value;
 		Memory[Field->Index]->Reset(this, Field);
 	}
+	//TODO: invoke init constructor
 }

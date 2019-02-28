@@ -188,6 +188,7 @@ void FDataReflection::Fill(UPsData* Instance)
 			}
 		}
 	}
+	//TODO: invoke init constructor
 }
 
 TSharedPtr<const FDataField> FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
