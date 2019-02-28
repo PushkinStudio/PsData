@@ -1,13 +1,14 @@
-// Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
 
 #pragma once
 
+#include "PsData.h"
+
 #include "CoreMinimal.h"
-#include "Widgets/DeclarativeSyntaxSupport.h"
-#include "Widgets/SWidget.h"
 #include "SGraphPin.h"
 #include "SNameComboBox.h"
-#include "PsData.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
+#include "Widgets/SWidget.h"
 
 struct FEventPath
 {
@@ -24,25 +25,25 @@ struct FEventPath
 		: Type(InType)
 		, Path(InPath)
 		, bSelf(bInSelf)
-	{}
+	{
+	}
 };
 
-class PSDATAEDITORPLUGIN_API SPsGraphPinEventList : public SGraphPin
+class PSDATAEDITORPLUGIN_API SPsDataGraphPinEventList : public SGraphPin
 {
 public:
-	SLATE_BEGIN_ARGS(SPsGraphPinEventList) {}
+	SLATE_BEGIN_ARGS(SPsDataGraphPinEventList) {}
 	SLATE_END_ARGS()
-	
+
 	void Construct(const FArguments& InArgs, UEdGraphPin* InGraphPinObj, const TArray<TSharedPtr<FEventPath>>& InEventList);
-	
+
 protected:
-	
-	virtual TSharedRef<SWidget>	GetDefaultValueWidget() override;
-	
+	virtual TSharedRef<SWidget> GetDefaultValueWidget() override;
+
 	void ComboBoxSelectionChanged(TSharedPtr<FName> NameItem, ESelectInfo::Type SelectInfo);
-	
-	TSharedPtr<class SNameComboBox>	ComboBox;
-	
+
+	TSharedPtr<class SNameComboBox> ComboBox;
+
 	TArray<TSharedPtr<FEventPath>> EventList;
 	TArray<TSharedPtr<FName>> NameList;
 };

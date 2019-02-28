@@ -1,102 +1,97 @@
-// Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
 
 #include "PsDataCore.h"
 
-const FString EDataMetaType::Strict = TEXT("strict");
-const FString EDataMetaType::Event = TEXT("event");
-const FString EDataMetaType::Bubbles = TEXT("bubbles");
-const FString EDataMetaType::Alias = TEXT("alias");
-const FString EDataMetaType::Link = TEXT("link");
-const FString EDataMetaType::Deprecated = TEXT("deprecated");
+#include "UObject/UObjectIterator.h"
 
-IPsDataAccess* FDataReflection::DataAccess = nullptr;
-TMap<UClass*, TMap<FString, FDataFieldDescription>> FDataReflection::Fields;
+TMap<UClass*, TMap<FString, TSharedPtr<const FDataField>>> FDataReflection::FieldsByName;
+TMap<UClass*, TMap<int32, TSharedPtr<const FDataField>>> FDataReflection::FieldsByHash;
+
 TArray<UClass*> FDataReflection::ClassQueue;
-TArray<FString> FDataReflection::MetaCollection;
+TArray<const char*> FDataReflection::MetaCollection;
 
-FString FDataReflection::GetTypeAsString(EDataFieldType Type)
+bool FDataReflection::bCompiled = false;
+
+void FDataReflection::AddField(UClass* OwnerClass, const FString& Name, int32 Hash, FAbstractDataTypeContext* Context)
 {
-	switch(Type)
+	check(!bCompiled);
+
+	if (!InQueue(OwnerClass))
 	{
-		case EDataFieldType::DFT_Data:
-			return TEXT("Data");
-		case EDataFieldType::DFT_float:
-			return TEXT("Float");
-		case EDataFieldType::DFT_int32:
-			return TEXT("Int");
-		case EDataFieldType::DFT_String:
-			return TEXT("String");
-		case EDataFieldType::DFT_bool:
-			return TEXT("Bool");
-		default:
-			UE_LOG(LogData, Error, TEXT("Unsupport type: %d"), (uint8) Type)
-			return TEXT("Unsupport");
+		if (InQueue())
+		{
+			UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s another class is active: %s"), *OwnerClass->GetName(), *Name, *GetLastClassInQueue()->GetName());
+		}
+		else
+		{
+			UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s because queue is empty"), *OwnerClass->GetName(), *Name);
+		}
+		return;
 	}
-}
 
-FString FDataReflection::GenerateGetFunctionName(const FDataFieldDescription& Field)
-{
-	return FString::Printf(TEXT("Get%s%sProperty"), *GetTypeAsString(Field.Type), Field.ContainerType == EDataContainerType::DCT_None ? TEXT("") : (Field.ContainerType == EDataContainerType::DCT_Array ? TEXT("Array") : TEXT("Map")));
-}
+	TMap<FString, TSharedPtr<const FDataField>>& MapByName = FieldsByName.FindOrAdd(OwnerClass);
+	TMap<int32, TSharedPtr<const FDataField>>& MapByHash = FieldsByHash.FindOrAdd(OwnerClass);
 
-FString FDataReflection::GenerateSetFunctionName(const FDataFieldDescription& Field)
-{
-	return FString::Printf(TEXT("Set%s%sProperty"), *GetTypeAsString(Field.Type), Field.ContainerType == EDataContainerType::DCT_None ? TEXT("") : (Field.ContainerType == EDataContainerType::DCT_Array ? TEXT("Array") : TEXT("Map")));
-}
+	const int32 Index = MapByName.Num();
 
-FString FDataReflection::GenerateChangePropertyEventTypeName(const FDataFieldDescription& Field)
-{
-	if (!Field.Meta.EventType.IsEmpty())
+	TSharedPtr<const FDataField> Field(new FDataField(Name, Index, Hash, Context, MetaCollection));
+	MetaCollection.Reset();
+
+	if (MapByHash.Contains(Hash))
 	{
-		return Field.Meta.EventType;
+		UE_LOG(LogData, Fatal, TEXT("Can't generate unique hash for %s::%s 0x%08x"), *OwnerClass->GetName(), *Name, Hash);
 	}
-	return FString::Printf(TEXT("%sСhanged"), *Field.Name);
-}
 
-void FDataReflection::AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataFieldType Type, EDataContainerType ContainerType)
-{
-	FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(Type, ContainerType, Name, Offset, Size, MetaCollection));
-}
+	MapByName.Add(Name, Field);
+	MapByHash.Add(Hash, Field);
 
-void FDataReflection::AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, UClass* Type, EDataContainerType ContainerType)
-{
-	FDataReflection::Fields.FindOrAdd(StaticClass).Add(Name, FDataFieldDescription(Type, ContainerType, Name, Offset, Size, MetaCollection));
+	UE_LOG(LogData, Verbose, TEXT(" %02d %s %s::%s (0x%08x)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *Name, Hash);
 }
 
 void FDataReflection::AddToQueue(UPsData* Instance)
 {
+	if (bCompiled)
+	{
+		return;
+	}
+
 	UClass* Class = Instance->GetClass();
 	if (UPsData::StaticClass() == Class)
 	{
 		return;
 	}
-	
-	if (Fields.Contains(Class))
+
+	if (FieldsByName.Contains(Class))
 	{
 		return;
 	}
-	
+
 	if ((Class->GetClassFlags() & CLASS_Constructed) == 0)
 	{
 		return;
 	}
-	
+
 	UClass* SuperClass = Class->GetSuperClass();
-	if (Fields.Contains(SuperClass))
+	if (FieldsByName.Contains(SuperClass))
 	{
-		Fields.FindOrAdd(Class).Append(*Fields.Find(SuperClass));
+		FieldsByName.FindOrAdd(Class).Append(*FieldsByName.Find(SuperClass));
 	}
 	else
 	{
-		Fields.FindOrAdd(Class);
+		FieldsByName.FindOrAdd(Class);
 	}
-	
+
 	ClassQueue.Add(Class);
-	UE_LOG(LogData, Verbose, TEXT("Describe %s start"), *Class->GetName())
+	UE_LOG(LogData, Verbose, TEXT("Describe %s:"), *Class->GetName())
 }
 
 void FDataReflection::RemoveFromQueue(UPsData* Instance)
 {
+	if (bCompiled)
+	{
+		return;
+	}
+
 	if (ClassQueue.Num() > 0 && ClassQueue.Last() == Instance->GetClass())
 	{
 		if (ClassQueue.Num() == 1)
@@ -107,199 +102,180 @@ void FDataReflection::RemoveFromQueue(UPsData* Instance)
 		{
 			ClassQueue.SetNum(ClassQueue.Num() - 1, false);
 		}
-		
+
 		UClass* Class = Instance->GetClass();
-		
+
 		if (MetaCollection.Num() > 0)
 		{
 			UE_LOG(LogData, Error, TEXT(" %s has unused meta"), *Class->GetName())
 			MetaCollection.Reset();
 		}
-		
-		UE_LOG(LogData, Verbose, TEXT("Describe %s complete"), *Class->GetName())
-	}
-}
 
-void FDataReflection::Fill(UPsData* Instance)
-{
-	const TMap<FString, FDataFieldDescription>& FieldMap = FDataReflection::GetFields(Instance->GetClass());
-	for (auto& Pair : FieldMap)
-	{
-		if (Pair.Value.Type == EDataFieldType::DFT_Data && Pair.Value.ContainerType == EDataContainerType::DCT_None)
-		{
-			UPsData*& Data = *FDataReflectionTools::UnsafeGet<UPsData*>(Instance, Pair.Value.Offset);
-			Data = nullptr;
-			
-			if (Instance->HasAnyFlags(EObjectFlags::RF_ClassDefaultObject | EObjectFlags::RF_DefaultSubObject))
-			{
-				continue;
-			}
-			
-			if (Pair.Value.Meta.bStrict)
-			{
-				UPsData* NewObject = ::NewObject<UPsData>(Instance, Pair.Value.Class);
-				FDataReflectionTools::Set<UPsData*>(Instance, Pair.Value.Name, NewObject);
-			}
-		}
+		// Sort by Hash
+		FieldsByHash.FindOrAdd(Class).KeySort([](const int32& a, const int32& b) -> bool {
+			return a < b;
+		});
+
+		//Sort by String
+		FieldsByName.FindOrAdd(Class).KeySort([](const FString& a, const FString& b) -> bool {
+			return a < b;
+		});
+
+		UE_LOG(LogData, Verbose, TEXT("%s complete!"), *Class->GetName())
 	}
 }
 
 bool FDataReflection::InQueue(UClass* StaticClass)
 {
-	return ClassQueue.Num() > 0 && ClassQueue.Last() == StaticClass;
+	return !bCompiled && ClassQueue.Num() > 0 && ClassQueue.Last() == StaticClass;
 }
 
 bool FDataReflection::InQueue()
 {
-	return ClassQueue.Num() > 0;
+	return !bCompiled && ClassQueue.Num() > 0;
 }
 
 UClass* FDataReflection::GetLastClassInQueue()
 {
-	if (ClassQueue.Num() > 0)
+	if (!bCompiled && ClassQueue.Num() > 0)
 	{
 		return ClassQueue.Last();
+	}
+	return nullptr;
+}
+void FDataReflection::PushMeta(const char* Meta)
+{
+	check(!bCompiled);
+	MetaCollection.Add(Meta);
+}
+
+void FDataReflection::ClearMeta()
+{
+	check(!bCompiled);
+	MetaCollection.Reset();
+}
+
+void FDataReflection::Fill(UPsData* Instance)
+{
+	const bool bDefaultObject = Instance->HasAnyFlags(EObjectFlags::RF_ClassDefaultObject | EObjectFlags::RF_DefaultSubObject);
+
+	const TMap<FString, TSharedPtr<const FDataField>>& FieldMap = FDataReflection::GetFields(Instance->GetClass());
+
+	auto& Memory = FDataReflectionTools::FPsDataFriend::GetMemory(Instance);
+	Memory.AddDefaulted(FieldMap.Num());
+
+	for (const auto& Pair : FieldMap)
+	{
+		const auto& Field = Pair.Value;
+		Memory[Field->Index].Reset(Field->Context->AllocateMemory());
+
+		if (Field->Context->IsData() && !Field->Context->IsContainer())
+		{
+			UPsData** Data = nullptr;
+			FDataReflectionTools::GetByField<UPsData*>(Instance, Field, Data);
+			*Data = nullptr;
+
+			if (bDefaultObject)
+			{
+				continue;
+			}
+
+			UClass* DataType = Cast<UClass>(Field->Context->GetUE4Type());
+			if (Field->Meta.bStrict && DataType != nullptr)
+			{
+				UPsData* NewObject = ::NewObject<UPsData>(Instance, Cast<UClass>(DataType));
+				FDataReflectionTools::SetByField<UPsData*>(Instance, Field, NewObject);
+			}
+		}
+	}
+}
+
+TSharedPtr<const FDataField> FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
+{
+	TMap<FString, TSharedPtr<const FDataField>>* MapPtr = FieldsByName.Find(OwnerClass);
+	if (MapPtr)
+	{
+		TSharedPtr<const FDataField>* SharedPtr = MapPtr->Find(Name);
+		if (SharedPtr)
+		{
+			return *SharedPtr;
+		}
+	}
+
+	return nullptr;
+}
+
+TSharedPtr<const FDataField> FDataReflection::GetFieldByHash(UClass* OwnerClass, int32 Hash)
+{
+	if (auto MapPtr = FieldsByHash.Find(OwnerClass))
+	{
+		if (auto FieldPtr = MapPtr->Find(Hash))
+		{
+			return *FieldPtr;
+		}
 	}
 	return nullptr;
 }
 
 bool FDataReflection::HasClass(const UClass* StaticClass)
 {
-	return Fields.Contains(StaticClass);
+	return FieldsByName.Contains(StaticClass);
 }
 
-const TMap<FString, FDataFieldDescription>& FDataReflection::GetFields(const UClass* StaticClass)
+const TMap<FString, TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* StaticClass)
 {
-	auto Find = Fields.Find(StaticClass);
+	auto Find = FieldsByName.Find(StaticClass);
 	if (Find)
 	{
 		return *Find;
 	}
-	
-	static TMap<FString, FDataFieldDescription> Empty;
+
+	static TMap<FString, TSharedPtr<const FDataField>> Empty;
 	return Empty;
 }
 
-void ParseValue(FString& Value)
+void FDataReflection::Compile()
 {
-	if (Value.IsEmpty())
-	{
-		return;
-	}
-	
-	Value.TrimStartAndEndInline();
-	
-	if (Value.IsEmpty())
-	{
-		return;
-	}
-	
-	int32 Last = Value.Len() - 1;
-	if (Last != 0 && ((Value[0] == '"' && Value[Last] == '"') || (Value[0] == '\'' && Value[Last] == '\'')))
-	{
-		Value = Value.Mid(1, Value.Len() - 2);
-	}
-}
+	check(!bCompiled);
+	bCompiled = true;
 
-void FDataFieldDescription::ParseMeta(TArray<FString>& Collection)
-{
-	for(FString& Item : Collection)
-	{
-		FString Key;
-		FString Value;
-		if (!Item.Split(TEXT("="), &Key, &Value))
-		{
-			Key = Item;
-		}
-		Key.TrimStartAndEndInline();
-		Key.ToLowerInline();
-		ParseValue(Value);
-		
-		if (Key.Equals(EDataMetaType::Strict, ESearchCase::CaseSensitive))
-		{
-			Meta.bStrict = true;
-		}
-		else if (Key.Equals(EDataMetaType::Event, ESearchCase::CaseSensitive))
-		{
-			Meta.bEvent = true;
-			Meta.EventType = Value;
-		}
-		else if (Key.Equals(EDataMetaType::Bubbles, ESearchCase::CaseSensitive))
-		{
-			Meta.bBubbles = true;
-		}
-		else if (Key.Equals(EDataMetaType::Alias, ESearchCase::CaseSensitive))
-		{
-			Meta.Alias = Value;
-		}
-		else if (Key.Equals(EDataMetaType::Link, ESearchCase::CaseSensitive))
-		{
-			Meta.bLink = true;
-			Meta.LinkPath = Value;
-		}
-		else if (Key.Equals(EDataMetaType::Deprecated, ESearchCase::CaseSensitive))
-		{
-			Meta.bDeprecated = true;
-		}
-		else
-		{
-			UE_LOG(LogData, Error, TEXT("Unknown meta \"%s\" in %s::%s (%s)"), *Key, *FDataReflection::GetLastClassInQueue()->GetName(), *Name, *Item)
-		}
-	}
-	
-	if (Meta.bStrict && Meta.bEvent)
-	{
-		Meta.bEvent = false;
-		Meta.bBubbles = false;
-		Meta.EventType = TEXT("");
-		
-		UE_LOG(LogData, Error, TEXT("Property %s::%s with strict meta can't broadcast event"), *FDataReflection::GetLastClassInQueue()->GetName(), *Name)
-	}
-	
-	if (ContainerType != EDataContainerType::DCT_None)
-	{
-		if (Meta.bStrict)
-		{
-			Meta.bStrict = false;
-			UE_LOG(LogData, Error, TEXT("Container %s::%s can't have strict meta"), *FDataReflection::GetLastClassInQueue()->GetName(), *Name)
-		}
-	}
-	
-	Collection.Reset();
-}
+	ClassQueue.Shrink();
+	MetaCollection.Shrink();
 
-void FDataReflection::DeclareMeta(FString Meta)
-{
-	if (!Meta.Contains(TEXT(",")))
+	TArray<UField*> ReadOnlyFields;
+	for (auto& MapPair : FieldsByHash)
 	{
-		Meta.TrimStartAndEndInline();
-		MetaCollection.Add(Meta);
-	}
-	else
-	{
-		TArray<FString> Collection;
-		Meta.ParseIntoArray(Collection, TEXT(","), true);
-		MetaCollection.Reserve(MetaCollection.Num() + Collection.Num());
-		for(FString& Item : Collection)
+		for (auto& Pair : MapPair.Value)
 		{
-			Item.TrimStartAndEndInline();
-			MetaCollection.Add(Item);
+			if (Pair.Value->Meta.bReadOnly)
+			{
+				ReadOnlyFields.Add(Pair.Value->Context->GetUE4Type());
+			}
 		}
 	}
-}
 
-void FDataReflection::ClearMeta()
-{
-	MetaCollection.Reset();
-}
-
-void FDataReflection::SetDataAccess(IPsDataAccess* DataAccessInterface)
-{
-	check(DataAccessInterface)
-	DataAccess = DataAccessInterface;
-}
-
-IPsDataAccess* FDataReflection::GetDataAccess()
-{
-	return DataAccess;
+	while (ReadOnlyFields.Num() > 0)
+	{
+		UField* UEField = ReadOnlyFields.Pop();
+		if (UClass* UEClass = Cast<UClass>(UEField))
+		{
+			auto Find = FieldsByHash.Find(UEClass);
+			if (Find)
+			{
+				auto& Map = *Find;
+				for (auto& Pair : Map)
+				{
+					if (!Pair.Value->Meta.bReadOnly)
+					{
+						FDataField* Field = const_cast<FDataField*>(Pair.Value.Get());
+						Field->Meta.bReadOnly = true;
+						if (Pair.Value->Context->IsData())
+						{
+							ReadOnlyFields.AddUnique(Pair.Value->Context->GetUE4Type());
+						}
+					}
+				}
+			}
+		}
+	}
 }

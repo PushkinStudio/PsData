@@ -1,1078 +1,982 @@
-// Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
 
 #pragma once
 
-#include "CoreMinimal.h"
 #include "PsData.h"
-#include "PsEvent.h"
-#include "PsDataAccess.h"
-#include "Async/Async.h"
-#include <type_traits>
+#include "PsDataEvent.h"
+#include "PsDataField.h"
+#include "PsDataFunctionLibrary.h"
+#include "PsDataMemory.h"
+#include "PsDataTraits.h"
+#include "PsDataUtils.h"
 
-enum class EDataFieldType : uint8
+#include "CoreMinimal.h"
+
+/***********************************
+ * FDataReflection
+ ***********************************/
+
+namespace FDataReflectionTools
 {
-	DFT_Data,
-	DFT_float,
-	DFT_int32,
-	DFT_String,
-	DFT_bool
-};
-
-enum class EDataContainerType : uint8
-{
-	DCT_None,
-	DCT_Array,
-	DCT_Map,
-};
-
-enum class EDataToken : uint8
-{
-	DT_Object,
-	DT_Array,
-	DT_Value
-};
-
-struct EDataMetaType
-{
-	static const FString Strict;
-	static const FString Event;
-	static const FString Bubbles;
-	static const FString Alias;
-	static const FString Link;
-	static const FString Deprecated;
-};
-
-/** see UPsData::Set{Type}Property UPsData::Get{Type}Property */
-/** see FDataReflectionTools::TypeHandler<{Type}> */
-/** see FDataReflection::GetTypeAsString */
-
-struct FDataMeta
-{
-	bool bStrict;
-	bool bEvent;
-	bool bBubbles;
-	bool bDeprecated;
-	bool bLink;
-	FString LinkPath;
-	FString Alias;
-	FString EventType;
-	
-	FDataMeta()
-	: bStrict(false)
-	, bEvent(false)
-	, bBubbles(false)
-	, bDeprecated(false)
-	, bLink(false)
-	, LinkPath()
-	, Alias()
-	, EventType()
-	{}
-};
-
-struct FDataFieldDescription
-{
-	EDataFieldType Type;
-	EDataContainerType ContainerType;
-	FString Name;
-	int32 Offset;
-	int32 Size;
-	UClass* Class;
-	FDataMeta Meta;
-	
-	FDataFieldDescription(const EDataFieldType& InType, const EDataContainerType& InContainerType, const FString& InName, const int32& InOffset, const int32& InSize, TArray<FString>& MetaCollection)
-	: Type(InType)
-	, ContainerType(InContainerType)
-	, Name(InName)
-	, Offset(InOffset)
-	, Size(InSize)
-	, Class(nullptr)
-	{
-		ParseMeta(MetaCollection);
-	}
-	
-	FDataFieldDescription(UClass* InClass, const EDataContainerType& InContainerType, const FString& InName, const int32& InOffset, const int32& InSize, TArray<FString>& MetaCollection)
-	: Type(EDataFieldType::DFT_Data)
-	, ContainerType(InContainerType)
-	, Name(InName)
-	, Offset(InOffset)
-	, Size(InSize)
-	, Class(InClass)
-	{
-		ParseMeta(MetaCollection);
-	}
-	
-	void ParseMeta(TArray<FString>& Collection);
-};
+template <class Class, typename Type>
+struct FDprop;
+struct FMeta;
+} // namespace FDataReflectionTools
 
 struct PSDATAPLUGIN_API FDataReflection
 {
 private:
-	static IPsDataAccess* DataAccess;
-	static TMap<UClass*, TMap<FString, FDataFieldDescription>> Fields;
+	static TMap<UClass*, TMap<FString, TSharedPtr<const FDataField>>> FieldsByName;
+	static TMap<UClass*, TMap<int32, TSharedPtr<const FDataField>>> FieldsByHash;
+
 	static TArray<UClass*> ClassQueue;
-	static TArray<FString> MetaCollection;
-	
-public:
-	static FString GetTypeAsString(EDataFieldType Type);
-	static FString GenerateGetFunctionName(const FDataFieldDescription& Field);
-	static FString GenerateSetFunctionName(const FDataFieldDescription& Field);
-	static FString GenerateChangePropertyEventTypeName(const FDataFieldDescription& Field);
-	
-	static void AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataFieldType Type, EDataContainerType ContainerType);
-	static void AddField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, UClass* Type, EDataContainerType ContainerType);
-	
+	static TArray<const char*> MetaCollection;
+
+	static bool bCompiled;
+
+protected:
+	template <class Class, typename Type>
+	friend struct FDataReflectionTools::FDprop;
+	friend struct FDataReflectionTools::FMeta;
+	friend class UPsData;
+
+	static void AddField(UClass* OwnerClass, const FString& Name, int32 Hash, FAbstractDataTypeContext* Context);
 	static void AddToQueue(UPsData* Instance);
 	static void RemoveFromQueue(UPsData* Instance);
-	static void Fill(UPsData* Instance);
 	static bool InQueue(UClass* StaticClass);
 	static bool InQueue();
 	static UClass* GetLastClassInQueue();
-	
-	static bool HasClass(const UClass* StaticClass);
-	static const TMap<FString, FDataFieldDescription>& GetFields(const UClass* StaticClass);
-	static void DeclareMeta(FString Meta);
+	static void PushMeta(const char* Meta);
 	static void ClearMeta();
-	
-	static void SetDataAccess(IPsDataAccess* DataAccessInterface);
-	static IPsDataAccess* GetDataAccess();
+	static void Fill(UPsData* Instance);
+
+public:
+	static TSharedPtr<const FDataField> GetFieldByName(UClass* OwnerClass, const FString& Name);
+	static TSharedPtr<const FDataField> GetFieldByHash(UClass* OwnerClass, int32 Hash);
+	static const TMap<FString, TSharedPtr<const FDataField>>& GetFields(const UClass* StaticClass);
+	static bool HasClass(const UClass* StaticClass);
+
+	static void Compile();
+};
+
+/***********************************
+ * Macro with comma
+ ***********************************/
+
+#define COMMA ,
+
+/***********************************
+ * Private macro for describe function
+ ***********************************/
+
+#define _DFUNC(__Library__, __Type__, __StringType__)                                                                                    \
+                                                                                                                                         \
+	virtual TSharedPtr<const FDataFieldFunctions> GetUFunctions() const override                                                         \
+	{                                                                                                                                    \
+		static TSharedPtr<const FDataFieldFunctions> Functions(                                                                          \
+			new FDataFieldFunctions(                                                                                                     \
+				__Library__::StaticClass()->FindFunctionByName(FName(*FString::Printf(TEXT("Get%sProperty"), TEXT(#__StringType__)))),   \
+				__Library__::StaticClass()->FindFunctionByName(FName(*FString::Printf(TEXT("Set%sProperty"), TEXT(#__StringType__)))))); \
+		return Functions;                                                                                                                \
+	}                                                                                                                                    \
+                                                                                                                                         \
+	virtual FAbstractDataMemory* AllocateMemory() const override                                                                         \
+	{                                                                                                                                    \
+		return new FDataMemory<__Type__>();                                                                                              \
+	}                                                                                                                                    \
+                                                                                                                                         \
+	virtual const FString& GetCppType() const override                                                                                   \
+	{                                                                                                                                    \
+		return FDataReflectionTools::FType<__Type__>::Type();                                                                            \
+	}                                                                                                                                    \
+                                                                                                                                         \
+	virtual const FString& GetCppContentType() const override                                                                            \
+	{                                                                                                                                    \
+		return FDataReflectionTools::FType<__Type__>::ContentType();                                                                     \
+	}                                                                                                                                    \
+                                                                                                                                         \
+	virtual uint32 GetHash() const override                                                                                              \
+	{                                                                                                                                    \
+		static constexpr const uint32 Hash = FDataReflectionTools::FType<__Type__>::Hash();                                              \
+		return Hash;                                                                                                                     \
+	}                                                                                                                                    \
+                                                                                                                                         \
+	virtual ~FDataTypeContext() {}
+
+/***********************************
+ * Base context
+ ***********************************/
+
+template <typename T>
+struct FDataTypeContext : public FAbstractDataTypeContext
+{
+	static_assert(FDataReflectionTools::TAlwaysFalse<T>::value, "Unsupported type");
+};
+
+/***********************************
+ * int32 context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<int32> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, int32, Int);
+};
+
+template <>
+struct FDataTypeContext<TArray<int32>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<int32>, IntArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, int32>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA int32>, IntMap);
+};
+
+/***********************************
+ * uint8 context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<uint8> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, uint8, Byte);
+};
+
+template <>
+struct FDataTypeContext<TArray<uint8>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<uint8>, ByteArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, uint8>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA uint8>, ByteMap);
+};
+
+/***********************************
+ * float context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<float> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, float, Float);
+};
+
+template <>
+struct FDataTypeContext<TArray<float>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<float>, FloatArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, float>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA float>, FloatMap);
+};
+
+/***********************************
+ * String context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<FString> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, FString, String);
+};
+
+template <>
+struct FDataTypeContext<TArray<FString>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<FString>, StringArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, FString>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FString>, StringMap);
+};
+
+/***********************************
+ * bool context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<bool> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, bool, Bool);
+};
+
+template <>
+struct FDataTypeContext<TArray<bool>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<bool>, BoolArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, bool>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA bool>, BoolMap);
+};
+
+/***********************************
+ * Data context
+ ***********************************/
+
+template <typename T>
+struct FDataTypeContext<T*> : public FAbstractDataTypeContext
+{
+	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
+	virtual bool IsData() const override
+	{
+		return true;
+	}
+
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		if (FAbstractDataTypeContext::IsA(RightContext))
+			return true;
+
+		if (RightContext->IsArray() || RightContext->IsMap())
+			return false;
+
+		UClass* RClass = Cast<UClass>(RightContext->GetUE4Type());
+		//if (RClass != nullptr && RClass->IsChildOf(T::StaticClass()))
+		if (RClass != nullptr && RClass->IsChildOf(UPsData::StaticClass()))
+			return true;
+		return false;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, T*, Data);
+};
+
+template <typename T>
+struct FDataTypeContext<TArray<T*>> : public FAbstractDataTypeContext
+{
+	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	virtual bool IsData() const override
+	{
+		return true;
+	}
+
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		if (FAbstractDataTypeContext::IsA(RightContext))
+			return true;
+
+		if (!RightContext->IsArray())
+			return false;
+
+		UClass* RClass = Cast<UClass>(RightContext->GetUE4Type());
+		//if (RClass != nullptr && RClass->IsChildOf(T::StaticClass()))
+		if (RClass != nullptr && RClass->IsChildOf(UPsData::StaticClass()))
+			return true;
+		return false;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<T*>, DataArray);
+};
+
+template <typename T>
+struct FDataTypeContext<TMap<FString, T*>> : public FAbstractDataTypeContext
+{
+	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	virtual bool IsData() const override
+	{
+		return true;
+	}
+
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		if (FAbstractDataTypeContext::IsA(RightContext))
+			return true;
+
+		if (!RightContext->IsMap())
+			return false;
+
+		UClass* RClass = Cast<UClass>(RightContext->GetUE4Type());
+		//if (RClass != nullptr && RClass->IsChildOf(T::StaticClass()))
+		if (RClass != nullptr && RClass->IsChildOf(UPsData::StaticClass()))
+			return true;
+		return false;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA T*>, DataMap);
+};
+
+/***********************************
+ * TSoftObjectPtr context
+ ***********************************/
+
+template <typename T>
+struct FDataTypeContext<TSoftObjectPtr<T>> : public FAbstractDataTypeContext
+{
+	static_assert(std::is_base_of<UObject, T>::value, "T must be only UObject");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TSoftObjectPtr<T>, SoftObject);
+};
+
+template <typename T>
+struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FAbstractDataTypeContext
+{
+	static_assert(std::is_base_of<UObject, T>::value, "T must be only UObject");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<TSoftObjectPtr<T>>, SoftObjectArray);
+};
+
+template <typename T>
+struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FAbstractDataTypeContext
+{
+	static_assert(std::is_base_of<UObject, T>::value, "T must be only UObject");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA TSoftObjectPtr<T>>, SoftObjectMap);
+};
+
+/***********************************
+ * FText context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<FText> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, FText, Text);
+};
+
+template <>
+struct FDataTypeContext<TArray<FText>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<FText>, TextArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, FText>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FText>, TextMap);
+};
+
+/***********************************
+ * Enum context
+ ***********************************/
+
+template <typename T>
+struct FEnumDataTypeContext : public FAbstractDataTypeContext
+{
+	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be describe by DESCRIBE_ENUM macros");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return FindObject<UEnum>(ANY_PACKAGE, *FDataReflectionTools::FType<T>::ContentType());
+	}
+
+	virtual TSharedPtr<const FDataFieldFunctions> GetUFunctions() const override
+	{
+		static TSharedPtr<const FDataFieldFunctions> Functions(
+			new FDataFieldFunctions(
+				UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(TEXT("GetByteProperty"))),
+				UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(TEXT("SetByteProperty")))));
+		return Functions;
+	}
+
+	virtual FAbstractDataMemory* AllocateMemory() const override
+	{
+		return new FDataMemory<T>();
+	}
+
+	virtual const FString& GetCppType() const override
+	{
+		return FDataReflectionTools::FType<T>::Type();
+	}
+
+	virtual const FString& GetCppContentType() const override
+	{
+		return FDataReflectionTools::FType<T>::ContentType();
+	}
+
+	virtual uint32 GetHash() const override
+	{
+		static constexpr const int32 Hash = FDataReflectionTools::FType<T>::Hash();
+		return Hash;
+	}
+
+	bool HasExtendedTypeCheck() const override
+	{
+		return true;
+	}
+
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		static constexpr const int32 Hash = FDataReflectionTools::FType<T>::Hash();
+		return Hash == RightContext->GetHash() || GetHash() == RightContext->GetHash();
+	}
 };
 
 namespace FDataReflectionTools
 {
-	template <typename T> struct TAlwaysFalse : std::false_type {};
-	
-	template <typename T> struct TRemovePointer
-	{
-		typedef T NonPoinerType;
-		
-		static T& Get(T& Value)
-		{
-			return Value;
-		}
-	};
-	
-	template <typename T> struct TRemovePointer<T*>
-	{
-		typedef T NonPoinerType;
-		
-		static T& Get(T*& Value)
-		{
-			return *Value;
-		}
-	};
-	
-	template<typename T>
-	struct TypeHandler
-	{
-		static_assert(TAlwaysFalse<T>::value, "Unsupported type");
-		
-		static void DeclareField(UClass* StaticClass, const FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType);
-		static bool SetValue(UPsData* Instance, T& Value, T& NewValue);
-		static void Rename(T& Value, const FString& Name);
-		static bool CheckType(EDataFieldType Type);
-		static bool CheckContainerType(EDataContainerType Type);
-	};
-	
-	template<>
-	struct TypeHandler<float>
-	{
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_float, ContainerType);
-		}
-		
-		static bool SetValue(UPsData* Instance, float& Value, float& NewValue)
-		{
-			if (Value == NewValue) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(float& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return EDataFieldType::DFT_float == Type;
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_None == Type;
-		}
-	};
 
-	template<>
-	struct TypeHandler<int32>
-	{
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_int32, ContainerType);
-		}
-		
-		static bool SetValue(UPsData* Instance, int32& Value, int32& NewValue)
-		{
-			if (Value == NewValue) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(int32& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return EDataFieldType::DFT_int32 == Type;
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_None == Type;
-		}
-	};
+template <typename T>
+FDataTypeContext<T>& GetContext()
+{
+	static const TSharedPtr<FDataTypeContext<T>> Context(new FDataTypeContext<T>());
+	return *Context.Get();
+}
 
-	template<>
-	struct TypeHandler<FString>
-	{
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_String, ContainerType);
-		}
-		
-		static bool SetValue(UPsData* Instance, FString& Value, FString& NewValue)
-		{
-			if (Value == NewValue) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(FString& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return EDataFieldType::DFT_String == Type;
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_None == Type;
-		}
-	};
-	
-	template<>
-	struct TypeHandler<bool>
-	{
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			FDataReflection::AddField(StaticClass, Name, Offset, Size, EDataFieldType::DFT_bool, ContainerType);
-		}
-		
-		static bool SetValue(UPsData* Instance, bool& Value, bool& NewValue)
-		{
-			if (Value == NewValue) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(bool& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return EDataFieldType::DFT_bool == Type;
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_None == Type;
-		}
-	};
-	
-	template<typename T>
-	struct TypeHandler<T*>
-	{
-		static_assert(std::is_base_of<UPsData, T>::value, "Pointer mast be only UPsData");
-		
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			FDataReflection::AddField(StaticClass, Name, Offset, Size, T::StaticClass(), ContainerType);
-		}
-		
-		static bool SetValue(UPsData* Instance, T*& Value, T*& NewValue)
-		{
-			if (Value == NewValue) return false;
-			
-			if (Value)
-			{
-				FPsDataFriend::RemoveChild(Instance, Value);
-			}
-			
-			Value = NewValue;
-			
-			if (NewValue)
-			{
-				FPsDataFriend::AddChild(Instance, NewValue);
-			}
-			
-			return true;
-		}
-		
-		static void Rename(T*& Value, const FString& Name)
-		{
-			FPsDataFriend::ChangeDataName(Value, Name);
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return EDataFieldType::DFT_Data == Type;
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_None == Type;
-		}
-	};
-	
-	template<typename T>
-	struct TypeHandler<TArray<T>>
-	{
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			TypeHandler<T>::DeclareField(StaticClass, Name, Offset, Size, EDataContainerType::DCT_Array);
-		}
-		
-		static bool SetValue(UPsData* Instance, TArray<T>& Value, TArray<T>& NewValue)
-		{
-			// TODO: need optimization
-			if (Value == NewValue) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(TArray<T>& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return TypeHandler<T>::CheckType(Type);
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_Array == Type;
-		}
-	};
-	
-	template<typename T>
-	struct TypeHandler<TArray<T*>>
-	{
-		static_assert(std::is_base_of<UPsData, T>::value, "Pointer mast be only UPsData");
-		
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			TypeHandler<T*>::DeclareField(StaticClass, Name, Offset, Size, EDataContainerType::DCT_Array);
-		}
-		
-		static bool SetValue(UPsData* Instance, TArray<T*>& Value, TArray<T*>& NewValue)
-		{
-			// TODO: need optimization
-			bool bChange = false;
-			TSet<T*> ValueSet(Value);
-			TSet<T*> NewValueSet(NewValue);
-			for(int32 i = 0; i < Value.Num(); ++i)
-			{
-				if (!NewValueSet.Contains(Value[i]))
-				{
-					FPsDataFriend::RemoveChild(Instance, Value[i]);
-					bChange = true;
-				}
-			}
-			
-			for(int32 i = 0; i < NewValue.Num(); ++i)
-			{
-				if (!ValueSet.Contains(NewValue[i]))
-				{
-					FPsDataFriend::AddChild(Instance, NewValue[i]);
-					bChange = true;
-				}
-			}
-			
-			if (!bChange) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(TArray<T*>& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return TypeHandler<T*>::CheckType(Type);
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_Array == Type;
-		}
-	};
-	
-	template<typename T>
-	struct TypeHandler<TMap<FString, T>>
-	{
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			TypeHandler<T>::DeclareField(StaticClass, Name, Offset, Size, EDataContainerType::DCT_Map);
-		}
-		
-		static bool SetValue(UPsData* Instance, TMap<FString, T>& Value, TMap<FString, T>& NewValue)
-		{
-			// TODO: need optimization
-			bool bChange = false;
-			if (Value.Num() == NewValue.Num())
-			{
-				for(auto& Pair : Value)
-				{
-					if (T* ValueFromMap = NewValue.Find(Pair.Key))
-					{
-						if (*ValueFromMap != Pair.Value)
-						{
-							bChange = true;
-							break;
-						}
-					}
-					else
-					{
-						bChange = true;
-						break;
-					}
-				}
-			}
-			else
-			{
-				bChange = true;
-			}
-			
-			if (!bChange) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(TMap<FString, T>& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return TypeHandler<T>::CheckType(Type);
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_Map == Type;
-		}
-	};
-	
-	template<typename T>
-	struct TypeHandler<TMap<FString, T*>>
-	{
-		static_assert(std::is_base_of<UPsData, T>::value, "Pointer mast be only UPsData");
-		
-		static void DeclareField(UClass* StaticClass, FString& Name, int32 Offset, int32 Size, EDataContainerType ContainerType)
-		{
-			TypeHandler<T*>::DeclareField(StaticClass, Name, Offset, Size, EDataContainerType::DCT_Map);
-		}
-		
-		static bool SetValue(UPsData* Instance, TMap<FString, T*>& Value, TMap<FString, T*>& NewValue)
-		{
-			// TODO: need optimization
-			bool bChange = false;
-			
-			TSet<T*> ValueSet;
-			ValueSet.Reserve(Value.Num());
-			for(auto& Pair : Value)
-			{
-				ValueSet.Add(Pair.Value);
-			}
-			
-			TSet<T*> NewValueSet;
-			NewValueSet.Reserve(NewValue.Num());
-			for(auto& Pair : NewValue)
-			{
-				NewValueSet.Add(Pair.Value);
-			}
-			
-			for(auto& Pair : Value)
-			{
-				if (!NewValueSet.Contains(Pair.Value))
-				{
-					FPsDataFriend::RemoveChild(Instance, Pair.Value);
-					bChange = true;
-				}
-			}
-			
-			for(auto& Pair : NewValue)
-			{
-				if (!ValueSet.Contains(Pair.Value))
-				{
-					FPsDataFriend::AddChild(Instance, Pair.Value);
-					bChange = true;
-				}
-				if (Pair.Value->GetName() != Pair.Key)
-				{
-					FPsDataFriend::ChangeDataName(Pair.Value, Pair.Key);
-					bChange = true;
-				}
-			}
-			
-			if (!bChange) return false;
-			Value = NewValue;
-			return true;
-		}
-		
-		static void Rename(TMap<FString, T*>& Value, const FString& Name)
-		{
-			
-		}
-		
-		static bool CheckType(EDataFieldType Type)
-		{
-			return TypeHandler<T*>::CheckType(Type);
-		}
-		
-		static bool CheckContainerType(EDataContainerType Type)
-		{
-			return EDataContainerType::DCT_Map == Type;
-		}
-	};
+/***********************************
+ * CHECK TYPE BY CONTEXT
+ ***********************************/
 
-	template<typename T>
-	void DeclareField(UClass* StaticClass, FString Name, int32 Offset, int32 Size)
+template <typename T>
+bool CheckType(FAbstractDataTypeContext* LeftContext, FAbstractDataTypeContext* RightContext)
+{
+	if (LeftContext == RightContext)
 	{
-		if (!FDataReflection::InQueue(StaticClass))
-		{
-			if (FDataReflection::InQueue())
-			{
-				UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s another class is active: %s"), *StaticClass->GetName(), *Name, *FDataReflection::GetLastClassInQueue()->GetName());
-			}
-			else
-			{
-				UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s because queue is empty"), *StaticClass->GetName(), *Name);
-			}
-			return;
-		}
-		
-		UE_LOG(LogData, Verbose, TEXT(" + %s::%s"), *StaticClass->GetName(), *Name)
-		TypeHandler<T>::DeclareField(StaticClass, Name, Offset, Size, EDataContainerType::DCT_None);
+		return true;
 	}
-	
-	/***********************************
-	 * UNSAFE SET/GET
-	 ***********************************/
-	
-	template<typename T>
-	bool UnsafeSet(UPsData* Instance, T& Value, T& NewValue)
+	return LeftContext->IsA(RightContext);
+}
+
+/***********************************
+ * GET PROPERTY VALUE BY FIELD
+ ***********************************/
+
+template <typename T>
+bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, T*& OutValue)
+{
+	if (CheckType<T>(&GetContext<T>(), Field->Context))
 	{
-		return TypeHandler<T>::SetValue(Instance, Value, NewValue);
+		return UnsafeGet(Instance, Field, OutValue);
 	}
-	
-	template<typename T>
-	T* UnsafeGet(UPsData* Instance, int32 Offset)
+	else
 	{
-		return (T*)((char*)Instance + Offset);
-	}
-	
-	/***********************************
-	 * SET
-	 ***********************************/
-	
-	template<typename T>
-	void Set(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset, T& NewValue, bool bCreate = false)
-	{
-		UE_LOG(LogData, Fatal, TEXT("Not supported"));
-	}
-	
-	template<typename T>
-	void Set(UPsData* Instance, const FString& Name, T& NewValue, bool bCreate = false)
-	{
-		IPsDataAccess* DataAccess = FDataReflection::GetDataAccess();
-		if (DataAccess != nullptr && !DataAccess->CanModify())
-		{
-			UE_LOG(LogData, Fatal, TEXT("You can't edit property (see IPsDataAccess::CanModify())"))
-		}
-		
-		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
-		if (Find)
-		{
-			const FDataFieldDescription& Field = *Find;
-			if (Field.Meta.bStrict && !Instance->HasAnyFlags(EObjectFlags::RF_NeedInitialization))
-			{
-				UE_LOG(LogData, Error, TEXT("Can't set strict %s::%s property"), *Instance->GetClass()->GetName(), *Field.Name);
-				return;
-			}
-			
-			if (TypeHandler<T>::CheckType(Field.Type) && TypeHandler<T>::CheckContainerType(Field.ContainerType))
-			{
-				T& Value = *UnsafeGet<T>(Instance, Field.Offset);
-				if (UnsafeSet<T>(Instance, Value, NewValue))
-				{
-					TypeHandler<T>::Rename(Value, Name);
-					if (Field.Meta.bEvent)
-					{
-						Instance->Broadcast(UPsEvent::ConstructEvent(FDataReflection::GenerateChangePropertyEventTypeName(Field), Field.Meta.bBubbles));
-					}
-					
-					if (!FPsDataFriend::IsChanged(Instance))
-					{
-						FPsDataFriend::SetIsChanged(Instance, true);
-						TWeakObjectPtr<UPsData> InstanceWeakPtr(Instance);
-						AsyncTask(ENamedThreads::GameThread, [InstanceWeakPtr]()
-						{
-							if (InstanceWeakPtr.IsValid())
-							{
-								FPsDataFriend::SetIsChanged(InstanceWeakPtr.Get(), false);
-								InstanceWeakPtr->Broadcast(UPsEvent::ConstructEvent(TEXT("Changed"), false));
-							}
-						});
-					}
-				}
-			}
-			else
-			{
-				UE_LOG(LogData, Error, TEXT("Property %s::%s has another type"), *Instance->GetClass()->GetName(), *Field.Name);
-			}
-			return;
-		}
-		else
-		{
-			TArray<FString> Path;
-			Name.ParseIntoArray(Path, TEXT("."));
-			if (Path.Num() > 1)
-			{
-				Set<T>(Instance, Path, 0, NewValue, bCreate);
-				return;
-			}
-		}
-		
-		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
-	}
-	
-	/***********************************
-	 * GET
-	 ***********************************/
-	
-	template<typename T>
-	bool Get(UPsData* Instance, const FDataFieldDescription& Field, T*& OutValue)
-	{
-		check(Instance);
-		
-		if (TypeHandler<T>::CheckType(Field.Type) && TypeHandler<T>::CheckContainerType(Field.ContainerType))
-		{
-			OutValue = UnsafeGet<T>(Instance, Field.Offset);
-			return true;
-		}
-		else
-		{
-			OutValue = nullptr;
-			
-			UE_LOG(LogData, Error, TEXT("Property %s::%s has another type"), *Instance->GetClass()->GetName(), *Field.Name);
-			return false;
-		}
-		
 		OutValue = nullptr;
-		
-		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Field.Name);
+		UE_LOG(LogData, Fatal, TEXT("Property %s::%s has type \"%s\" can't cast to \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *Field->Context->GetCppType(), *GetContext<T>().GetCppType());
 		return false;
 	}
-	
-	template<typename T>
-	bool Get(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset, int32 PathLength, T*& OutValue)
+}
+
+/***********************************
+ * GET PROPERTY VALUE BY FIELD (for nested collections)
+ ***********************************/
+
+template <typename T>
+bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TArray<T>>*& OutValue)
+{
+	OutValue = nullptr;
+	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
+	return false;
+}
+
+template <typename T>
+bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TMap<FString, T>>*& OutValue)
+{
+	OutValue = nullptr;
+	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
+	return false;
+}
+
+template <typename T>
+bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FString, TArray<T>>*& OutValue)
+{
+	OutValue = nullptr;
+	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
+	return false;
+}
+
+template <typename T>
+bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FString, TMap<FString, T>>*& OutValue)
+{
+	OutValue = nullptr;
+	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
+	return false;
+}
+
+/***********************************
+ * GET PROPERTY VALUE BY HASH
+ ***********************************/
+
+template <typename T>
+bool GetByHash(UPsData* Instance, int32 Hash, T*& OutValue)
+{
+	auto Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
+	if (Field.IsValid())
 	{
-		const int32 Delta = PathLength - PathOffset;
-		OutValue = nullptr;
-		
-		check(PathLength <= Path.Num());
-		check(Delta > 0);
-		check(Instance);
-		
-		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Path[PathOffset]);
-		if (Find)
+		return GetByField(Instance, Field, OutValue);
+	}
+
+	UE_LOG(LogData, Error, TEXT("Can't find property in %s by hash: 0x%08x"), *Instance->GetClass()->GetName(), Hash);
+	return false;
+}
+
+/***********************************
+ * GET PROPERTY VALUE BY PATH
+ ***********************************/
+
+template <typename T>
+bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset, int32 PathLength, T*& OutValue)
+{
+	const int32 Delta = PathLength - PathOffset;
+	OutValue = nullptr;
+
+	check(PathLength <= Path.Num());
+	check(Delta > 0);
+
+	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Path[PathOffset]);
+	if (Find)
+	{
+		auto Field = *Find;
+		if (Delta == 1)
 		{
-			const FDataFieldDescription& Field = *Find;
-			if (Delta == 1)
+			return GetByField(Instance, Field, OutValue);
+		}
+		else if (Delta > 1)
+		{
+			const bool bArray = Field->Context->IsArray();
+			const bool bMap = Field->Context->IsMap();
+			const bool bData = Field->Context->IsData();
+
+			if (!bArray && !bMap)
 			{
-				return Get<T>(Instance, Field, OutValue);
-			}
-			else if (Delta > 1)
-			{
-				if (Field.ContainerType == EDataContainerType::DCT_None)
+				if (bData)
 				{
-					if (Field.Type == EDataFieldType::DFT_Data)
+					UPsData** DataPtr = nullptr;
+					if (GetByPath<UPsData*>(Instance, Path, PathOffset, PathOffset + 1, DataPtr))
 					{
-						UPsData** DataPtr = nullptr;
-						if (Get<UPsData*>(Instance, Path, PathOffset, PathOffset + 1, DataPtr))
+						UPsData* Data = *DataPtr;
+						if (Data)
 						{
-							UPsData* Data = *DataPtr;
-							if (Data)
-							{
-								return Get<T>(Data, Path, PathOffset + 1, Path.Num(), OutValue);
-							}
-							else
-							{
-								UE_LOG(LogData, Error, TEXT("Property %s::%s is null"), *Instance->GetClass()->GetName(), *Field.Name);
-								return false;
-							}
+							return GetByPath<T>(Data, Path, PathOffset + 1, Path.Num(), OutValue);
 						}
 						else
 						{
+							UE_LOG(LogData, Error, TEXT("Property %s::%s is null"), *Instance->GetClass()->GetName(), *Field->Name);
 							return false;
 						}
 					}
 					else
 					{
-						UE_LOG(LogData, Error, TEXT("Property %s::%s doesn't contain children"), *Instance->GetClass()->GetName(), *Field.Name);
 						return false;
 					}
 				}
-				else if (Field.ContainerType == EDataContainerType::DCT_Array)
+				else
 				{
-					if (Field.Type == EDataFieldType::DFT_Data)
+					UE_LOG(LogData, Error, TEXT("Property %s::%s doesn't contain children"), *Instance->GetClass()->GetName(), *Field->Name);
+					return false;
+				}
+			}
+			else if (bArray)
+			{
+				if (bData)
+				{
+					TArray<UPsData*>* ArrayPtr = nullptr;
+					if (GetByField(Instance, Field, ArrayPtr))
 					{
-						TArray<UPsData*>* ArrayPtr = nullptr;
-						if (Get<TArray<UPsData*>>(Instance, Field, ArrayPtr))
+						TArray<UPsData*>& Array = *ArrayPtr;
+						const FString& StringArrayIndex = Path[PathOffset + 1];
+						if (StringArrayIndex.IsNumeric())
 						{
-							TArray<UPsData*>& Array = *ArrayPtr;
-							const FString& StringArrayIndex = Path[PathOffset + 1];
-							if (StringArrayIndex.IsNumeric())
+							const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
+							if (Array.IsValidIndex(ArrayIndex))
 							{
-								const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
-								if (Array.IsValidIndex(ArrayIndex))
+								if (Array[ArrayIndex])
 								{
-									if (Array[ArrayIndex])
-									{
-										return Get<T>(Array[ArrayIndex], Path, PathOffset + 2, Path.Num(), OutValue);
-									}
-									else
-									{
-										UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is null"), *Instance->GetClass()->GetName(), *Field.Name, ArrayIndex);
-										return false;
-									}
+									return GetByPath<T>(Array[ArrayIndex], Path, PathOffset + 2, Path.Num(), OutValue);
 								}
 								else
 								{
-									UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field.Name, ArrayIndex);
+									UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is null"), *Instance->GetClass()->GetName(), *Field->Name, ArrayIndex);
 									return false;
 								}
 							}
 							else
 							{
-								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field.Name, *StringArrayIndex);
+								UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field->Name, ArrayIndex);
 								return false;
 							}
 						}
 						else
 						{
+							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field->Name, *StringArrayIndex);
 							return false;
 						}
 					}
 					else
 					{
-						TArray<T>* ArrayPtr = nullptr;
-						if (Get<TArray<T>>(Instance, Field, ArrayPtr))
-						{
-							TArray<T>& Array = *ArrayPtr;
-							const FString& StringArrayIndex = Path[PathOffset + 1];
-							if (StringArrayIndex.IsNumeric())
-							{
-								const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
-								if (Array.IsValidIndex(ArrayIndex))
-								{
-									OutValue = &Array[ArrayIndex];
-									return true;
-								}
-								else
-								{
-									UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field.Name, ArrayIndex);
-									return false;
-								}
-							}
-							else
-							{
-								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field.Name, *StringArrayIndex);
-								return false;
-							}
-						}
-						else
-						{
-							return false;
-						}
+						return false;
 					}
 				}
-				else if (Field.ContainerType == EDataContainerType::DCT_Map)
+				else
 				{
-					if (Field.Type == EDataFieldType::DFT_Data)
+					TArray<T>* ArrayPtr = nullptr;
+					if (GetByField(Instance, Field, ArrayPtr))
 					{
-						TMap<FString, UPsData*>* MapPtr = nullptr;
-						if (Get<TMap<FString, UPsData*>>(Instance, Field, MapPtr))
+						TArray<T>& Array = *ArrayPtr;
+						const FString& StringArrayIndex = Path[PathOffset + 1];
+						if (StringArrayIndex.IsNumeric())
 						{
-							TMap<FString, UPsData*>& Map = *MapPtr;
-							const FString& Key = Path[PathOffset + 1];
-							UPsData** DataPtr = Map.Find(Key);
-							if (DataPtr)
+							const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
+							if (Array.IsValidIndex(ArrayIndex))
 							{
-								return Get<T>(*DataPtr, Path, PathOffset + 2, Path.Num(), OutValue);
-							}
-							else
-							{
-								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field.Name, *Key);
-								return false;
-							}
-
-						}
-						else
-						{
-							return false;
-						}
-					}
-					else
-					{
-						TMap<FString, T>* MapPtr = nullptr;
-						if (Get<TMap<FString, T>>(Instance, Field, MapPtr))
-						{
-							TMap<FString, T>& Map = *MapPtr;
-							const FString& Key = Path[PathOffset + 1];
-							T* ValuePtr = Map.Find(Key);
-							if (ValuePtr)
-							{
-								OutValue = ValuePtr;
+								OutValue = &Array[ArrayIndex];
 								return true;
 							}
 							else
 							{
-								UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field.Name, *Key);
+								UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field->Name, ArrayIndex);
 								return false;
 							}
-							
 						}
 						else
 						{
+							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field->Name, *StringArrayIndex);
 							return false;
 						}
+					}
+					else
+					{
+						return false;
+					}
+				}
+			}
+			else if (bMap)
+			{
+				if (bData)
+				{
+					TMap<FString, UPsData*>* MapPtr = nullptr;
+					if (GetByField(Instance, Field, MapPtr))
+					{
+						TMap<FString, UPsData*>& Map = *MapPtr;
+						const FString& Key = Path[PathOffset + 1];
+						UPsData** DataPtr = Map.Find(Key);
+						if (DataPtr)
+						{
+							return GetByPath<T>(*DataPtr, Path, PathOffset + 2, Path.Num(), OutValue);
+						}
+						else
+						{
+							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field->Name, *Key);
+							return false;
+						}
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					TMap<FString, T>* MapPtr = nullptr;
+					if (GetByField(Instance, Field, MapPtr))
+					{
+						TMap<FString, T>& Map = *MapPtr;
+						const FString& Key = Path[PathOffset + 1];
+						T* ValuePtr = Map.Find(Key);
+						if (ValuePtr)
+						{
+							OutValue = ValuePtr;
+							return true;
+						}
+						else
+						{
+							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field->Name, *Key);
+							return false;
+						}
+					}
+					else
+					{
+						return false;
 					}
 				}
 			}
 		}
-		else
-		{
-			UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Path[PathOffset]);
-			return false;
-		}
-		
-		UE_LOG(LogData, Error, TEXT("Unknown error"));
+	}
+	else
+	{
+		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Path[PathOffset]);
 		return false;
 	}
-	
-	template<typename T>
-	bool Get(UPsData* Instance, const FString& Name, T*& OutValue)
-	{
-		check(Instance);
-		
-		const FDataFieldDescription* Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
-		if (Find)
-		{
-			return Get<T>(Instance, *Find, OutValue);
-		}
-		else
-		{
-			TArray<FString> Path;
-			Name.ParseIntoArray(Path, TEXT("."));
-			if (Path.Num() > 1)
-			{
-				return Get<T>(Instance, Path, 0, Path.Num(), OutValue);
-			}
-		}
-		
-		OutValue = nullptr;
-		
-		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
-		return false;
-	}
-	
-	/***********************************
-	 * Link Type trait
-	 ***********************************/
-	
-	template <typename T, typename K> struct TLinkType
-	{
-		typedef K ResultType;
-		
-		static void Get(UPsData* Instance, const FString& Property, const FString& Path)
-		{
-			static_assert(TAlwaysFalse<T>::value, "Unsupported type");
-		}
-	};
-	
-	template <typename K> struct TLinkType<FString, K>
-	{
-		typedef K* ResultType;
 
-		static ResultType Get(UPsData* Instance, const FString& Path, const FString& Property)
-		{
-			return Cast<K>(Instance->GetDataProperty_Link(Path, Property));
-		}
-	};
-
-	template <typename K> struct TLinkType<TArray<FString>, K>
-	{
-		typedef TArray<K*> ResultType;
-
-		static ResultType Get(UPsData* Instance, const FString& Path, const FString& Property)
-		{
-			TArray<UPsData*> Array = Instance->GetDataArrayProperty_Link(Path, Property);
-			ResultType ResultArray;
-			for(UPsData* Data : Array)
-			{
-				ResultArray.Add(Cast<K>(Data));
-			}
-			return ResultArray;
-		}
-	};
-	
+	return false;
 }
 
-/** Private macros */
+/***********************************
+ * GET PROPERTY VALUE BY NAME
+ ***********************************/
 
-#define _TOKENPASTE(x, y, z) x ## y ## z
-#define _TOKENPASTE2(x, y, z) _TOKENPASTE(x, y, z)
-#define _UNIQUE(prefix, postfix) _TOKENPASTE2(prefix, __LINE__, postfix)
-
-/** Public macros */
-
-#define COMMA ,
-
-#define DMETA(...) \
-private: \
-	struct _UNIQUE(__zmeta_, _struct) { \
-		_UNIQUE(__zmeta_, _struct)() { \
-			if (FDataReflection::InQueue()) \
-				FDataReflection::DeclareMeta(TEXT(#__VA_ARGS__)); \
-		} \
-} _UNIQUE(__zmeta_, _inst);
-
-/** DPROP */
-
-#define DPROP(Class, Type, Name) \
-protected: \
-	Type Name; \
-	\
-public: \
-	const typename FDataReflectionTools::TRemovePointer< Type >::NonPoinerType& Get##Name##Ref() \
-	{ \
-		return FDataReflectionTools::TRemovePointer< Type >::Get(Name); \
-	} \
-	\
-	Type Get##Name() const \
-	{ \
-		return Name; \
-	} \
-	\
-	void Set##Name(Type& Value) \
-	{ \
-		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
-	} \
-	\
-	void Set##Name(Type&& Value) \
-	{ \
-		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
-	} \
-	\
-private: \
-	struct _UNIQUE(__zprop_, _struct) { \
-		_UNIQUE(__zprop_, _struct)() { \
-			if (FDataReflection::InQueue(Class::StaticClass())) \
-				FDataReflectionTools::DeclareField<Type>(Class::StaticClass(), TEXT(#Name), offsetof(Class, Name), sizeof(Type)); \
-			FDataReflection::ClearMeta(); \
-		} \
-	} _UNIQUE(__zprop_, _inst);
-
-/** DPROP with link */
-
-#define DPROP_LINK(Class, Type, Name, Path, ReturnType) \
-	static_assert(std::is_base_of<UPsData, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::value, "Only UPsData can be return type"); \
-	static_assert(std::is_base_of<FString, Type>::value || std::is_base_of<TArray<FString>, Type>::value, "Only FString or TArray<FString> property can be linked"); \
-	\
-	DMETA(Link=Type::Path::ReturnType) \
-	DPROP(Class, Type, Name) \
-	\
-public: \
-	FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::ResultType Get##Name##_Link() \
-	{ \
-		return FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::Get(this, TEXT(#Name), TEXT(#Path)); \
+template <typename T>
+bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
+{
+	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
+	if (Find)
+	{
+		return GetByField(Instance, *Find, OutValue);
+	}
+	else
+	{
+		TArray<FString> Path;
+		Name.ParseIntoArray(Path, TEXT("."));
+		if (Path.Num() > 1)
+		{
+			return GetByPath<T>(Instance, Path, 0, Path.Num(), OutValue);
+		}
 	}
 
-/** DPROP deprecated */
+	OutValue = nullptr;
 
-#define DPROP_DEPRECATED(Class, Type, Name) \
-	DMETA(Deprecated) \
-protected: \
-	DEPRECATED(0, "Property was marked as deprecated") \
-	Type Name; \
-	\
-public: \
-	DEPRECATED(0, "Property was marked as deprecated") \
-	Type Get##Name() const \
-	{ \
-		return Name; \
-	} \
-	\
-	DEPRECATED(0, "Property was marked as deprecated") \
-	void Set##Name(Type& Value) \
-	{ \
-		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
-	} \
-	\
-	DEPRECATED(0, "Property was marked as deprecated") \
-	void Set##Name(Type&& Value) \
-	{ \
-		FDataReflectionTools::Set<Type>(this, TEXT(#Name), Value); \
-	} \
-	\
-private: \
-	struct _UNIQUE(__zprop_, _struct) { \
-		_UNIQUE(__zprop_, _struct)() { \
-			if (FDataReflection::InQueue(Class::StaticClass())) \
-				FDataReflectionTools::DeclareField<Type>(Class::StaticClass(), TEXT(#Name), offsetof(Class, Name), sizeof(Type)); \
-			FDataReflection::ClearMeta(); \
-		} \
-	} _UNIQUE(__zprop_, _inst);
+	UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
+	return false;
+}
 
-#define DPROP_LINK_DEPRECATED(Class, Type, Name, Path, ReturnType) \
-	static_assert(std::is_base_of<UPsData, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::value, "Only UPsData can be return type"); \
-	static_assert(std::is_base_of<FString, Type>::value || std::is_base_of<TArray<FString>, Type>::value, "Only FString or TArray<FString> property can be linked"); \
-	\
-	DMETA(Link=Type::Path::ReturnType) \
-	DPROP_DEPRECATED(Class, Type, Name) \
-	\
-public: \
-	DEPRECATED(0, "Property was marked as deprecated") \
-	FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::ResultType Get##Name##_Link()  \
-	{ \
-		return FDataReflectionTools::TLinkType<Type, FDataReflectionTools::TRemovePointer<ReturnType>::NonPoinerType>::Get(this, TEXT(#Name), TEXT(#Path)); \
+/***********************************
+ * SET PROPERTY VALUE BY FIELD
+ ***********************************/
+
+template <typename T>
+void SetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
+{
+	if (Field->Meta.bStrict && !Instance->HasAnyFlags(EObjectFlags::RF_NeedInitialization))
+	{
+		UE_LOG(LogData, Error, TEXT("Can't set strict %s::%s property"), *Instance->GetClass()->GetName(), *Field->Name);
+		return;
 	}
 
-#define DMAP(Class, Type, Name) DPROP(Class, TMap<FString COMMA Type>, Name)
+	if (CheckType<T>(Field->Context, &GetContext<T>()))
+	{
+		UnsafeSet<T>(Instance, Field, NewValue);
+	}
+	else
+	{
+		UE_LOG(LogData, Fatal, TEXT("Property %s::%s has type (%s) can't cast from (%s)"), *Instance->GetClass()->GetName(), *Field->Name, *Field->Context->GetCppType(), *GetContext<T>().GetCppType());
+	}
+}
 
-#define DMAP_DEPRECATED(Class, Type, Name) DPROP_DEPRECATED(Class, TMap<FString COMMA Type>, Name)
+/***********************************
+ * SET PROPERTY VALUE BY HASH
+ ***********************************/
+
+template <typename T>
+void SetByHash(UPsData* Instance, int32 Hash, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
+{
+	auto Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
+	if (Field.IsValid())
+	{
+		SetByField<T>(Instance, Field, NewValue);
+		return;
+	}
+
+	UE_LOG(LogData, Error, TEXT("Can't find property in %s by hash: 0x%08x"), *Instance->GetClass()->GetName(), Hash);
+}
+
+/***********************************
+ * SET PROPERTY VALUE BY NAME
+ ***********************************/
+
+template <typename T>
+void SetByName(UPsData* Instance, const FString& Name, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
+{
+	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
+	if (Find)
+	{
+		SetByField<T>(Instance, *Find, NewValue);
+	}
+	else
+	{
+		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
+	}
+}
+} // namespace FDataReflectionTools
+
+/***********************************
+ * Cast helper
+ ***********************************/
+
+namespace FDataReflectionTools
+{
+template <typename T>
+struct FPsDataCastHelper
+{
+	static T* Cast(UPsData* Data)
+	{
+		if (Data != nullptr && Data->GetClass()->IsChildOf(T::StaticClass()))
+		{
+			return static_cast<T*>(Data);
+		}
+		return nullptr;
+	}
+
+	static TArray<T*> Cast(TArray<UPsData*> Array)
+	{
+		TArray<T*> Result;
+		for (auto Element : Array)
+		{
+			Result.Add(Cast(Element));
+		}
+		return Result;
+	}
+};
+} // namespace FDataReflectionTools
+
+/***********************************
+ * FDProp
+ ***********************************/
+
+namespace FDataReflectionTools
+{
+template <class Class, typename Type>
+struct FDprop
+{
+	FDprop(const char* Name, const int32 Hash)
+	{
+		if (FDataReflection::InQueue(Class::StaticClass()))
+		{
+			FDataReflection::AddField(Class::StaticClass(), FString(Name), Hash, &FDataReflectionTools::GetContext<Type>());
+			FDataReflection::ClearMeta();
+		}
+	}
+};
+} // namespace FDataReflectionTools
+
+/***********************************
+ * FDMeta
+ ***********************************/
+
+namespace FDataReflectionTools
+{
+struct FMeta
+{
+	FMeta(const char* Meta)
+	{
+		if (FDataReflection::InQueue())
+		{
+			FDataReflection::PushMeta(Meta);
+		}
+	}
+};
+} // namespace FDataReflectionTools
+
+/***********************************
+ * Private macros
+ ***********************************/
+
+#define _TOKENPASTE(x, y) x##y
+#define _TOKENPASTE2(x, y) _TOKENPASTE(x, y)
+#define _UNIC(name) _TOKENPASTE2(__z##name, __LINE__)
+#define _REFLECT(__Class__, __Type__, __Name__)                                        \
+private:                                                                               \
+	static constexpr const int32 _UNIC(hash) = FDataReflectionTools::crc32(#__Name__); \
+	FDataReflectionTools::FDprop<__Class__, __Type__> _UNIC(prop) = FDataReflectionTools::FDprop<__Class__, __Type__>(#__Name__, _UNIC(hash));

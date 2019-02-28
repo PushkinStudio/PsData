@@ -1,3 +1,5 @@
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
+
 using UnrealBuildTool;
 
 public class PsDataPlugin : ModuleRules
@@ -23,6 +25,7 @@ public class PsDataPlugin : ModuleRules
 				"Slate",
 				"SlateCore",
 				"Json",
+				"JsonUtilities",
 			}
 		);
 	}

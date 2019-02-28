@@ -1,5 +1,7 @@
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
 
 #include "PsDataEditorPlugin.h"
+
 #include "Pins/PsDataPinFactory.h"
 #include "PsData.h"
 
@@ -15,9 +17,8 @@ void FPsDataEditorPluginModule::StartupModule()
 
 void FPsDataEditorPluginModule::ShutdownModule()
 {
-
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FPsDataEditorPluginModule, PsDataEditorPlugin)

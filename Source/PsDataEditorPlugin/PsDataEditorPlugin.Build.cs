@@ -1,3 +1,5 @@
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
+
 using System.IO;
 
 namespace UnrealBuildTool.Rules
@@ -21,7 +23,8 @@ namespace UnrealBuildTool.Rules
 					"CoreUObject",
 					"Engine",
 					"PsDataEditorPlugin",
-					"PsDataPlugin"
+					"PsDataPlugin",
+					"Json",
 				}
 			);
 

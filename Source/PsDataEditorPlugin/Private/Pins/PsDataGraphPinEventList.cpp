@@ -1,6 +1,7 @@
-// Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
 
-#include "Pins/PsGraphPinEventList.h"
+#include "Pins/PsDataGraphPinEventList.h"
+
 #include "ScopedTransaction.h"
 
 FString GenerateName(TSharedPtr<FEventPath> Event)
@@ -12,27 +13,27 @@ FString GenerateName(TSharedPtr<FEventPath> Event)
 	return *FString::Printf(TEXT("%s (%s)"), *Event->Type, *Event->Path);
 }
 
-void SPsGraphPinEventList::Construct(const FArguments& InArgs, UEdGraphPin* InGraphPinObj, const TArray<TSharedPtr<FEventPath>>& InEventList)
+void SPsDataGraphPinEventList::Construct(const FArguments& InArgs, UEdGraphPin* InGraphPinObj, const TArray<TSharedPtr<FEventPath>>& InEventList)
 {
 	EventList = InEventList;
-	
-	for(auto EventPtr : EventList)
+
+	for (auto EventPtr : EventList)
 	{
 		NameList.Add(MakeShareable(new FName(*GenerateName(EventPtr))));
 	}
-	
+
 	SGraphPin::Construct(SGraphPin::FArguments(), InGraphPinObj);
 }
 
-TSharedRef<SWidget>	SPsGraphPinEventList::GetDefaultValueWidget()
+TSharedRef<SWidget> SPsDataGraphPinEventList::GetDefaultValueWidget()
 {
 	TSharedPtr<FName> CurrentlySelectedName;
-	
+
 	if (GraphPinObj)
 	{
 		// Preserve previous selection, or set to first in list
 		FString PreviousSelection = GraphPinObj->GetDefaultAsString();
-		for(int32 i = 0; i < EventList.Num(); ++i)
+		for (int32 i = 0; i < EventList.Num(); ++i)
 		{
 			auto EventPtr = EventList[i];
 			if (PreviousSelection == EventPtr->Type)
@@ -40,29 +41,28 @@ TSharedRef<SWidget>	SPsGraphPinEventList::GetDefaultValueWidget()
 				CurrentlySelectedName = NameList[i];
 				break;
 			}
-
 		}
 	}
-	
+
 	// Create widget
 	return SAssignNew(ComboBox, SNameComboBox)
-	.ContentPadding(FMargin(6.0f, 2.0f))
-	.OptionsSource(&NameList)
-	.InitiallySelectedItem(CurrentlySelectedName)
-	.OnSelectionChanged(this, &SPsGraphPinEventList::ComboBoxSelectionChanged)
-	.Visibility(this, &SGraphPin::GetDefaultValueVisibility);
+		.ContentPadding(FMargin(6.0f, 2.0f))
+		.OptionsSource(&NameList)
+		.InitiallySelectedItem(CurrentlySelectedName)
+		.OnSelectionChanged(this, &SPsDataGraphPinEventList::ComboBoxSelectionChanged)
+		.Visibility(this, &SGraphPin::GetDefaultValueVisibility);
 }
 
-void SPsGraphPinEventList::ComboBoxSelectionChanged(TSharedPtr<FName> NameItem, ESelectInfo::Type SelectInfo)
+void SPsDataGraphPinEventList::ComboBoxSelectionChanged(TSharedPtr<FName> NameItem, ESelectInfo::Type SelectInfo)
 {
 	if (auto Schema = (GraphPinObj ? GraphPinObj->GetSchema() : NULL))
 	{
 		FName Name = NameItem.IsValid() ? *NameItem : NAME_None;
 		FString NameAsString = Name.ToString();
-		
+
 		TSharedPtr<FEventPath> Event;
-		
-		for(auto EventPtr : EventList)
+
+		for (auto EventPtr : EventList)
 		{
 			if (NameAsString == GenerateName(EventPtr))
 			{
@@ -70,10 +70,10 @@ void SPsGraphPinEventList::ComboBoxSelectionChanged(TSharedPtr<FName> NameItem, 
 				break;
 			}
 		}
-		
+
 		if (Event.IsValid())
 		{
-			if(GraphPinObj->GetDefaultAsString() != Event->Type)
+			if (GraphPinObj->GetDefaultAsString() != Event->Type)
 			{
 				GraphPinObj->Modify();
 				Schema->TrySetDefaultValue(*GraphPinObj, Event->Type);
@@ -81,4 +81,3 @@ void SPsGraphPinEventList::ComboBoxSelectionChanged(TSharedPtr<FName> NameItem, 
 		}
 	}
 }
-

@@ -1,3 +1,5 @@
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -6,7 +8,6 @@
 class FPsDataPluginModule : public IModuleInterface
 {
 public:
-
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 };

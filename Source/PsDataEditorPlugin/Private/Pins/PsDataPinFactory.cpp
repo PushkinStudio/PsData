@@ -1,26 +1,29 @@
-// Copyright 2015-2018 Mail.Ru Group. All Rights Reserved.
+// Copyright 2015-2019 Mail.Ru Group. All Rights Reserved.
 
 #include "Pins/PsDataPinFactory.h"
-#include "Pins/PsGraphPinEventList.h"
-#include "Engine/CurveTable.h"
-#include "Widgets/DeclarativeSyntaxSupport.h"
-#include "EdGraphSchema_K2.h"
-#include "SGraphPin.h"
-#include "K2Node_CallFunction.h"
+
+#include "Pins/PsDataGraphPinEventList.h"
 #include "PsDataAPI.h"
-	
+
+#include "EdGraphSchema_K2.h"
+#include "Engine/CurveTable.h"
+#include "K2Node_CallFunction.h"
+#include "SGraphPin.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
+
 TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 {
 	struct FHelperStruct
 	{
 	public:
-		UClass * Class;
+		UField* Field;
 		FString Path;
 
-		FHelperStruct(UClass* InClass, const FString& InPath)
-			: Class(InClass)
+		FHelperStruct(UField* InField, const FString& InPath)
+			: Field(InField)
 			, Path(InPath)
-		{}
+		{
+		}
 	};
 
 	TArray<FHelperStruct> Children;
@@ -29,17 +32,17 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 	Events.Add(MakeShareable(new FEventPath(TEXT("Added"), TEXT(""), true)));
 	Events.Add(MakeShareable(new FEventPath(TEXT("Removing"), TEXT(""), true)));
 	Events.Add(MakeShareable(new FEventPath(TEXT("Changed"), TEXT(""), true)));
-	
+
 	for (auto& Pair : FDataReflection::GetFields(TargetClass))
 	{
-		if (Pair.Value.Meta.bEvent)
+		if (Pair.Value->Meta.bEvent)
 		{
-			Events.Add(MakeShareable(new FEventPath(FDataReflection::GenerateChangePropertyEventTypeName(Pair.Value), TEXT(""), true)));
+			Events.Add(MakeShareable(new FEventPath(Pair.Value->GenerateChangePropertyEventName(), TEXT(""), true)));
 		}
 
-		if (Pair.Value.Type == EDataFieldType::DFT_Data)
+		if (Pair.Value->Context->IsData())
 		{
-			Children.Add(FHelperStruct(Pair.Value.Class, Pair.Value.Name));
+			Children.Add(FHelperStruct(Pair.Value->Context->GetUE4Type(), Pair.Value->Name));
 		}
 	}
 
@@ -48,17 +51,23 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 		FHelperStruct Child = Children.Last();
 		Children.RemoveAt(Children.Num() - 1, 1, false);
 
-		for (auto& Pair : FDataReflection::GetFields(Child.Class))
+		UClass* Class = Cast<UClass>(Child.Field);
+		if (Class == nullptr)
 		{
-			FString Path = Child.Path + TEXT(".") + Pair.Value.Name;
-			if (Pair.Value.Meta.bEvent && Pair.Value.Meta.bBubbles)
+			continue;
+		}
+
+		for (auto& Pair : FDataReflection::GetFields(Class))
+		{
+			FString Path = Child.Path + TEXT(".") + Pair.Value->Name;
+			if (Pair.Value->Meta.bEvent && Pair.Value->Meta.bBubbles)
 			{
-				Events.Add(MakeShareable(new FEventPath(FDataReflection::GenerateChangePropertyEventTypeName(Pair.Value), Path, false)));
+				Events.Add(MakeShareable(new FEventPath(Pair.Value->GenerateChangePropertyEventName(), Path, false)));
 			}
 
-			if (Pair.Value.Type == EDataFieldType::DFT_Data)
+			if (Pair.Value->Context->IsData())
 			{
-				Children.Add(FHelperStruct(Pair.Value.Class, Path));
+				Children.Add(FHelperStruct(Pair.Value->Context->GetUE4Type(), Path));
 			}
 		}
 	}
@@ -86,11 +95,10 @@ TSharedPtr<class SGraphPin> FPsDataPinFactory::CreatePin(class UEdGraphPin* InPi
 					UClass* TargetClass = Cast<UClass>(OwnerPin->PinType.PinSubCategoryObject.Get());
 					if (TargetClass)
 					{
-						return SNew(SPsGraphPinEventList, InPin, GenerateEvents(TargetClass));
+						return SNew(SPsDataGraphPinEventList, InPin, GenerateEvents(TargetClass));
 					}
 				}
 			}
-			
 		}
 	}
 
