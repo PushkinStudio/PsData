@@ -17,18 +17,15 @@
 
 UPsDataNode_Link::UPsDataNode_Link(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, Path()
-	, ReturnType(nullptr)
-	, bCollection(false)
 {
 }
 
 void UPsDataNode_Link::AllocateDefaultPins()
 {
 	auto Field = GetProperty();
-	if (Field.IsValid())
+	auto Link = GetLink();
+	if (Field.IsValid() && Link.IsValid())
 	{
-		SetLinkPath(Field->Meta.LinkPath);
 		UpdateFunctionReference();
 	}
 	Super::AllocateDefaultPins();
@@ -41,26 +38,30 @@ FText UPsDataNode_Link::GetMenuCategory() const
 
 FLinearColor UPsDataNode_Link::GetNodeTitleColor() const
 {
-	FString FunctionName = (bCollection ? TEXT("GetDataArrayByPath") : TEXT("GetDataByPath"));
-	UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
-
-	UProperty* Property = nullptr;
-	for (TFieldIterator<UProperty> PropIt(Function); PropIt && (PropIt->PropertyFlags & CPF_Parm); ++PropIt)
+	auto Link = GetLink();
+	if (Link.IsValid())
 	{
-		if (PropIt->HasAnyPropertyFlags(CPF_ReturnParm))
+		FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
+		UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
+
+		UProperty* Property = nullptr;
+		for (TFieldIterator<UProperty> PropIt(Function); PropIt && (PropIt->PropertyFlags & CPF_Parm); ++PropIt)
 		{
-			Property = *PropIt;
-			break;
+			if (PropIt->HasAnyPropertyFlags(CPF_ReturnParm))
+			{
+				Property = *PropIt;
+				break;
+			}
 		}
-	}
 
-	if (Property)
-	{
-		FEdGraphPinType PinType;
-		const UEdGraphSchema_K2* K2Schema = GetDefault<UEdGraphSchema_K2>();
-		if (K2Schema->ConvertPropertyToPinType(Property, PinType))
+		if (Property)
 		{
-			return K2Schema->GetPinTypeColor(PinType);
+			FEdGraphPinType PinType;
+			const UEdGraphSchema_K2* K2Schema = GetDefault<UEdGraphSchema_K2>();
+			if (K2Schema->ConvertPropertyToPinType(Property, PinType))
+			{
+				return K2Schema->GetPinTypeColor(PinType);
+			}
 		}
 	}
 
@@ -70,7 +71,9 @@ FLinearColor UPsDataNode_Link::GetNodeTitleColor() const
 FSlateIcon UPsDataNode_Link::GetIconAndTint(FLinearColor& ColorOut) const
 {
 	ColorOut = GetNodeTitleColor();
-	if (bCollection)
+
+	auto Link = GetLink();
+	if (Link.IsValid() && Link->bCollection)
 	{
 		return FSlateIcon("EditorStyle", "Kismet.AllClasses.ArrayVariableIcon");
 	}
@@ -85,27 +88,19 @@ FText UPsDataNode_Link::GetNodeTitle(ENodeTitleType::Type TitleType) const
 		return FText::FromString(TEXT("Bad UPsDataNode_Link node"));
 	}
 
-	switch (TitleType)
-	{
-	case ENodeTitleType::MenuTitle:
-		return FText::FromString(FString::Printf(TEXT("Get Link By %s"), *PropertyName));
-	case ENodeTitleType::FullTitle:
-		return FText::FromString(FString::Printf(TEXT("Get Link By %s::%s"), *TargetClass->GetName(), *PropertyName));
-	default:
-		return FText::FromString(TEXT("Get Link"));
-	}
+	return FText::FromString(FString::Printf(TEXT("Get Link By %s"), *PropertyName));
 }
 
 void UPsDataNode_Link::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
 {
 	struct GetMenuActions_Utils
 	{
-		static UBlueprintNodeSpawner* MakeAction(TSubclassOf<UEdGraphNode> NodeClass, UClass* TargetClass, const FDataField& Field)
+		static UBlueprintNodeSpawner* MakeAction(TSubclassOf<UEdGraphNode> NodeClass, UClass* TargetClass, const FDataField& Field, const FDataLink& Link)
 		{
 			UBlueprintNodeSpawner* NodeSpawner = UBlueprintNodeSpawner::Create(NodeClass);
 			check(NodeSpawner != nullptr);
 
-			NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateLambda([Field, TargetClass](UEdGraphNode* EvaluatorNode, bool) {
+			NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateLambda([Field, Link, TargetClass](UEdGraphNode* EvaluatorNode, bool) {
 				UPsDataNode_Link* Node = CastChecked<UPsDataNode_Link>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
 				Node->PropertyName = Field.Name;
@@ -122,9 +117,10 @@ void UPsDataNode_Link::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionR
 	{
 		for (auto& Pair : FDataReflection::GetFields(Class))
 		{
-			if (Pair.Value->Meta.bLink)
+			TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Class, Pair.Value->Hash);
+			if (Link.IsValid())
 			{
-				if (UBlueprintNodeSpawner* NodeSpawner = GetMenuActions_Utils::MakeAction(GetClass(), Class, *Pair.Value.Get()))
+				if (UBlueprintNodeSpawner* NodeSpawner = GetMenuActions_Utils::MakeAction(GetClass(), Class, *Pair.Value, *Link))
 				{
 					ActionRegistrar.AddBlueprintAction(Class, NodeSpawner);
 				}
@@ -133,27 +129,26 @@ void UPsDataNode_Link::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionR
 	}
 }
 
-void UPsDataNode_Link::SetLinkPath(const FString& LinkPath)
+TSharedPtr<const FDataLink> UPsDataNode_Link::GetLink() const
 {
-	TArray<FString> Values;
-	LinkPath.ParseIntoArray(Values, TEXT("::"));
-
-	if (Values.Num() != 3)
+	auto Field = GetProperty();
+	if (Field.IsValid())
 	{
-		return;
+		return FDataReflection::GetLinkByHash(TargetClass, Field->Hash);
 	}
+	return TSharedPtr<const FDataLink>(nullptr);
+}
 
-	bCollection = (Values[0] == TEXT("TArray<FString>"));
-	Path = Values[1];
-
+UClass* UPsDataNode_Link::GetReturnType(TSharedPtr<const FDataLink> Link)
+{
 	FString ClassName;
-	if (Values[2].EndsWith(TEXT("*"), ESearchCase::CaseSensitive))
+	if (Link->ReturnType.EndsWith(TEXT("*"), ESearchCase::CaseSensitive))
 	{
-		ClassName = Values[2].Left(Values[2].Len() - 1);
+		ClassName = Link->ReturnType.Left(Link->ReturnType.Len() - 1);
 	}
 	else
 	{
-		ClassName = Values[2];
+		ClassName = Link->ReturnType;
 	}
 
 	static TMap<FString, UClass*> Classes;
@@ -172,34 +167,34 @@ void UPsDataNode_Link::SetLinkPath(const FString& LinkPath)
 	auto Find = Classes.Find(ClassName);
 	if (!Find)
 	{
-		return;
+		return UPsData::StaticClass();
 	}
 
-	ReturnType = *Find;
+	return *Find;
 }
 
 void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin)
 {
 	Super::UpdatePin(PinType, Pin);
+	auto Link = GetLink();
+
 	if (PinType == EPsDataVariablePinType::ReturnValue)
 	{
 		Pin->PinFriendlyName = FText::FromString(FString::Printf(TEXT("Link By %s"), *PropertyName));
 		if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Object)
 		{
-			Pin->PinType.PinSubCategoryObject = ReturnType;
+			if (Link.IsValid())
+			{
+				Pin->PinType.PinSubCategoryObject = GetReturnType(Link);
+			}
 		}
 	}
-	else if (PinType == EPsDataVariablePinType::Unknown)
+	else if (PinType == EPsDataVariablePinType::PropertyHash)
 	{
-		if (Pin->PinName.ToString() == TEXT("PropertyName"))
+		if (Link.IsValid())
 		{
 			Pin->bHidden = true;
-			Pin->DefaultValue = PropertyName;
-		}
-		else if (Pin->PinName.ToString() == TEXT("Path"))
-		{
-			Pin->bHidden = true;
-			Pin->DefaultValue = Path;
+			Pin->DefaultValue = FString::FromInt(Link->Hash);
 		}
 	}
 }
@@ -207,12 +202,13 @@ void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pi
 void UPsDataNode_Link::UpdateFunctionReference()
 {
 	auto Field = GetProperty();
-	if (!Field.IsValid())
+	auto Link = GetLink();
+	if (!Field.IsValid() || !Link.IsValid())
 	{
 		return;
 	}
 
-	FString FunctionName = (bCollection ? TEXT("GetDataArrayByPath") : TEXT("GetDataByPath"));
+	FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
 	UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
 	if (Function)
 	{

@@ -19,7 +19,6 @@ struct EDataMetaType
 	static const char* Event;
 	static const char* Bubbles;
 	static const char* Alias;
-	static const char* Link;
 	static const char* ReadOnly;
 	static const char* Deprecated;
 };
@@ -34,9 +33,7 @@ struct FDataFieldMeta
 	bool bEvent;
 	bool bBubbles;
 	bool bDeprecated;
-	bool bLink;
 	bool bReadOnly;
-	FString LinkPath;
 	FString Alias;
 	FString EventType;
 
@@ -95,4 +92,21 @@ public:
 private:
 	void ParseMeta(const TArray<const char*>& Collection);
 	void ParseMetaPair(const char* Key, int32 KeySize, const char* Value, int32 ValueSize);
+};
+
+/***********************************
+ * Link
+ ***********************************/
+
+struct PSDATAPLUGIN_API FDataLink
+{
+public:
+	FString Name;
+	FString Path;
+	FString ReturnType;
+	int32 Hash;
+	bool bCollection;
+	bool bAbstract;
+
+	FDataLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 InHash, bool bInCollection, bool bInAbstract);
 };

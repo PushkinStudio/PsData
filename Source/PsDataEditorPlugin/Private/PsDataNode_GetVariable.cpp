@@ -46,6 +46,11 @@ void UPsDataNode_GetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 	{
 		static UBlueprintNodeSpawner* MakeAction(TSubclassOf<UEdGraphNode> NodeClass, UClass* TargetClass, const FDataField& Field)
 		{
+			if (FDataReflection::GetFieldByName(TargetClass->GetSuperClass(), Field.Name).IsValid())
+			{
+				return nullptr;
+			}
+
 			UBlueprintNodeSpawner* NodeSpawner = UBlueprintNodeSpawner::Create(NodeClass);
 			check(NodeSpawner != nullptr);
 

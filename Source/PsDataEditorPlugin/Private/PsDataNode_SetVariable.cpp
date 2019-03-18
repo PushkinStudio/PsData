@@ -66,6 +66,11 @@ void UPsDataNode_SetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 				return nullptr;
 			}
 
+			if (FDataReflection::GetFieldByName(TargetClass->GetSuperClass(), Field.Name).IsValid())
+			{
+				return nullptr;
+			}
+
 			UBlueprintNodeSpawner* NodeSpawner = UBlueprintNodeSpawner::Create(NodeClass);
 			check(NodeSpawner != nullptr);
 

@@ -23,7 +23,7 @@ struct FMapChangeBehavior
 template <typename T>
 struct FMapChangeBehavior<T*>
 {
-	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
 	static void AddToMap(const THardObjectPtr<UPsData>& Instance, const FString& Name, T* Value)
 	{
@@ -169,8 +169,8 @@ public:
 
 	TArray<typename FDataReflectionTools::TConstRef<T, bConst>::Type> GetValues() const
 	{
-		TArray<T> Result;
-		for (auto It = Get().CreateConstIterator(); It; ++It)
+		TArray<typename FDataReflectionTools::TConstRef<T, bConst>::Type> Result;
+		for (auto It = Get().CreateIterator(); It; ++It)
 		{
 			Result.Add((*It).Value);
 		}

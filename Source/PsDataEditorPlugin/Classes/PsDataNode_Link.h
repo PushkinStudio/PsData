@@ -14,16 +14,6 @@ class PSDATAEDITORPLUGIN_API UPsDataNode_Link : public UPsDataNode_Variable
 	GENERATED_UCLASS_BODY()
 
 public:
-	UPROPERTY()
-	FString Path;
-
-	UPROPERTY()
-	UClass* ReturnType;
-
-	UPROPERTY()
-	bool bCollection;
-
-public:
 	// Begin UEdGraphNode interface.
 	virtual void AllocateDefaultPins() override;
 	// End UEdGraphNode interface.
@@ -37,8 +27,14 @@ public:
 	void GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const override;
 	// End UK2Node interface.
 
-	/** Set link path from meta data */
-	void SetLinkPath(const FString& LinkPath);
+	/** Get link */
+	TSharedPtr<const FDataLink> GetLink() const;
+
+	/** Get return type */
+	UClass* GetReturnType(TSharedPtr<const FDataLink> Link);
+
+	/** Update link path */
+	void UpdateLink();
 
 	/** Update allocated pin */
 	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin);

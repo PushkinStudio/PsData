@@ -19,8 +19,3 @@ FPsDataSerializer::FPsDataSerializer()
 FPsDataDeserializer::FPsDataDeserializer()
 {
 }
-
-bool FPsDataDeserializer::Has(const TSharedPtr<const FDataField>& Field)
-{
-	return false;
-}

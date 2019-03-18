@@ -16,76 +16,36 @@ class UPsData;
 
 struct PSDATAPLUGIN_API FPsDataJsonSerializer : public FPsDataSerializer
 {
-protected:
+private:
 	TSharedPtr<FJsonObject> RootJson;
-	TArray<TSharedPtr<FJsonObject>> JsonPath;
+	TArray<TSharedPtr<FJsonValue>> Values;
+	TArray<FString> Keys;
 
 public:
 	FPsDataJsonSerializer(TSharedPtr<FJsonObject> InJson);
 	FPsDataJsonSerializer();
 	virtual ~FPsDataJsonSerializer(){};
 
-protected:
-	void PushJson(TSharedPtr<FJsonObject> Json);
-	void PopJson(TSharedPtr<FJsonObject> Json);
-	TSharedPtr<FJsonObject> GetLastJson();
-
-public:
 	TSharedPtr<FJsonObject>& GetJson();
 
-	/***********************************
-	 * int32
-	 ***********************************/
+private:
+	void WriteJsonValue(TSharedPtr<FJsonValue> Value);
 
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, int32 Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TArray<int32>& Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TMap<FString, int32>& Data) override;
+public:
+	virtual void WriteKey(const FString& Key) override;
+	virtual void WriteArray() override;
+	virtual void WriteObject() override;
+	virtual void WriteValue(int32 Value) override;
+	virtual void WriteValue(uint8 Value) override;
+	virtual void WriteValue(float Value) override;
+	virtual void WriteValue(bool Value) override;
+	virtual void WriteValue(const FString& Value) override;
+	virtual void WriteValue(const FName& Value) override;
+	virtual void WriteValue(const UPsData* Value) override;
 
-	/***********************************
-	 * uint8
-	 ***********************************/
-
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, uint8 Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TArray<uint8>& Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TMap<FString, uint8>& Data) override;
-
-	/***********************************
-	 * float
-	 ***********************************/
-
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, float Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TArray<float>& Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TMap<FString, float>& Data) override;
-
-	/***********************************
-	 * String
-	 ***********************************/
-
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const FString& Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TArray<FString>& Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TMap<FString, FString>& Data) override;
-
-	/***********************************
-	 * bool
-	 ***********************************/
-
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, bool Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TArray<bool>& Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TMap<FString, bool>& Data) override;
-
-	/***********************************
-	 * Data
-	 ***********************************/
-
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, UPsData* Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TArray<UPsData*>& Data) override;
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, const TMap<FString, UPsData*>& Data) override;
-
-	/***********************************
-	* Custom
-	***********************************/
-
-	virtual void Serialize(const TSharedPtr<const FDataField>& Field, TSharedPtr<FJsonValue> Data) override;
+	virtual void PopKey(const FString& Key) override;
+	virtual void PopArray() override;
+	virtual void PopObject() override;
 };
 
 /***********************************
@@ -94,75 +54,40 @@ public:
 
 struct PSDATAPLUGIN_API FPsDataJsonDeserializer : public FPsDataDeserializer
 {
-protected:
+private:
 	TSharedPtr<FJsonObject> RootJson;
-	TArray<TSharedPtr<FJsonObject>> JsonPath;
+	TArray<TSharedPtr<FJsonValue>> Values;
+	TMap<TSharedPtr<FJsonValue>, TMap<FString, TSharedPtr<FJsonValue>>::TIterator> KeysIterator;
+	TMap<TSharedPtr<FJsonValue>, TArray<TSharedPtr<FJsonValue>>::TIterator> IndicesIterator;
+
+#if WITH_EDITORONLY_DATA
+	TSet<TSharedPtr<FJsonValue>> Used;
+#endif
 
 public:
 	FPsDataJsonDeserializer(TSharedPtr<FJsonObject> InJson);
 	virtual ~FPsDataJsonDeserializer(){};
 
-protected:
-	void PushJson(TSharedPtr<FJsonObject> Json);
-	void PopJson(TSharedPtr<FJsonObject> Json);
-	TSharedPtr<FJsonObject> GetLastJson();
-	FString GetStringType(EJson Type);
-
-public:
-	virtual bool Has(const TSharedPtr<const FDataField>& Field) override;
 	TSharedPtr<FJsonObject>& GetJson();
 
-	/***********************************
-	 * int32
-	 ***********************************/
+private:
+	TSharedPtr<FJsonValue> ReadJsonValue();
 
-	virtual int32 Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, int32 Data, UClass* DataClass) override;
-	virtual TArray<int32> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TArray<int32>& Data, UClass* DataClass) override;
-	virtual TMap<FString, int32> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TMap<FString, int32>& Data, UClass* DataClass) override;
+public:
+	virtual bool ReadKey(FString& OutKey) override;
+	virtual bool ReadIndex() override;
+	virtual bool ReadArray() override;
+	virtual bool ReadObject() override;
+	virtual bool ReadValue(int32& OutValue) override;
+	virtual bool ReadValue(uint8& OutValue) override;
+	virtual bool ReadValue(float& OutValue) override;
+	virtual bool ReadValue(bool& OutValue) override;
+	virtual bool ReadValue(FString& OutValue) override;
+	virtual bool ReadValue(FName& OutValue) override;
+	virtual bool ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator) override;
 
-	/***********************************
-	 * uint8
-	 ***********************************/
-
-	virtual uint8 Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, uint8 Data, UClass* DataClass) override;
-	virtual TArray<uint8> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TArray<uint8>& Data, UClass* DataClass) override;
-	virtual TMap<FString, uint8> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TMap<FString, uint8>& Data, UClass* DataClass) override;
-
-	/***********************************
-	 * float
-	 ***********************************/
-
-	virtual float Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, float Data, UClass* DataClass) override;
-	virtual TArray<float> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TArray<float>& Data, UClass* DataClass) override;
-	virtual TMap<FString, float> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TMap<FString, float>& Data, UClass* DataClass) override;
-
-	/***********************************
-	 * String
-	 ***********************************/
-
-	virtual FString Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Data, UClass* DataClass) override;
-	virtual TArray<FString> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TArray<FString>& Data, UClass* DataClass) override;
-	virtual TMap<FString, FString> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TMap<FString, FString>& Data, UClass* DataClass) override;
-
-	/***********************************
-	 * bool
-	 ***********************************/
-
-	virtual bool Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, bool Data, UClass* DataClass) override;
-	virtual TArray<bool> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TArray<bool>& Data, UClass* DataClass) override;
-	virtual TMap<FString, bool> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TMap<FString, bool>& Data, UClass* DataClass) override;
-
-	/***********************************
-	 * Data
-	 ***********************************/
-
-	virtual UPsData* Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, UPsData* Data, UClass* DataClass) override;
-	virtual TArray<UPsData*> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TArray<UPsData*>& Data, UClass* DataClass) override;
-	virtual TMap<FString, UPsData*> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const TMap<FString, UPsData*>& Data, UClass* DataClass) override;
-
-	/***********************************
-	 * Custom
-	 ***********************************/
-
-	virtual TSharedPtr<FJsonValue> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TSharedPtr<FJsonValue> Data, UClass* DataClass) override;
+	virtual void PopKey(const FString& Key) override;
+	virtual void PopIndex() override;
+	virtual void PopArray() override;
+	virtual void PopObject() override;
 };

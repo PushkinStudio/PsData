@@ -2,14 +2,12 @@
 
 #pragma once
 
-#include "Collection/PsDataMapProxy.h"
 #include "Serialize/PsDataJsonSerialization.h"
 #include "Serialize/PsDataSerialization.h"
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
-#include "Engine/DataTable.h"
 
 class UPsData;
 
@@ -17,21 +15,20 @@ class UPsData;
  * FTableDataSerializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataTableDeserializer : public FPsDataDeserializer
+struct PSDATAPLUGIN_API FPsDataStructDeserializer : public FPsDataDeserializer
 {
 private:
 	FPsDataJsonDeserializer JsonDeserializer;
 
 public:
-	FPsDataTableDeserializer(UDataTable* DataTable, const FString& PropertyName);
-
-	template <typename T, bool bConst>
-	FPsDataTableDeserializer(UDataTable* DataTable, const FPsDataBaseMapProxy<T, bConst>& MapProxy)
-		: FPsDataTableDeserializer(DataTable, MapProxy.GetField()->Name)
+	template <typename T>
+	FPsDataStructDeserializer(const T& Struct)
+		: FPsDataDeserializer()
+		, JsonDeserializer(CreateJsonFromStruct(T::StaticStruct(), &Struct))
 	{
 	}
 
-	virtual ~FPsDataTableDeserializer(){};
+	virtual ~FPsDataStructDeserializer(){};
 
 public:
 	virtual bool ReadKey(FString& OutKey) override;
@@ -51,10 +48,16 @@ public:
 	virtual void PopArray() override;
 	virtual void PopObject() override;
 
-private:
 	/***********************************
-	 * DataTable serialize
+	 * Struct serialize
 	 ***********************************/
+public:
+	static TSharedPtr<FJsonObject> CreateJsonFromStruct(const UStruct* Struct, const void* Value);
 
-	TSharedPtr<FJsonObject> CreateJsonFromTable(UDataTable* DataTable, const FString& PropertyName);
+private:
+	static TSharedPtr<FJsonValue> PropertySerialize(UProperty* Property, const void* Value);
+	static TSharedPtr<FJsonValue> StructPropertySerialize(UStructProperty* StructProperty, const void* Value);
+	static TSharedPtr<FJsonValue> StructSerialize(const UStruct* Struct, const void* Value);
+
+	static FString GetNormalizedKey(const FString& Key);
 };

@@ -60,8 +60,6 @@ private:
 template <class T>
 struct THardObjectPtr
 {
-	static_assert(std::is_base_of<UObject, T>::value, "THardObjectPtr avaliable only for UObject");
-
 private:
 	T* Value;
 

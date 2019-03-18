@@ -60,6 +60,11 @@ void FPsDataFriend::SetIsChanged(UPsData* Data, bool NewValue)
 	Data->bChanged = NewValue;
 }
 
+void FPsDataFriend::InitProperties(UPsData* Data)
+{
+	Data->InitProperties();
+}
+
 TArray<TUniquePtr<FAbstractDataMemory>>& FPsDataFriend::GetMemory(UPsData* Data)
 {
 	return Data->Memory;
@@ -85,6 +90,10 @@ void UPsData::PostInitProperties()
 	Super::PostInitProperties();
 	FDataReflection::RemoveFromQueue(this);
 	FDataReflection::Fill(this);
+}
+
+void UPsData::InitProperties()
+{
 }
 
 /***********************************
@@ -324,18 +333,24 @@ void UPsData::DataSerialize(FPsDataSerializer* Serializer) const
 {
 	for (auto& Pair : FDataReflection::GetFields(this->GetClass()))
 	{
+		Serializer->WriteKey(Pair.Key);
 		Memory[Pair.Value->Index]->Serialize(this, Pair.Value, Serializer);
+		Serializer->PopKey(Pair.Key);
 	}
 }
 
 void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer)
 {
-	for (auto& Pair : FDataReflection::GetFields(this->GetClass()))
+	const auto& Fields = FDataReflection::GetFields(this->GetClass());
+	FString Key;
+	while (Deserializer->ReadKey(Key))
 	{
-		if (Deserializer->Has(Pair.Value))
+		if (auto Find = Fields.Find(Key))
 		{
-			Memory[Pair.Value->Index]->Deserialize(this, Pair.Value, Deserializer);
+			auto& Field = *Find;
+			Memory[Field->Index]->Deserialize(this, Field, Deserializer);
 		}
+		Deserializer->PopKey(Key);
 	}
 }
 
@@ -390,5 +405,5 @@ void UPsData::Reset()
 		const auto& Field = Pair.Value;
 		Memory[Field->Index]->Reset(this, Field);
 	}
-	//TODO: invoke init constructor
+	InitProperties();
 }

@@ -44,6 +44,7 @@ struct PSDATAPLUGIN_API FPsDataFriend
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
 	static bool IsChanged(UPsData* Data);
 	static void SetIsChanged(UPsData* Data, bool NewValue);
+	static void InitProperties(UPsData* Data);
 	static TArray<TUniquePtr<FAbstractDataMemory>>& GetMemory(UPsData* Data);
 };
 } // namespace FDataReflectionTools
@@ -70,6 +71,33 @@ struct FDelegateWrapper
 	{
 	}
 };
+
+/***********************************
+ * PsData check
+ ***********************************/
+
+namespace FDataReflectionTools
+{
+template <typename T>
+struct TIsPsData
+{
+private:
+	static constexpr bool IsPsData(UPsData* Object) { return true; }
+
+public:
+	static constexpr bool Value = IsPsData((T*)nullptr);
+};
+
+template <typename T>
+struct TIsPsData<T*>
+{
+private:
+	static constexpr bool IsPsData(UPsData* Object) { return true; }
+
+public:
+	static constexpr bool Value = IsPsData((T*)nullptr);
+};
+} // namespace FDataReflectionTools
 
 /***********************************
 * PSDATA!
@@ -106,9 +134,13 @@ private:
 	/** Map of delegat wrappers */
 	mutable TMap<FString, TArray<FDelegateWrapper>> Delegates;
 
-public:
+private:
 	/** Post init properties */
 	virtual void PostInitProperties() override;
+
+protected:
+	/** Init properties */
+	virtual void InitProperties();
 
 	/***********************************
 	 * Event system

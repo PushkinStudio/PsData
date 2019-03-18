@@ -18,16 +18,19 @@
 
 namespace FDataReflectionTools
 {
-template <class Class, typename Type>
-struct FDprop;
-struct FMeta;
+template <typename Type, int32 Hash>
+struct FDProp;
+struct FDMeta;
+template <typename Type, class ReturnType, int32 Hash>
+struct FDLink;
 } // namespace FDataReflectionTools
 
 struct PSDATAPLUGIN_API FDataReflection
 {
 private:
-	static TMap<UClass*, TMap<FString, TSharedPtr<const FDataField>>> FieldsByName;
-	static TMap<UClass*, TMap<int32, TSharedPtr<const FDataField>>> FieldsByHash;
+	static TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FieldsByName;
+	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FieldsByHash;
+	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> LinksByHash;
 
 	static TArray<UClass*> ClassQueue;
 	static TArray<const char*> MetaCollection;
@@ -35,15 +38,17 @@ private:
 	static bool bCompiled;
 
 protected:
-	template <class Class, typename Type>
-	friend struct FDataReflectionTools::FDprop;
-	friend struct FDataReflectionTools::FMeta;
+	template <typename Type, int32 Hash>
+	friend struct FDataReflectionTools::FDProp;
+	friend struct FDataReflectionTools::FDMeta;
+	template <typename Type, class ReturnType, int32 Hash>
+	friend struct FDataReflectionTools::FDLink;
 	friend class UPsData;
 
-	static void AddField(UClass* OwnerClass, const FString& Name, int32 Hash, FAbstractDataTypeContext* Context);
+	static void AddField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context);
+	static void AddLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection);
 	static void AddToQueue(UPsData* Instance);
 	static void RemoveFromQueue(UPsData* Instance);
-	static bool InQueue(UClass* StaticClass);
 	static bool InQueue();
 	static UClass* GetLastClassInQueue();
 	static void PushMeta(const char* Meta);
@@ -53,7 +58,8 @@ protected:
 public:
 	static TSharedPtr<const FDataField> GetFieldByName(UClass* OwnerClass, const FString& Name);
 	static TSharedPtr<const FDataField> GetFieldByHash(UClass* OwnerClass, int32 Hash);
-	static const TMap<FString, TSharedPtr<const FDataField>>& GetFields(const UClass* StaticClass);
+	static const TMap<FString, const TSharedPtr<const FDataField>>& GetFields(const UClass* StaticClass);
+	static TSharedPtr<const FDataLink> GetLinkByHash(UClass* OwnerClass, int32 Hash);
 	static bool HasClass(const UClass* StaticClass);
 
 	static void Compile();
@@ -210,38 +216,6 @@ struct FDataTypeContext<TMap<FString, float>> : public FAbstractDataTypeContext
 };
 
 /***********************************
- * String context
- ***********************************/
-
-template <>
-struct FDataTypeContext<FString> : public FAbstractDataTypeContext
-{
-	_DFUNC(UPsDataFunctionLibrary, FString, String);
-};
-
-template <>
-struct FDataTypeContext<TArray<FString>> : public FAbstractDataTypeContext
-{
-	virtual bool IsArray() const override
-	{
-		return true;
-	}
-
-	_DFUNC(UPsDataFunctionLibrary, TArray<FString>, StringArray);
-};
-
-template <>
-struct FDataTypeContext<TMap<FString, FString>> : public FAbstractDataTypeContext
-{
-	virtual bool IsMap() const override
-	{
-		return true;
-	}
-
-	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FString>, StringMap);
-};
-
-/***********************************
  * bool context
  ***********************************/
 
@@ -274,13 +248,77 @@ struct FDataTypeContext<TMap<FString, bool>> : public FAbstractDataTypeContext
 };
 
 /***********************************
+ * String context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<FString> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, FString, String);
+};
+
+template <>
+struct FDataTypeContext<TArray<FString>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<FString>, StringArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, FString>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FString>, StringMap);
+};
+
+/***********************************
+ * FText context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<FText> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, FText, Text);
+};
+
+template <>
+struct FDataTypeContext<TArray<FText>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<FText>, TextArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, FText>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FText>, TextMap);
+};
+
+/***********************************
  * Data context
  ***********************************/
 
 template <typename T>
 struct FDataTypeContext<T*> : public FAbstractDataTypeContext
 {
-	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
 	virtual UField* GetUE4Type() const override
 	{
@@ -313,7 +351,7 @@ struct FDataTypeContext<T*> : public FAbstractDataTypeContext
 template <typename T>
 struct FDataTypeContext<TArray<T*>> : public FAbstractDataTypeContext
 {
-	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
 	virtual UField* GetUE4Type() const override
 	{
@@ -351,7 +389,7 @@ struct FDataTypeContext<TArray<T*>> : public FAbstractDataTypeContext
 template <typename T>
 struct FDataTypeContext<TMap<FString, T*>> : public FAbstractDataTypeContext
 {
-	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
 	virtual UField* GetUE4Type() const override
 	{
@@ -393,11 +431,9 @@ struct FDataTypeContext<TMap<FString, T*>> : public FAbstractDataTypeContext
 template <typename T>
 struct FDataTypeContext<TSoftObjectPtr<T>> : public FAbstractDataTypeContext
 {
-	static_assert(std::is_base_of<UObject, T>::value, "T must be only UObject");
-
-	virtual UField* GetUE4Type() const override
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
-		return T::StaticClass();
+		return true; // TODO: check type
 	}
 
 	_DFUNC(UPsDataFunctionLibrary, TSoftObjectPtr<T>, SoftObject);
@@ -406,16 +442,14 @@ struct FDataTypeContext<TSoftObjectPtr<T>> : public FAbstractDataTypeContext
 template <typename T>
 struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FAbstractDataTypeContext
 {
-	static_assert(std::is_base_of<UObject, T>::value, "T must be only UObject");
-
-	virtual UField* GetUE4Type() const override
-	{
-		return T::StaticClass();
-	}
-
 	virtual bool IsArray() const override
 	{
 		return true;
+	}
+
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		return true; // TODO: check type
 	}
 
 	_DFUNC(UPsDataFunctionLibrary, TArray<TSoftObjectPtr<T>>, SoftObjectArray);
@@ -424,51 +458,59 @@ struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FAbstractDataTypeCon
 template <typename T>
 struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FAbstractDataTypeContext
 {
-	static_assert(std::is_base_of<UObject, T>::value, "T must be only UObject");
-
-	virtual UField* GetUE4Type() const override
-	{
-		return T::StaticClass();
-	}
-
 	virtual bool IsMap() const override
 	{
 		return true;
+	}
+
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		return true; // TODO: check type
 	}
 
 	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA TSoftObjectPtr<T>>, SoftObjectMap);
 };
 
 /***********************************
- * FText context
+ * TSoftClassPtr context
  ***********************************/
 
-template <>
-struct FDataTypeContext<FText> : public FAbstractDataTypeContext
+template <typename T>
+struct FDataTypeContext<TSoftClassPtr<T>> : public FAbstractDataTypeContext
 {
-	_DFUNC(UPsDataFunctionLibrary, FText, Text);
+	_DFUNC(UPsDataFunctionLibrary, TSoftClassPtr<T>, SoftClass);
 };
 
-template <>
-struct FDataTypeContext<TArray<FText>> : public FAbstractDataTypeContext
+template <typename T>
+struct FDataTypeContext<TArray<TSoftClassPtr<T>>> : public FAbstractDataTypeContext
 {
 	virtual bool IsArray() const override
 	{
 		return true;
 	}
 
-	_DFUNC(UPsDataFunctionLibrary, TArray<FText>, TextArray);
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		return true; // TODO: check type
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<TSoftClassPtr<T>>, SoftClassArray);
 };
 
-template <>
-struct FDataTypeContext<TMap<FString, FText>> : public FAbstractDataTypeContext
+template <typename T>
+struct FDataTypeContext<TMap<FString, TSoftClassPtr<T>>> : public FAbstractDataTypeContext
 {
 	virtual bool IsMap() const override
 	{
 		return true;
 	}
 
-	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FText>, TextMap);
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		return true; // TODO: check type
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA TSoftClassPtr<T>>, SoftClassMap);
 };
 
 /***********************************
@@ -522,7 +564,7 @@ struct FEnumDataTypeContext : public FAbstractDataTypeContext
 
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
-		static constexpr const int32 Hash = FDataReflectionTools::FType<T>::Hash();
+		static constexpr const int32 Hash = FDataReflectionTools::FType<uint8>::Hash();
 		return Hash == RightContext->GetHash() || GetHash() == RightContext->GetHash();
 	}
 };
@@ -912,9 +954,17 @@ struct FPsDataCastHelper
 {
 	static T* Cast(UPsData* Data)
 	{
-		if (Data != nullptr && Data->GetClass()->IsChildOf(T::StaticClass()))
+		if (Data != nullptr)
 		{
-			return static_cast<T*>(Data);
+			const bool bCanCast = Data->GetClass()->IsChildOf(T::StaticClass());
+			if (bCanCast)
+			{
+				return static_cast<T*>(Data);
+			}
+			else
+			{
+				UE_LOG(LogData, Fatal, TEXT("Can't cast \"%s\" to \"%s\""), *Data->GetClass()->GetName(), *T::StaticClass()->GetName());
+			}
 		}
 		return nullptr;
 	}
@@ -937,17 +987,25 @@ struct FPsDataCastHelper
 
 namespace FDataReflectionTools
 {
-template <class Class, typename Type>
-struct FDprop
+template <typename Type, int32 Hash>
+struct FDProp
 {
-	FDprop(const char* Name, const int32 Hash)
+	typedef Type PropType;
+	static constexpr int32 PropHash = Hash;
+
+	FDProp(const char* Name)
 	{
-		if (FDataReflection::InQueue(Class::StaticClass()))
+		if (FDataReflection::InQueue())
 		{
-			FDataReflection::AddField(Class::StaticClass(), FString(Name), Hash, &FDataReflectionTools::GetContext<Type>());
+			FDataReflection::AddField(Name, Hash, &FDataReflectionTools::GetContext<Type>());
 			FDataReflection::ClearMeta();
 		}
 	}
+
+	FDProp(const FDProp&) = delete;
+	FDProp(FDProp&&) = delete;
+	FDProp& operator=(const FDProp&) = delete;
+	FDProp& operator=(FDProp&&) = delete;
 };
 } // namespace FDataReflectionTools
 
@@ -957,15 +1015,93 @@ struct FDprop
 
 namespace FDataReflectionTools
 {
-struct FMeta
+struct FDMeta
 {
-	FMeta(const char* Meta)
+	FDMeta(const char* Meta)
 	{
 		if (FDataReflection::InQueue())
 		{
 			FDataReflection::PushMeta(Meta);
 		}
 	}
+
+	FDMeta(const FDMeta&) = delete;
+	FDMeta(FDMeta&&) = delete;
+	FDMeta& operator=(const FDMeta&) = delete;
+	FDMeta& operator=(FDMeta&&) = delete;
+};
+} // namespace FDataReflectionTools
+
+/***********************************
+ * FDLink
+ ***********************************/
+
+namespace FDataReflectionTools
+{
+
+template <typename Type, class ReturnType, int32 Hash>
+struct FDLinkHelper
+{
+	typedef typename TConstRef<typename TRemovePointer<ReturnType>::Type*, true>::Type LinkType;
+	typedef LinkType Value;
+
+	static LinkType Get(const UPsData* Instance)
+	{
+		return Cast<typename TRemovePointer<ReturnType>::Type>(UPsDataFunctionLibrary::GetDataByLinkHash(Instance, Hash));
+	}
+};
+
+template <typename Type, class ReturnType, int32 Hash>
+struct FDLinkHelper<TArray<Type>, ReturnType, Hash>
+{
+	typedef typename TConstRef<typename TRemovePointer<ReturnType>::Type*, true>::Type LinkType;
+	typedef TArray<LinkType> Value;
+
+	static TArray<LinkType> Get(const UPsData* Instance)
+	{
+		TArray<LinkType> Result;
+		for (UPsData* Data : UPsDataFunctionLibrary::GetDataArrayByLinkHash(Instance, Hash))
+		{
+			Result.Add(Cast<typename TRemovePointer<ReturnType>::Type>(Data));
+		}
+		return Result;
+	}
+};
+
+template <typename Type, class ReturnType, int32 Hash>
+struct FDLink
+{
+private:
+	const UPsData* Instance;
+
+public:
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+		: Instance(InInstance)
+	{
+		static_assert(std::is_base_of<FString, Type>::value || std::is_base_of<TArray<FString>, Type>::value, "Only FString or TArray<FString> property can be linked");
+		static_assert(FDataReflectionTools::TIsContainer<ReturnType>::Value, "ReturnType must be non-container type");
+
+		if (FDataReflection::InQueue())
+		{
+			FDataReflection::AddLink(Name, Path, CharReturnType, Hash, bAbstract, std::is_base_of<TArray<FString>, Type>::value);
+		}
+	}
+
+	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+		: FDLink(Name, "<ABSTRACT>", CharReturnType, InInstance, true)
+	{
+	}
+
+	typename FDLinkHelper<Type, ReturnType, Hash>::Value Get() const
+	{
+		static_assert(std::is_base_of<UPsData, typename TRemovePointer<ReturnType>::Type>::value, "ReturnType must be only UPsData");
+		return FDLinkHelper<Type, ReturnType, Hash>::Get(Instance);
+	}
+
+	FDLink(const FDLink&) = delete;
+	FDLink(FDLink&&) = delete;
+	FDLink& operator=(const FDLink&) = delete;
+	FDLink& operator=(FDLink&&) = delete;
 };
 } // namespace FDataReflectionTools
 
@@ -975,8 +1111,10 @@ struct FMeta
 
 #define _TOKENPASTE(x, y) x##y
 #define _TOKENPASTE2(x, y) _TOKENPASTE(x, y)
-#define _UNIC(name) _TOKENPASTE2(__z##name, __LINE__)
-#define _REFLECT(__Class__, __Type__, __Name__)                                        \
+#define _UNIQ(name) _TOKENPASTE2(__z##name, __LINE__)
+#define _REFLECT(__Type__, __Name__)                                                   \
 private:                                                                               \
-	static constexpr const int32 _UNIC(hash) = FDataReflectionTools::crc32(#__Name__); \
-	FDataReflectionTools::FDprop<__Class__, __Type__> _UNIC(prop) = FDataReflectionTools::FDprop<__Class__, __Type__>(#__Name__, _UNIC(hash));
+	static constexpr const int32 _UNIQ(hash) = FDataReflectionTools::crc32(#__Name__); \
+                                                                                       \
+protected:                                                                             \
+	const FDataReflectionTools::FDProp<__Type__, _UNIQ(hash)> _zprop##__Name__{#__Name__};

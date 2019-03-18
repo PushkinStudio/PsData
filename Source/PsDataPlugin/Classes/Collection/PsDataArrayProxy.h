@@ -23,7 +23,7 @@ struct FArrayChangeBehavior
 template <typename T>
 struct FArrayChangeBehavior<T*>
 {
-	static_assert(std::is_base_of<UPsData, T>::value, "Pointer must be only UPsData");
+	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
 	static void AddToArray(const THardObjectPtr<UPsData>& Instance, int32 Index, T* Value)
 	{

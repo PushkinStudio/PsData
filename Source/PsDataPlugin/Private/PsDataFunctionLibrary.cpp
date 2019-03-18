@@ -161,6 +161,57 @@ void UPsDataFunctionLibrary::SetFloatMapProperty(UPsData* Target, int32 Hash, co
 }
 
 /***********************************
+ * bool
+ ***********************************/
+
+bool UPsDataFunctionLibrary::GetBoolProperty(UPsData* Target, int32 Hash)
+{
+	bool* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	return false;
+}
+
+void UPsDataFunctionLibrary::SetBoolProperty(UPsData* Target, int32 Hash, bool Value)
+{
+	FDataReflectionTools::SetByHash<bool>(Target, Hash, Value);
+}
+
+const TArray<bool>& UPsDataFunctionLibrary::GetBoolArrayProperty(UPsData* Target, int32 Hash)
+{
+	TArray<bool>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TArray<bool> Default = TArray<bool>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetBoolArrayProperty(UPsData* Target, int32 Hash, const TArray<bool>& Value)
+{
+	FDataReflectionTools::SetByHash<TArray<bool>>(Target, Hash, Value);
+}
+
+const TMap<FString, bool>& UPsDataFunctionLibrary::GetBoolMapProperty(UPsData* Target, int32 Hash)
+{
+	TMap<FString, bool>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TMap<FString, bool> Default = TMap<FString, bool>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetBoolMapProperty(UPsData* Target, int32 Hash, const TMap<FString, bool>& Value)
+{
+	FDataReflectionTools::SetByHash<TMap<FString, bool>>(Target, Hash, Value);
+}
+
+/***********************************
  * String
  ***********************************/
 
@@ -212,54 +263,55 @@ void UPsDataFunctionLibrary::SetStringMapProperty(UPsData* Target, int32 Hash, c
 }
 
 /***********************************
- * bool
+ * FText
  ***********************************/
 
-bool UPsDataFunctionLibrary::GetBoolProperty(UPsData* Target, int32 Hash)
+FText UPsDataFunctionLibrary::GetTextProperty(UPsData* Target, int32 Hash)
 {
-	bool* Result = nullptr;
+	FText* Result = nullptr;
 	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
 	{
 		return *Result;
 	}
-	return false;
-}
-
-void UPsDataFunctionLibrary::SetBoolProperty(UPsData* Target, int32 Hash, bool Value)
-{
-	FDataReflectionTools::SetByHash<bool>(Target, Hash, Value);
-}
-
-const TArray<bool>& UPsDataFunctionLibrary::GetBoolArrayProperty(UPsData* Target, int32 Hash)
-{
-	TArray<bool>* Result = nullptr;
-	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
-	{
-		return *Result;
-	}
-	static const TArray<bool> Default = TArray<bool>();
+	static const FText Default = FText();
 	return Default;
 }
 
-void UPsDataFunctionLibrary::SetBoolArrayProperty(UPsData* Target, int32 Hash, const TArray<bool>& Value)
+void UPsDataFunctionLibrary::SetTextProperty(UPsData* Target, int32 Hash, const FText& Value)
 {
-	FDataReflectionTools::SetByHash<TArray<bool>>(Target, Hash, Value);
+	FDataReflectionTools::SetByHash<FText>(Target, Hash, Value);
 }
 
-const TMap<FString, bool>& UPsDataFunctionLibrary::GetBoolMapProperty(UPsData* Target, int32 Hash)
+const TArray<FText>& UPsDataFunctionLibrary::GetTextArrayProperty(UPsData* Target, int32 Hash)
 {
-	TMap<FString, bool>* Result = nullptr;
+	TArray<FText>* Result = nullptr;
 	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
 	{
 		return *Result;
 	}
-	static const TMap<FString, bool> Default = TMap<FString, bool>();
+	static const TArray<FText> Default = TArray<FText>();
 	return Default;
 }
 
-void UPsDataFunctionLibrary::SetBoolMapProperty(UPsData* Target, int32 Hash, const TMap<FString, bool>& Value)
+void UPsDataFunctionLibrary::SetTextArrayProperty(UPsData* Target, int32 Hash, const TArray<FText>& Value)
 {
-	FDataReflectionTools::SetByHash<TMap<FString, bool>>(Target, Hash, Value);
+	FDataReflectionTools::SetByHash<TArray<FText>>(Target, Hash, Value);
+}
+
+const TMap<FString, FText>& UPsDataFunctionLibrary::GetTextMapProperty(UPsData* Target, int32 Hash)
+{
+	TMap<FString, FText>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TMap<FString, FText> Default = TMap<FString, FText>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetTextMapProperty(UPsData* Target, int32 Hash, const TMap<FString, FText>& Value)
+{
+	FDataReflectionTools::SetByHash<TMap<FString, FText>>(Target, Hash, Value);
 }
 
 /***********************************
@@ -317,14 +369,15 @@ void UPsDataFunctionLibrary::SetDataMapProperty(UPsData* Target, int32 Hash, con
  * TSoftObject
  ***********************************/
 
-TSoftObjectPtr<UObject> UPsDataFunctionLibrary::GetSoftObjectProperty(UPsData* Target, int32 Hash)
+const TSoftObjectPtr<UObject>& UPsDataFunctionLibrary::GetSoftObjectProperty(UPsData* Target, int32 Hash)
 {
 	TSoftObjectPtr<UObject>* Result;
 	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
 	{
 		return *Result;
 	}
-	return TSoftObjectPtr<UObject>();
+	static const TSoftObjectPtr<UObject> Default = TSoftObjectPtr<UObject>();
+	return Default;
 }
 
 void UPsDataFunctionLibrary::SetSoftObjectProperty(UPsData* Target, int32 Hash, const TSoftObjectPtr<UObject>& Value)
@@ -365,73 +418,87 @@ void UPsDataFunctionLibrary::SetSoftObjectMapProperty(UPsData* Target, int32 Has
 }
 
 /***********************************
- * FText
+ * TSoftClass
  ***********************************/
 
-FText UPsDataFunctionLibrary::GetTextProperty(UPsData* Target, int32 Hash)
+const TSoftClassPtr<UObject>& UPsDataFunctionLibrary::GetSoftClassProperty(UPsData* Target, int32 Hash)
 {
-	FText* Result = nullptr;
+	TSoftClassPtr<UObject>* Result;
 	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
 	{
 		return *Result;
 	}
-	static const FText Default = FText();
+	static const TSoftClassPtr<UObject> Default = TSoftClassPtr<UObject>();
 	return Default;
 }
 
-void UPsDataFunctionLibrary::SetTextProperty(UPsData* Target, int32 Hash, const FText& Value)
+void UPsDataFunctionLibrary::SetSoftClassProperty(UPsData* Target, int32 Hash, const TSoftClassPtr<UObject>& Value)
 {
-	FDataReflectionTools::SetByHash<FText>(Target, Hash, Value);
+	FDataReflectionTools::SetByHash<TSoftClassPtr<UObject>>(Target, Hash, Value);
 }
 
-const TArray<FText>& UPsDataFunctionLibrary::GetTextArrayProperty(UPsData* Target, int32 Hash)
+const TArray<TSoftClassPtr<UObject>>& UPsDataFunctionLibrary::GetSoftClassArrayProperty(UPsData* Target, int32 Hash)
 {
-	TArray<FText>* Result = nullptr;
+	TArray<TSoftClassPtr<UObject>>* Result;
 	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
 	{
 		return *Result;
 	}
-	static const TArray<FText> Default = TArray<FText>();
+	static const TArray<TSoftClassPtr<UObject>> Default = TArray<TSoftClassPtr<UObject>>();
 	return Default;
 }
 
-void UPsDataFunctionLibrary::SetTextArrayProperty(UPsData* Target, int32 Hash, const TArray<FText>& Value)
+void UPsDataFunctionLibrary::SetSoftClassArrayProperty(UPsData* Target, int32 Hash, const TArray<TSoftClassPtr<UObject>>& Value)
 {
-	FDataReflectionTools::SetByHash<TArray<FText>>(Target, Hash, Value);
+	FDataReflectionTools::SetByHash<TArray<TSoftClassPtr<UObject>>>(Target, Hash, Value);
 }
 
-const TMap<FString, FText>& UPsDataFunctionLibrary::GetTextMapProperty(UPsData* Target, int32 Hash)
+const TMap<FString, TSoftClassPtr<UObject>>& UPsDataFunctionLibrary::GetSoftClassMapProperty(UPsData* Target, int32 Hash)
 {
-	TMap<FString, FText>* Result = nullptr;
+	TMap<FString, TSoftClassPtr<UObject>>* Result;
 	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
 	{
 		return *Result;
 	}
-	static const TMap<FString, FText> Default = TMap<FString, FText>();
+	static const TMap<FString, TSoftClassPtr<UObject>> Default = TMap<FString, TSoftClassPtr<UObject>>();
 	return Default;
 }
 
-void UPsDataFunctionLibrary::SetTextMapProperty(UPsData* Target, int32 Hash, const TMap<FString, FText>& Value)
+void UPsDataFunctionLibrary::SetSoftClassMapProperty(UPsData* Target, int32 Hash, const TMap<FString, TSoftClassPtr<UObject>>& Value)
 {
-	FDataReflectionTools::SetByHash<TMap<FString, FText>>(Target, Hash, Value);
+	FDataReflectionTools::SetByHash<TMap<FString, TSoftClassPtr<UObject>>>(Target, Hash, Value);
 }
 
 /***********************************
  * Path
  ***********************************/
 
-UPsData* UPsDataFunctionLibrary::GetDataByPath(UPsData* Target, const FString& PropertyName, const FString& Path)
+UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, int32 Hash)
 {
-	FString* PropertyPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<FString>(Target, PropertyName, PropertyPtr))
+	//TODO: PS-136
+	UPsData* Target = const_cast<UPsData*>(ConstTarget);
+
+	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
+	if (!Link.IsValid())
 	{
-		return nullptr;
+		UE_LOG(LogData, Fatal, TEXT("Can't find link 0x%08x in \"%s\""), Hash, *Target->GetClass()->GetName())
+	}
+
+	if (Link->bAbstract)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Can't link abstract path \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
+	}
+
+	FString* PropertyPtr = nullptr;
+	if (!FDataReflectionTools::GetByName<FString>(Target, Link->Name, PropertyPtr))
+	{
+		UE_LOG(LogData, Fatal, TEXT("Can't find property \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
 	}
 
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), Path, MapPtr))
+	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), Link->Path, MapPtr))
 	{
-		return nullptr;
+		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *Link->Path, *Target->GetRoot()->GetClass()->GetName())
 	}
 
 	UPsData** Find = MapPtr->Find(*PropertyPtr);
@@ -443,22 +510,35 @@ UPsData* UPsDataFunctionLibrary::GetDataByPath(UPsData* Target, const FString& P
 	return nullptr;
 }
 
-TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByPath(UPsData* Target, const FString& PropertyName, const FString& Path)
+TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* ConstTarget, int32 Hash)
 {
-	TArray<UPsData*> Result;
+	//TODO: PS-136
+	UPsData* Target = const_cast<UPsData*>(ConstTarget);
+
+	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
+	if (!Link.IsValid())
+	{
+		UE_LOG(LogData, Fatal, TEXT("Can't find link 0x%08x in \"%s\""), Hash, *Target->GetClass()->GetName())
+	}
+
+	if (Link->bAbstract)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Can't link abstract path \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
+	}
 
 	TArray<FString>* PropertyPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<TArray<FString>>(Target, PropertyName, PropertyPtr))
+	if (!FDataReflectionTools::GetByName<TArray<FString>>(Target, Link->Name, PropertyPtr))
 	{
-		return Result;
+		UE_LOG(LogData, Fatal, TEXT("Can't find property \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
 	}
 
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), Path, MapPtr))
+	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), Link->Path, MapPtr))
 	{
-		return Result;
+		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *Link->Path, *Target->GetRoot()->GetClass()->GetName())
 	}
 
+	TArray<UPsData*> Result;
 	const TArray<FString>& Array = *PropertyPtr;
 	for (const FString& Element : Array)
 	{
@@ -468,7 +548,6 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByPath(UPsData* Target, con
 			Result.Add(*Find);
 		}
 	}
-
 	return Result;
 }
 

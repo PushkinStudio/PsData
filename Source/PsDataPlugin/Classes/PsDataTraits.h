@@ -42,6 +42,30 @@ struct TRemovePointer<T*>
 } // namespace FDataReflectionTools
 
 /***********************************
+ * TSelector trait
+ ***********************************/
+
+namespace FDataReflectionTools
+{
+template <typename True, typename False, bool bValue>
+struct TSelector
+{
+};
+
+template <typename True, typename False>
+struct TSelector<True, False, true>
+{
+	typedef True Value;
+};
+
+template <typename True, typename False>
+struct TSelector<True, False, false>
+{
+	typedef False Value;
+};
+} // namespace FDataReflectionTools
+
+/***********************************
  * TConstRef trait
  ***********************************/
 
@@ -50,13 +74,13 @@ namespace FDataReflectionTools
 template <typename T, bool bConst = false>
 struct TConstRef
 {
-	typedef const T& Type;
+	typedef typename TSelector<T, const T&, std::is_arithmetic<T>::value>::Value Type;
 };
 
 template <typename T>
 struct TConstRef<const T>
 {
-	typedef const T& Type;
+	typedef typename TSelector<const T, const T&, std::is_arithmetic<T>::value>::Value Type;
 };
 
 template <typename T>
@@ -128,37 +152,3 @@ struct TIsContainer<TMap<K, T>>
 };
 
 } // namespace FDataReflectionTools
-
-/***********************************
-* Default value trait
-***********************************/
-
-template <typename T>
-struct FDefaultValue
-{
-	static T GetDefault() { return T(); }
-};
-
-template <>
-struct FDefaultValue<int32>
-{
-	static int32 GetDefault() { return 0; }
-};
-
-template <>
-struct FDefaultValue<uint8>
-{
-	static uint8 GetDefault() { return 0; }
-};
-
-template <>
-struct FDefaultValue<float>
-{
-	static float GetDefault() { return 0.f; }
-};
-
-template <>
-struct FDefaultValue<bool>
-{
-	static bool GetDefault() { return false; }
-};

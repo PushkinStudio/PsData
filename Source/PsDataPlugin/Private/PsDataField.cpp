@@ -13,7 +13,6 @@ const char* EDataMetaType::Strict = "strict";
 const char* EDataMetaType::Event = "event";
 const char* EDataMetaType::Bubbles = "bubbles";
 const char* EDataMetaType::Alias = "alias";
-const char* EDataMetaType::Link = "link";
 const char* EDataMetaType::ReadOnly = "readonly";
 const char* EDataMetaType::Deprecated = "deprecated";
 
@@ -26,9 +25,7 @@ FDataFieldMeta::FDataFieldMeta()
 	, bEvent(false)
 	, bBubbles(false)
 	, bDeprecated(false)
-	, bLink(false)
 	, bReadOnly(false)
-	, LinkPath()
 	, Alias()
 	, EventType()
 {
@@ -315,12 +312,6 @@ void FDataField::ParseMetaPair(const char* Key, int32 KeySize, const char* Value
 		checkf(Value != nullptr, TEXT("Value needed!"));
 		Meta.Alias = Value ? FString(ValueSize, Value) : TEXT("");
 	}
-	else if (Equal(Key, EDataMetaType::Link))
-	{
-		checkf(Value != nullptr, TEXT("Value needed!"));
-		Meta.bLink = true;
-		Meta.LinkPath = Value ? FString(ValueSize, Value) : TEXT("");
-	}
 	else if (Equal(Key, EDataMetaType::Deprecated))
 	{
 		ensureMsgf(Value == nullptr, TEXT("Unused value!"));
@@ -352,4 +343,18 @@ void FDataField::ParseMetaPair(const char* Key, int32 KeySize, const char* Value
 		Meta.EventType = TEXT("");
 		UE_LOG(LogData, Error, TEXT("Property with strict meta can't broadcast event"))
 	}
+}
+
+/***********************************
+ * Link
+ ***********************************/
+
+FDataLink::FDataLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 InHash, bool bInAbstract, bool bInCollection)
+	: Name(CharName)
+	, Path(CharPath)
+	, ReturnType(CharReturnType)
+	, Hash(InHash)
+	, bCollection(bInCollection)
+	, bAbstract(bInAbstract)
+{
 }

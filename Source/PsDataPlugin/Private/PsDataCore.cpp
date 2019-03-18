@@ -4,33 +4,29 @@
 
 #include "UObject/UObjectIterator.h"
 
-TMap<UClass*, TMap<FString, TSharedPtr<const FDataField>>> FDataReflection::FieldsByName;
-TMap<UClass*, TMap<int32, TSharedPtr<const FDataField>>> FDataReflection::FieldsByHash;
+TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByName;
+TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByHash;
+TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> FDataReflection::LinksByHash;
 
 TArray<UClass*> FDataReflection::ClassQueue;
 TArray<const char*> FDataReflection::MetaCollection;
 
 bool FDataReflection::bCompiled = false;
 
-void FDataReflection::AddField(UClass* OwnerClass, const FString& Name, int32 Hash, FAbstractDataTypeContext* Context)
+void FDataReflection::AddField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context)
 {
 	check(!bCompiled);
+	const FString Name(CharName);
 
-	if (!InQueue(OwnerClass))
+	if (!InQueue())
 	{
-		if (InQueue())
-		{
-			UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s another class is active: %s"), *OwnerClass->GetName(), *Name, *GetLastClassInQueue()->GetName());
-		}
-		else
-		{
-			UE_LOG(LogData, Error, TEXT("Can't describe: %s::%s because queue is empty"), *OwnerClass->GetName(), *Name);
-		}
-		return;
+		UE_LOG(LogData, Fatal, TEXT("Can't describe property \"%s\" because queue is empty"), *Name);
 	}
 
-	TMap<FString, TSharedPtr<const FDataField>>& MapByName = FieldsByName.FindOrAdd(OwnerClass);
-	TMap<int32, TSharedPtr<const FDataField>>& MapByHash = FieldsByHash.FindOrAdd(OwnerClass);
+	UClass* OwnerClass = GetLastClassInQueue();
+
+	TMap<FString, const TSharedPtr<const FDataField>>& MapByName = FieldsByName.FindOrAdd(OwnerClass);
+	TMap<int32, const TSharedPtr<const FDataField>>& MapByHash = FieldsByHash.FindOrAdd(OwnerClass);
 
 	const int32 Index = MapByName.Num();
 
@@ -46,6 +42,30 @@ void FDataReflection::AddField(UClass* OwnerClass, const FString& Name, int32 Ha
 	MapByHash.Add(Hash, Field);
 
 	UE_LOG(LogData, Verbose, TEXT(" %02d %s %s::%s (0x%08x)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *Name, Hash);
+}
+
+void FDataReflection::AddLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection)
+{
+	check(!bCompiled);
+
+	if (!InQueue())
+	{
+		UE_LOG(LogData, Fatal, TEXT("Can't describe link \"%s\" because queue is empty"), CharName);
+	}
+
+	UClass* OwnerClass = GetLastClassInQueue();
+
+	TMap<int32, const TSharedPtr<const FDataLink>>& MapByHash = LinksByHash.FindOrAdd(OwnerClass);
+	if (auto Find = MapByHash.Find(Hash))
+	{
+		auto Link = *Find;
+		if (!Link->bAbstract)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s (path: %s) 0x%08x"), *OwnerClass->GetName(), *Link->Name, *Link->Path, Hash);
+		}
+	}
+
+	MapByHash.Add(Hash, TSharedPtr<const FDataLink>(new FDataLink(CharName, CharPath, CharReturnType, Hash, bAbstract, bCollection)));
 }
 
 void FDataReflection::AddToQueue(UPsData* Instance)
@@ -69,16 +89,6 @@ void FDataReflection::AddToQueue(UPsData* Instance)
 	if ((Class->GetClassFlags() & CLASS_Constructed) == 0)
 	{
 		return;
-	}
-
-	UClass* SuperClass = Class->GetSuperClass();
-	if (FieldsByName.Contains(SuperClass))
-	{
-		FieldsByName.FindOrAdd(Class).Append(*FieldsByName.Find(SuperClass));
-	}
-	else
-	{
-		FieldsByName.FindOrAdd(Class);
 	}
 
 	ClassQueue.Add(Class);
@@ -125,11 +135,6 @@ void FDataReflection::RemoveFromQueue(UPsData* Instance)
 	}
 }
 
-bool FDataReflection::InQueue(UClass* StaticClass)
-{
-	return !bCompiled && ClassQueue.Num() > 0 && ClassQueue.Last() == StaticClass;
-}
-
 bool FDataReflection::InQueue()
 {
 	return !bCompiled && ClassQueue.Num() > 0;
@@ -159,7 +164,7 @@ void FDataReflection::Fill(UPsData* Instance)
 {
 	const bool bDefaultObject = Instance->HasAnyFlags(EObjectFlags::RF_ClassDefaultObject | EObjectFlags::RF_DefaultSubObject);
 
-	const TMap<FString, TSharedPtr<const FDataField>>& FieldMap = FDataReflection::GetFields(Instance->GetClass());
+	const TMap<FString, const TSharedPtr<const FDataField>>& FieldMap = FDataReflection::GetFields(Instance->GetClass());
 
 	auto& Memory = FDataReflectionTools::FPsDataFriend::GetMemory(Instance);
 	Memory.AddDefaulted(FieldMap.Num());
@@ -188,15 +193,15 @@ void FDataReflection::Fill(UPsData* Instance)
 			}
 		}
 	}
-	//TODO: invoke init constructor
+	FDataReflectionTools::FPsDataFriend::InitProperties(Instance);
 }
 
 TSharedPtr<const FDataField> FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
 {
-	TMap<FString, TSharedPtr<const FDataField>>* MapPtr = FieldsByName.Find(OwnerClass);
+	TMap<FString, const TSharedPtr<const FDataField>>* MapPtr = FieldsByName.Find(OwnerClass);
 	if (MapPtr)
 	{
-		TSharedPtr<const FDataField>* SharedPtr = MapPtr->Find(Name);
+		const TSharedPtr<const FDataField>* SharedPtr = MapPtr->Find(Name);
 		if (SharedPtr)
 		{
 			return *SharedPtr;
@@ -218,12 +223,7 @@ TSharedPtr<const FDataField> FDataReflection::GetFieldByHash(UClass* OwnerClass,
 	return nullptr;
 }
 
-bool FDataReflection::HasClass(const UClass* StaticClass)
-{
-	return FieldsByName.Contains(StaticClass);
-}
-
-const TMap<FString, TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* StaticClass)
+const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* StaticClass)
 {
 	auto Find = FieldsByName.Find(StaticClass);
 	if (Find)
@@ -231,8 +231,25 @@ const TMap<FString, TSharedPtr<const FDataField>>& FDataReflection::GetFields(co
 		return *Find;
 	}
 
-	static TMap<FString, TSharedPtr<const FDataField>> Empty;
+	static TMap<FString, const TSharedPtr<const FDataField>> Empty;
 	return Empty;
+}
+
+TSharedPtr<const FDataLink> FDataReflection::GetLinkByHash(UClass* OwnerClass, int32 Hash)
+{
+	if (auto MapPtr = LinksByHash.Find(OwnerClass))
+	{
+		if (auto FieldPtr = MapPtr->Find(Hash))
+		{
+			return *FieldPtr;
+		}
+	}
+	return nullptr;
+}
+
+bool FDataReflection::HasClass(const UClass* StaticClass)
+{
+	return FieldsByName.Contains(StaticClass);
 }
 
 void FDataReflection::Compile()
