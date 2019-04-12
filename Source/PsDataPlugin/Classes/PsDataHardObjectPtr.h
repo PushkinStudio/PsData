@@ -85,7 +85,7 @@ private:
 			if (Count == 0)
 			{
 				UPsDataHardObjectPtrSingleton::Get()->ObjectCounters.Remove(Object);
-				const_cast<UObject*>(Object)->ClearFlags(RF_StrongRefOnFrame);
+				const_cast<UObject*>(Object)->ClearFlags(RF_Standalone);
 			}
 		}
 	}
@@ -102,7 +102,7 @@ private:
 			if (Count == 1)
 			{
 				// @TODO ZEN-770 Check cluster add instead of root one
-				const_cast<UObject*>(Object)->SetFlags(RF_StrongRefOnFrame);
+				const_cast<UObject*>(Object)->SetFlags(RF_Standalone);
 			}
 		}
 	}

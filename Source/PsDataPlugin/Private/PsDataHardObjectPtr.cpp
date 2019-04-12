@@ -19,7 +19,7 @@ UPsDataHardObjectPtrSingleton* UPsDataHardObjectPtrSingleton::Get()
 	if (Singleton == nullptr)
 	{
 		Singleton = NewObject<UPsDataHardObjectPtrSingleton>();
-		Singleton->AddToRoot();
+		Singleton->SetFlags(RF_Standalone);
 	}
 
 	return Singleton;
