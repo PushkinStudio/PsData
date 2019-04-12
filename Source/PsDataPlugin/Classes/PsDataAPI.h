@@ -53,7 +53,7 @@ public:                                                                         
 		FDataReflectionTools::SetByHash<__Type__>(this, _UNIQ(hash), Value);                                           \
 	}                                                                                                                  \
                                                                                                                        \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                     \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                               \
 	{                                                                                                                  \
 		Bind(_UNIQ(hash), Delegate);                                                                                   \
 	}
@@ -94,7 +94,7 @@ public:                                                                         
 	}                                                                                                                  \
                                                                                                                        \
 	DEPRECATED(0, "Property was marked as deprecated")                                                                 \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                     \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                               \
 	{                                                                                                                  \
 		Bind(_UNIQ(hash), Delegate);                                                                                   \
 	}
@@ -140,9 +140,9 @@ public:                                                                         
 			FDataReflectionTools::GetByHash(This, _UNIQ(hash), Output);                                                \
 			return *Output;                                                                                            \
 		}                                                                                                              \
-	} const GetMutable##__Name__ = FMutable_##__Name__(this);                                                          \
+	} const GetMutable##__Name__{this};                                                                                \
                                                                                                                        \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                     \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                               \
 	{                                                                                                                  \
 		Bind(_UNIQ(hash), Delegate);                                                                                   \
 	}
@@ -190,10 +190,10 @@ public:                                                                         
 			FDataReflectionTools::GetByHash(This, _UNIQ(hash), Output);                                                \
 			return *Output;                                                                                            \
 		}                                                                                                              \
-	} const GetMutable##__Name__ = FMutable_##__Name__(this);                                                          \
+	} const GetMutable##__Name__{this};                                                                                \
                                                                                                                        \
 	DEPRECATED(0, "Property was marked as deprecated")                                                                 \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                     \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                               \
 	{                                                                                                                  \
 		Bind(_UNIQ(hash), Delegate);                                                                                   \
 	}
@@ -220,7 +220,7 @@ public:                                                                         
 		return FPsDataArrayProxy<__Type__>(this, _UNIQ(hash));                                                         \
 	}                                                                                                                  \
                                                                                                                        \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                     \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                               \
 	{                                                                                                                  \
 		Bind(_UNIQ(hash), Delegate);                                                                                   \
 	}
@@ -251,7 +251,7 @@ public:                                                                         
 	}                                                                                                                  \
                                                                                                                        \
 	DEPRECATED(0, "Property was marked as deprecated")                                                                 \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                     \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                               \
 	{                                                                                                                  \
 		Bind(_UNIQ(hash), Delegate);                                                                                   \
 	}
@@ -278,7 +278,7 @@ public:                                                                         
 		return FPsDataMapProxy<__Type__>(this, _UNIQ(hash));                                                         \
 	}                                                                                                                \
                                                                                                                      \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                   \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                             \
 	{                                                                                                                \
 		Bind(_UNIQ(hash), Delegate);                                                                                 \
 	}
@@ -309,7 +309,7 @@ public:                                                                         
 	}                                                                                                                \
                                                                                                                      \
 	DEPRECATED(0, "Property was marked as deprecated")                                                               \
-	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate)                                                   \
+	void Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                             \
 	{                                                                                                                \
 		Bind(_UNIQ(hash), Delegate);                                                                                 \
 	}

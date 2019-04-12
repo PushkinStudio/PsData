@@ -6,6 +6,7 @@
 
 TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByName;
 TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByHash;
+TMap<UClass*, TMap<FString, const TSharedPtr<const FDataLink>>> FDataReflection::LinksByName;
 TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> FDataReflection::LinksByHash;
 
 TArray<UClass*> FDataReflection::ClassQueue;
@@ -41,21 +42,26 @@ void FDataReflection::AddField(const char* CharName, int32 Hash, FAbstractDataTy
 	MapByName.Add(Name, Field);
 	MapByHash.Add(Hash, Field);
 
-	UE_LOG(LogData, Verbose, TEXT(" %02d %s %s::%s (0x%08x)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *Name, Hash);
+	UE_LOG(LogData, VeryVerbose, TEXT(" %02d %s %s::%s (0x%08x)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *Name, Hash);
 }
 
 void FDataReflection::AddLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection)
 {
 	check(!bCompiled);
+	const FString Name(CharName);
+	const FString Path(CharPath);
+	const FString ReturnType(CharReturnType);
 
 	if (!InQueue())
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't describe link \"%s\" because queue is empty"), CharName);
+		UE_LOG(LogData, Fatal, TEXT("Can't describe link \"%s\" because queue is empty"), *Name);
 	}
 
 	UClass* OwnerClass = GetLastClassInQueue();
 
+	TMap<FString, const TSharedPtr<const FDataLink>>& MapByName = LinksByName.FindOrAdd(OwnerClass);
 	TMap<int32, const TSharedPtr<const FDataLink>>& MapByHash = LinksByHash.FindOrAdd(OwnerClass);
+
 	if (auto Find = MapByHash.Find(Hash))
 	{
 		auto Link = *Find;
@@ -64,8 +70,11 @@ void FDataReflection::AddLink(const char* CharName, const char* CharPath, const 
 			UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s (path: %s) 0x%08x"), *OwnerClass->GetName(), *Link->Name, *Link->Path, Hash);
 		}
 	}
+	TSharedPtr<const FDataLink> Link(new FDataLink(Name, Path, ReturnType, Hash, bAbstract, bCollection, MetaCollection));
+	MetaCollection.Reset();
 
-	MapByHash.Add(Hash, TSharedPtr<const FDataLink>(new FDataLink(CharName, CharPath, CharReturnType, Hash, bAbstract, bCollection)));
+	MapByName.Add(Name, Link);
+	MapByHash.Add(Hash, Link);
 }
 
 void FDataReflection::AddToQueue(UPsData* Instance)
@@ -92,7 +101,7 @@ void FDataReflection::AddToQueue(UPsData* Instance)
 	}
 
 	ClassQueue.Add(Class);
-	UE_LOG(LogData, Verbose, TEXT("Describe %s:"), *Class->GetName())
+	UE_LOG(LogData, VeryVerbose, TEXT("Describe %s:"), *Class->GetName())
 }
 
 void FDataReflection::RemoveFromQueue(UPsData* Instance)
@@ -131,7 +140,7 @@ void FDataReflection::RemoveFromQueue(UPsData* Instance)
 			return a < b;
 		});
 
-		UE_LOG(LogData, Verbose, TEXT("%s complete!"), *Class->GetName())
+		UE_LOG(LogData, VeryVerbose, TEXT("%s complete!"), *Class->GetName())
 	}
 }
 
@@ -223,9 +232,9 @@ TSharedPtr<const FDataField> FDataReflection::GetFieldByHash(UClass* OwnerClass,
 	return nullptr;
 }
 
-const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* StaticClass)
+const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* OwnerClass)
 {
-	auto Find = FieldsByName.Find(StaticClass);
+	auto Find = FieldsByName.Find(OwnerClass);
 	if (Find)
 	{
 		return *Find;
@@ -233,6 +242,18 @@ const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFie
 
 	static TMap<FString, const TSharedPtr<const FDataField>> Empty;
 	return Empty;
+}
+
+TSharedPtr<const FDataLink> FDataReflection::GetLinkByName(UClass* OwnerClass, const FString& Name)
+{
+	if (auto MapPtr = LinksByName.Find(OwnerClass))
+	{
+		if (auto FieldPtr = MapPtr->Find(Name))
+		{
+			return *FieldPtr;
+		}
+	}
+	return nullptr;
 }
 
 TSharedPtr<const FDataLink> FDataReflection::GetLinkByHash(UClass* OwnerClass, int32 Hash)
@@ -247,9 +268,21 @@ TSharedPtr<const FDataLink> FDataReflection::GetLinkByHash(UClass* OwnerClass, i
 	return nullptr;
 }
 
-bool FDataReflection::HasClass(const UClass* StaticClass)
+const TMap<FString, const TSharedPtr<const FDataLink>>& FDataReflection::GetLinks(UClass* OwnerClass)
 {
-	return FieldsByName.Contains(StaticClass);
+	auto Find = LinksByName.Find(OwnerClass);
+	if (Find)
+	{
+		return *Find;
+	}
+
+	static TMap<FString, const TSharedPtr<const FDataLink>> Empty;
+	return Empty;
+}
+
+bool FDataReflection::HasClass(const UClass* OwnerClass)
+{
+	return FieldsByName.Contains(OwnerClass);
 }
 
 void FDataReflection::Compile()

@@ -21,6 +21,7 @@ struct EDataMetaType
 	static const char* Alias;
 	static const char* ReadOnly;
 	static const char* Deprecated;
+	static const char* Nullable;
 };
 
 /***********************************
@@ -38,6 +39,17 @@ struct FDataFieldMeta
 	FString EventType;
 
 	FDataFieldMeta();
+};
+
+/***********************************
+ * FDataLinkMeta
+ ***********************************/
+
+struct FDataLinkMeta
+{
+	bool bNullable;
+
+	FDataLinkMeta();
 };
 
 /***********************************
@@ -74,7 +86,7 @@ struct PSDATAPLUGIN_API FAbstractDataTypeContext
 };
 
 /***********************************
- * Field
+ * FDataField
  ***********************************/
 
 struct PSDATAPLUGIN_API FDataField
@@ -88,14 +100,10 @@ public:
 
 	FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, const TArray<const char*>& MetaCollection);
 	const FString& GenerateChangePropertyEventName() const;
-
-private:
-	void ParseMeta(const TArray<const char*>& Collection);
-	void ParseMetaPair(const char* Key, int32 KeySize, const char* Value, int32 ValueSize);
 };
 
 /***********************************
- * Link
+ * FDataLink
  ***********************************/
 
 struct PSDATAPLUGIN_API FDataLink
@@ -107,6 +115,7 @@ public:
 	int32 Hash;
 	bool bCollection;
 	bool bAbstract;
+	FDataLinkMeta Meta;
 
-	FDataLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 InHash, bool bInCollection, bool bInAbstract);
+	FDataLink(const FString& InName, const FString& InPath, const FString& InReturnType, int32 InHash, bool bInCollection, bool bInAbstract, const TArray<const char*>& MetaCollection);
 };

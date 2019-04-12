@@ -474,6 +474,79 @@ struct FTypeDeserializer<TSoftClassPtr<T>>
 		return Deserialize(Deserializer);
 	}
 };
+
+template <>
+struct FTypeSerializer<FLinearColor>
+{
+	static void Serialize(FPsDataSerializer* Serializer, const FLinearColor& Value)
+	{
+		static const FString RParam(TEXT("r"));
+		static const FString GParam(TEXT("g"));
+		static const FString BParam(TEXT("b"));
+		static const FString AParam(TEXT("a"));
+
+		Serializer->WriteObject();
+		Serializer->WriteKey(RParam);
+		Serializer->WriteValue(Value.R);
+		Serializer->PopKey(RParam);
+		Serializer->WriteKey(GParam);
+		Serializer->WriteValue(Value.G);
+		Serializer->PopKey(GParam);
+		Serializer->WriteKey(BParam);
+		Serializer->WriteValue(Value.B);
+		Serializer->PopKey(BParam);
+		Serializer->WriteKey(AParam);
+		Serializer->WriteValue(Value.A);
+		Serializer->PopKey(AParam);
+		Serializer->PopObject();
+	}
+};
+
+template <>
+struct FTypeDeserializer<FLinearColor>
+{
+	static FLinearColor Deserialize(FPsDataDeserializer* Deserializer)
+	{
+		static const FString RParam(TEXT("r"));
+		static const FString GParam(TEXT("g"));
+		static const FString BParam(TEXT("b"));
+		static const FString AParam(TEXT("a"));
+
+		FLinearColor Result;
+		if (Deserializer->ReadObject())
+		{
+			FString Key;
+			while (Deserializer->ReadKey(Key))
+			{
+				float Value = 0;
+				if (Key == RParam && Deserializer->ReadValue(Value))
+				{
+					Result.R = Value;
+				}
+				else if (Key == GParam && Deserializer->ReadValue(Value))
+				{
+					Result.G = Value;
+				}
+				else if (Key == BParam && Deserializer->ReadValue(Value))
+				{
+					Result.B = Value;
+				}
+				else if (Key == AParam && Deserializer->ReadValue(Value))
+				{
+					Result.A = Value;
+				}
+				Deserializer->PopKey(Key);
+			}
+			Deserializer->PopObject();
+		}
+		return Result;
+	}
+
+	static FLinearColor Deserialize(FPsDataDeserializer* Deserializer, const FLinearColor& Value)
+	{
+		return Deserialize(Deserializer);
+	}
+};
 } // namespace FDataReflectionTools
 
 /***********************************
@@ -645,7 +718,7 @@ struct FDataMemory<T*> : public FAbstractDataMemory
 
 		if (NewValue)
 		{
-			FDataReflectionTools::FPsDataFriend::ChangeDataName(NewValue, Field->Name);
+			FDataReflectionTools::FPsDataFriend::ChangeDataName(NewValue, Field->Name, TEXT(""));
 			FDataReflectionTools::FPsDataFriend::AddChild(Instance, NewValue);
 		}
 		return true;
@@ -718,7 +791,7 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 		{
 			if (NewValue[i]->GetParent() != Instance)
 			{
-				FDataReflectionTools::FPsDataFriend::ChangeDataName(NewValue[i], FString::FromInt(i));
+				FDataReflectionTools::FPsDataFriend::ChangeDataName(NewValue[i], FString::FromInt(i), Field->Name);
 				FDataReflectionTools::FPsDataFriend::AddChild(Instance, NewValue[i]);
 				bChange = true;
 			}
@@ -807,7 +880,7 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 		{
 			if (Pair.Value->GetParent() != Instance)
 			{
-				FDataReflectionTools::FPsDataFriend::ChangeDataName(Pair.Value, Pair.Key);
+				FDataReflectionTools::FPsDataFriend::ChangeDataName(Pair.Value, Pair.Key, Field->Name);
 				FDataReflectionTools::FPsDataFriend::AddChild(Instance, Pair.Value);
 				bChange = true;
 			}

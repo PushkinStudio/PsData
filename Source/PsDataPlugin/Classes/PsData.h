@@ -39,7 +39,7 @@ namespace FDataReflectionTools
 {
 struct PSDATAPLUGIN_API FPsDataFriend
 {
-	static void ChangeDataName(UPsData* Data, const FString& Name);
+	static void ChangeDataName(UPsData* Data, const FString& Name, const FString& CollectionName);
 	static void AddChild(UPsData* Parent, UPsData* Data);
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
 	static bool IsChanged(UPsData* Data);
@@ -70,6 +70,27 @@ struct FDelegateWrapper
 		, Field(InField)
 	{
 	}
+};
+
+/***********************************
+ * FPsDataReport
+ ***********************************/
+
+enum class EPsDataReportType : uint8
+{
+	Logic = 0,
+	Link = 1,
+};
+
+struct FPsDataReport
+{
+	EPsDataReportType Type;
+	FString SourcePath;
+	FString Reason;
+	FString LinkedPath;
+
+	FPsDataReport(EPsDataReportType InType, const FString& InSourcePath, const FString& InReason);
+	FPsDataReport(EPsDataReportType InType, const FString& InSourcePath, const FString& InReason, const FString& InLinkedPath);
 };
 
 /***********************************
@@ -116,6 +137,9 @@ private:
 
 	/** Data name */
 	FString DataKey;
+
+	/** Data collection name */
+	FString CollectionKey;
 
 	/** Parent */
 	UPROPERTY()
@@ -223,9 +247,13 @@ public:
 	 * Data property
 	 ***********************************/
 
-	/** Get key */
+	/** Get data key */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	FString GetDataKey() const;
+	const FString& GetDataKey() const;
+
+	/** Get collection key */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	const FString& GetCollectionKey() const;
 
 	/** Get parent */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
@@ -241,8 +269,12 @@ public:
 
 public:
 	/***********************************
-     * Reset
+     * Utility
      ***********************************/
 
+	/** Reset */
 	void Reset();
+
+	/** Validation */
+	TArray<FPsDataReport> Validation() const;
 };

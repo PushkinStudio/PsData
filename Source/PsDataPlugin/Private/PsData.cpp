@@ -15,11 +15,12 @@
 
 namespace FDataReflectionTools
 {
-void FPsDataFriend::ChangeDataName(UPsData* Data, const FString& Name)
+void FPsDataFriend::ChangeDataName(UPsData* Data, const FString& Name, const FString& CollectionName)
 {
-	if (Data->DataKey != Name)
+	if (Data->DataKey != Name || Data->CollectionKey != CollectionName)
 	{
 		Data->DataKey = Name;
+		Data->CollectionKey = CollectionName;
 		Data->Broadcast(UPsDataEvent::ConstructEvent(TEXT("NameChanged"), false));
 	}
 }
@@ -70,6 +71,25 @@ TArray<TUniquePtr<FAbstractDataMemory>>& FPsDataFriend::GetMemory(UPsData* Data)
 	return Data->Memory;
 }
 } // namespace FDataReflectionTools
+
+/***********************************
+ * FPsDataReport
+ ***********************************/
+
+FPsDataReport::FPsDataReport(EPsDataReportType InType, const FString& InSourcePath, const FString& InReason)
+	: Type(InType)
+	, SourcePath(InSourcePath)
+	, Reason(InReason)
+{
+}
+
+FPsDataReport::FPsDataReport(EPsDataReportType InType, const FString& InSourcePath, const FString& InReason, const FString& InLinkedPath)
+	: Type(InType)
+	, SourcePath(InSourcePath)
+	, Reason(InReason)
+	, LinkedPath(InLinkedPath)
+{
+}
 
 /***********************************
 * PSDATA!
@@ -176,7 +196,7 @@ void UPsData::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& D
 
 void UPsData::BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
 {
-	BindInternal(Type, Delegate);
+	UnbindInternal(Type, Delegate);
 }
 
 void UPsData::UpdateDelegates() const
@@ -358,9 +378,14 @@ void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer)
  * Data property
  ***********************************/
 
-FString UPsData::GetDataKey() const
+const FString& UPsData::GetDataKey() const
 {
 	return DataKey;
+}
+
+const FString& UPsData::GetCollectionKey() const
+{
+	return CollectionKey;
 }
 
 UPsData* UPsData::GetParent() const
@@ -391,12 +416,16 @@ FString UPsData::GetHash() const
 	Md5Gen.Final(Digest);
 
 	return FString::Printf(
-		TEXT("%08x%08x%08x%08"),
+		TEXT("%08x%08x%08x%08x"),
 		(static_cast<uint32>(Digest[0]) << 24) | (static_cast<uint32>(Digest[1]) << 16) | (static_cast<uint32>(Digest[2]) << 8) | static_cast<uint32>(Digest[3]),
 		(static_cast<uint32>(Digest[4]) << 24) | (static_cast<uint32>(Digest[5]) << 16) | (static_cast<uint32>(Digest[6]) << 8) | static_cast<uint32>(Digest[7]),
 		(static_cast<uint32>(Digest[8]) << 24) | (static_cast<uint32>(Digest[9]) << 16) | (static_cast<uint32>(Digest[10]) << 8) | static_cast<uint32>(Digest[11]),
 		(static_cast<uint32>(Digest[12]) << 24) | (static_cast<uint32>(Digest[13]) << 16) | (static_cast<uint32>(Digest[14]) << 8) | static_cast<uint32>(Digest[15]));
 }
+
+/***********************************
+ * Utility
+ ***********************************/
 
 void UPsData::Reset()
 {
@@ -406,4 +435,174 @@ void UPsData::Reset()
 		Memory[Field->Index]->Reset(this, Field);
 	}
 	InitProperties();
+}
+
+TArray<FPsDataReport> UPsData::Validation() const
+{
+	TArray<FPsDataReport> Result;
+
+	//TODO: PS-136
+	UPsData* Data = const_cast<UPsData*>(this);
+	UPsData* Current = Data;
+	UPsData* RootData = Data->GetRoot();
+
+	FString Path;
+	do
+	{
+		// TODO: need GetPath() function
+		const FString& CollectionName = Current->GetCollectionKey();
+		if (!CollectionName.IsEmpty())
+		{
+			if (Path.IsEmpty())
+			{
+				Path = CollectionName + TEXT(".") + Current->GetDataKey();
+			}
+			else
+			{
+				Path = CollectionName + TEXT(".") + Current->GetDataKey() + TEXT(".") + Path;
+			}
+		}
+		else
+		{
+			if (Path.IsEmpty())
+			{
+				Path = Current->GetDataKey();
+			}
+			else
+			{
+				Path = Current->GetDataKey() + TEXT(".") + Path;
+			}
+		}
+	} while ((Current = Current->GetParent()) != nullptr);
+
+	for (auto& Pair : FDataReflection::GetLinks(GetClass()))
+	{
+		const FString FieldPath = Path + TEXT(".") + Pair.Value->Name;
+
+		if (Pair.Value->bAbstract)
+		{
+			Result.Add(FPsDataReport(EPsDataReportType::Logic, FieldPath, TEXT("Used abstract property")));
+		}
+		else
+		{
+			if (Pair.Value->bCollection)
+			{
+				TArray<FString>* PropertiesPtr = nullptr;
+				if (FDataReflectionTools::GetByName<TArray<FString>>(Data, Pair.Value->Name, PropertiesPtr))
+				{
+					TMap<FString, UPsData*>* MapPtr = nullptr;
+					if (FDataReflectionTools::GetByName(RootData, Pair.Value->Path, MapPtr))
+					{
+						TMap<FString, UPsData*> Map = *MapPtr;
+
+						const TArray<FString>& Properties = *PropertiesPtr;
+						for (const FString& Property : Properties)
+						{
+							if (Property.Len() > 0)
+							{
+								UPsData** Find = Map.Find(Property);
+								if (Find == nullptr)
+								{
+									Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property not found"), Pair.Value->Path + TEXT(".") + Property));
+								}
+							}
+							else if (!Pair.Value->Meta.bNullable)
+							{
+								Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property is empty"), Pair.Value->Path + TEXT(".?")));
+							}
+						}
+					}
+					else
+					{
+						Result.Add(FPsDataReport(EPsDataReportType::Logic, Pair.Value->Path, TEXT("Used undeclared property")));
+					}
+				}
+				else
+				{
+					Result.Add(FPsDataReport(EPsDataReportType::Logic, FieldPath, TEXT("Used undeclared property")));
+				}
+			}
+			else
+			{
+				FString* PropertyPtr = nullptr;
+				if (FDataReflectionTools::GetByName<FString>(Data, Pair.Value->Name, PropertyPtr))
+				{
+					TMap<FString, UPsData*>* MapPtr = nullptr;
+					if (FDataReflectionTools::GetByName(RootData, Pair.Value->Path, MapPtr))
+					{
+						TMap<FString, UPsData*> Map = *MapPtr;
+						const FString& Property = *PropertyPtr;
+						if (Property.Len() > 0)
+						{
+							UPsData** Find = Map.Find(Property);
+							if (Find == nullptr)
+							{
+								Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property not found"), Pair.Value->Path + TEXT(".") + Property));
+							}
+						}
+						else if (!Pair.Value->Meta.bNullable)
+						{
+							Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property is empty"), Pair.Value->Path + TEXT(".?")));
+						}
+					}
+					else
+					{
+						Result.Add(FPsDataReport(EPsDataReportType::Logic, Pair.Value->Path, TEXT("Used undeclared property")));
+					}
+				}
+				else
+				{
+					Result.Add(FPsDataReport(EPsDataReportType::Logic, FieldPath, TEXT("Used undeclared property")));
+				}
+			}
+		}
+	}
+
+	for (auto& Pair : FDataReflection::GetFields(this->GetClass()))
+	{
+		if (Pair.Value->Context->IsData())
+		{
+			if (Pair.Value->Context->IsArray())
+			{
+				TArray<UPsData*>* Value = nullptr;
+				if (FDataReflectionTools::GetByField(Data, Pair.Value, Value))
+				{
+					for (UPsData* Element : *Value)
+					{
+						if (Element)
+						{
+							Result.Append(Element->Validation());
+						}
+					}
+				}
+			}
+			else if (Pair.Value->Context->IsMap())
+			{
+				TMap<FString, UPsData*>* Value = nullptr;
+				if (FDataReflectionTools::GetByField(Data, Pair.Value, Value))
+				{
+					for (const auto& ElementPair : *Value)
+					{
+						if (ElementPair.Value)
+						{
+							Result.Append(ElementPair.Value->Validation());
+						}
+					}
+				}
+			}
+			else
+			{
+				UPsData** Value = nullptr;
+				if (FDataReflectionTools::GetByField(Data, Pair.Value, Value))
+				{
+					if ((*Value))
+					{
+						Result.Append((*Value)->Validation());
+					}
+				}
+			}
+		}
+	}
+
+	return Result;
 }

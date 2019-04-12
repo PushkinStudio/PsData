@@ -11,6 +11,7 @@
 #include "PsDataUtils.h"
 
 #include "CoreMinimal.h"
+#include "UObject/Package.h"
 
 /***********************************
  * FDataReflection
@@ -30,6 +31,7 @@ struct PSDATAPLUGIN_API FDataReflection
 private:
 	static TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FieldsByName;
 	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FieldsByHash;
+	static TMap<UClass*, TMap<FString, const TSharedPtr<const FDataLink>>> LinksByName;
 	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> LinksByHash;
 
 	static TArray<UClass*> ClassQueue;
@@ -58,9 +60,11 @@ protected:
 public:
 	static TSharedPtr<const FDataField> GetFieldByName(UClass* OwnerClass, const FString& Name);
 	static TSharedPtr<const FDataField> GetFieldByHash(UClass* OwnerClass, int32 Hash);
-	static const TMap<FString, const TSharedPtr<const FDataField>>& GetFields(const UClass* StaticClass);
+	static const TMap<FString, const TSharedPtr<const FDataField>>& GetFields(const UClass* OwnerClass);
+	static TSharedPtr<const FDataLink> GetLinkByName(UClass* OwnerClass, const FString& Name);
 	static TSharedPtr<const FDataLink> GetLinkByHash(UClass* OwnerClass, int32 Hash);
-	static bool HasClass(const UClass* StaticClass);
+	static const TMap<FString, const TSharedPtr<const FDataLink>>& GetLinks(UClass* OwnerClass);
+	static bool HasClass(const UClass* OwnerClass);
 
 	static void Compile();
 };
@@ -431,6 +435,11 @@ struct FDataTypeContext<TMap<FString, T*>> : public FAbstractDataTypeContext
 template <typename T>
 struct FDataTypeContext<TSoftObjectPtr<T>> : public FAbstractDataTypeContext
 {
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
 		return true; // TODO: check type
@@ -442,6 +451,11 @@ struct FDataTypeContext<TSoftObjectPtr<T>> : public FAbstractDataTypeContext
 template <typename T>
 struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FAbstractDataTypeContext
 {
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
 	virtual bool IsArray() const override
 	{
 		return true;
@@ -458,6 +472,11 @@ struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FAbstractDataTypeCon
 template <typename T>
 struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FAbstractDataTypeContext
 {
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
 	virtual bool IsMap() const override
 	{
 		return true;
@@ -478,12 +497,22 @@ struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FAbstractData
 template <typename T>
 struct FDataTypeContext<TSoftClassPtr<T>> : public FAbstractDataTypeContext
 {
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
 	_DFUNC(UPsDataFunctionLibrary, TSoftClassPtr<T>, SoftClass);
 };
 
 template <typename T>
 struct FDataTypeContext<TArray<TSoftClassPtr<T>>> : public FAbstractDataTypeContext
 {
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
 	virtual bool IsArray() const override
 	{
 		return true;
@@ -500,6 +529,11 @@ struct FDataTypeContext<TArray<TSoftClassPtr<T>>> : public FAbstractDataTypeCont
 template <typename T>
 struct FDataTypeContext<TMap<FString, TSoftClassPtr<T>>> : public FAbstractDataTypeContext
 {
+	virtual UField* GetUE4Type() const override
+	{
+		return T::StaticClass();
+	}
+
 	virtual bool IsMap() const override
 	{
 		return true;
@@ -514,13 +548,45 @@ struct FDataTypeContext<TMap<FString, TSoftClassPtr<T>>> : public FAbstractDataT
 };
 
 /***********************************
+ * FLinearColor context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<FLinearColor> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, FLinearColor, LinearColor);
+};
+
+template <>
+struct FDataTypeContext<TArray<FLinearColor>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<FLinearColor>, LinearColorArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, FLinearColor>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FLinearColor>, LinearColorMap);
+};
+
+/***********************************
  * Enum context
  ***********************************/
 
 template <typename T>
 struct FEnumDataTypeContext : public FAbstractDataTypeContext
 {
-	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be describe by DESCRIBE_ENUM macros");
+	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
 
 	virtual UField* GetUE4Type() const override
 	{
@@ -1049,6 +1115,25 @@ struct FDLinkHelper
 	{
 		return Cast<typename TRemovePointer<ReturnType>::Type>(UPsDataFunctionLibrary::GetDataByLinkHash(Instance, Hash));
 	}
+
+	static bool IsEmpty(const UPsData* Instance)
+	{
+		TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Instance->GetClass(), Hash);
+		if (!Link->Meta.bNullable)
+		{
+			return false;
+		}
+
+		FString* PropertyPtr = nullptr;
+		GetByName<FString>(const_cast<UPsData*>(Instance), Link->Name, PropertyPtr); //TODO: PS-136
+		const FString& Property = *PropertyPtr;
+		if (Property.Len() == 0)
+		{
+			return true;
+		}
+
+		return false;
+	}
 };
 
 template <typename Type, class ReturnType, int32 Hash>
@@ -1065,6 +1150,26 @@ struct FDLinkHelper<TArray<Type>, ReturnType, Hash>
 			Result.Add(Cast<typename TRemovePointer<ReturnType>::Type>(Data));
 		}
 		return Result;
+	}
+
+	static bool IsEmpty(const UPsData* Instance)
+	{
+		TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Instance->GetClass(), Hash);
+		if (!Link->Meta.bNullable)
+		{
+			return false;
+		}
+
+		TArray<FString>* PropertyPtr = nullptr;
+		GetByName<TArray<FString>>(const_cast<UPsData*>(Instance), Link->Name, PropertyPtr); //TODO: PS-136
+		const TArray<FString>& Property = *PropertyPtr;
+
+		if (Property.Num() == 0)
+		{
+			return true;
+		}
+
+		return false;
 	}
 };
 
@@ -1084,6 +1189,7 @@ public:
 		if (FDataReflection::InQueue())
 		{
 			FDataReflection::AddLink(Name, Path, CharReturnType, Hash, bAbstract, std::is_base_of<TArray<FString>, Type>::value);
+			FDataReflection::ClearMeta();
 		}
 	}
 
@@ -1096,6 +1202,11 @@ public:
 	{
 		static_assert(std::is_base_of<UPsData, typename TRemovePointer<ReturnType>::Type>::value, "ReturnType must be only UPsData");
 		return FDLinkHelper<Type, ReturnType, Hash>::Get(Instance);
+	}
+
+	bool IsEmpty() const
+	{
+		return FDLinkHelper<Type, ReturnType, Hash>::IsEmpty(Instance);
 	}
 
 	FDLink(const FDLink&) = delete;

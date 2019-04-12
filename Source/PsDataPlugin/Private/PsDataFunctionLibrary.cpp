@@ -470,6 +470,58 @@ void UPsDataFunctionLibrary::SetSoftClassMapProperty(UPsData* Target, int32 Hash
 }
 
 /***********************************
+ * FLinearColor
+ ***********************************/
+
+FLinearColor UPsDataFunctionLibrary::GetLinearColorProperty(UPsData* Target, int32 Hash)
+{
+	FLinearColor* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const FLinearColor Default = FLinearColor();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetLinearColorProperty(UPsData* Target, int32 Hash, const FLinearColor& Value)
+{
+	FDataReflectionTools::SetByHash<FLinearColor>(Target, Hash, Value);
+}
+
+const TArray<FLinearColor>& UPsDataFunctionLibrary::GetLinearColorArrayProperty(UPsData* Target, int32 Hash)
+{
+	TArray<FLinearColor>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TArray<FLinearColor> Default = TArray<FLinearColor>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetLinearColorArrayProperty(UPsData* Target, int32 Hash, const TArray<FLinearColor>& Value)
+{
+	FDataReflectionTools::SetByHash<TArray<FLinearColor>>(Target, Hash, Value);
+}
+
+const TMap<FString, FLinearColor>& UPsDataFunctionLibrary::GetLinearColorMapProperty(UPsData* Target, int32 Hash)
+{
+	TMap<FString, FLinearColor>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TMap<FString, FLinearColor> Default = TMap<FString, FLinearColor>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetLinearColorMapProperty(UPsData* Target, int32 Hash, const TMap<FString, FLinearColor>& Value)
+{
+	FDataReflectionTools::SetByHash<TMap<FString, FLinearColor>>(Target, Hash, Value);
+}
+
+/***********************************
  * Path
  ***********************************/
 
@@ -505,6 +557,11 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 	if (Find)
 	{
 		return *Find;
+	}
+
+	if (!Link->Meta.bNullable)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Link without Nullable meta can't be nullptr"))
 	}
 
 	return nullptr;
@@ -546,6 +603,10 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 		if (Find)
 		{
 			Result.Add(*Find);
+		}
+		else if (!Link->Meta.bNullable)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Link without Nullable meta can't be nullptr"))
 		}
 	}
 	return Result;

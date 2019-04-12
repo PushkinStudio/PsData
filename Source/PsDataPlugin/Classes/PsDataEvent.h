@@ -15,6 +15,13 @@ class PSDATAPLUGIN_API UPsDataEvent : public UObject
 	GENERATED_UCLASS_BODY()
 
 public:
+	/** Added */
+	static const FString Added;
+
+	/** Removing */
+	static const FString Removing;
+
+	/** Dispatch property changed */
 	static void DispatchChange(UPsData* Instance, TSharedPtr<const FDataField> Field);
 
 	UFUNCTION(BlueprintPure, Category = "PsData|Event")

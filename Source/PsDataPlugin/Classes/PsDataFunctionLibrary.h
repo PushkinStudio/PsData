@@ -271,6 +271,34 @@ public:
 	static void SetSoftClassMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, TSoftClassPtr<UObject>>& Value);
 
 	/***********************************
+	 * FLinearColor
+	 ***********************************/
+
+	/** Get linear color property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static FLinearColor GetLinearColorProperty(UPsData* Target, int32 Crc32);
+
+	/** Set linear color property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetLinearColorProperty(UPsData* Target, int32 Crc32, const FLinearColor& Value);
+
+	/** Get linear color array property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static const TArray<FLinearColor>& GetLinearColorArrayProperty(UPsData* Target, int32 Crc32);
+
+	/** Set linear color array property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetLinearColorArrayProperty(UPsData* Target, int32 Crc32, const TArray<FLinearColor>& Value);
+
+	/** Get linear color map property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static const TMap<FString, FLinearColor>& GetLinearColorMapProperty(UPsData* Target, int32 Crc32);
+
+	/** Set linear color map property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetLinearColorMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FLinearColor>& Value);
+
+	/***********************************
 	 * Path
 	 ***********************************/
 

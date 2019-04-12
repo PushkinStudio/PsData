@@ -3,23 +3,6 @@
 #include "PsDataHardObjectPtr.h"
 
 /***********************************
- * FHardObjectPtrCounter
- ***********************************/
-
-FHardObjectPtrCounter::FHardObjectPtrCounter()
-	: Num(0)
-	, Object(nullptr)
-{
-}
-
-FHardObjectPtrCounter::FHardObjectPtrCounter(const UObject* InObject)
-	: Num(0)
-	, Object(InObject)
-{
-	check(Object);
-}
-
-/***********************************
 * UPsDataSingleton
 ***********************************/
 

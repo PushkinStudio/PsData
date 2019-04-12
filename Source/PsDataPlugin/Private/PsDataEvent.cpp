@@ -7,6 +7,9 @@
 
 #include "Async/Async.h"
 
+const FString UPsDataEvent::Added(TEXT("Added"));
+const FString UPsDataEvent::Removing(TEXT("Removing"));
+
 UPsDataEvent::UPsDataEvent(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, Type(TEXT("Unknown"))

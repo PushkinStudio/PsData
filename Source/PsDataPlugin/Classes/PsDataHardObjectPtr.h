@@ -8,35 +8,6 @@
 #include "PsDataHardObjectPtr.generated.h"
 
 /***********************************
- * FHardObjectPtrCounter
- ***********************************/
-
-USTRUCT()
-struct PSDATAPLUGIN_API FHardObjectPtrCounter
-{
-	GENERATED_USTRUCT_BODY()
-
-public:
-	int32 Num;
-
-	UPROPERTY()
-	const UObject* Object;
-
-	FHardObjectPtrCounter();
-	FHardObjectPtrCounter(const UObject* InObject);
-
-	friend uint32 GetTypeHash(const FHardObjectPtrCounter& Counter)
-	{
-		return GetTypeHash(Counter.Object);
-	}
-
-	friend bool operator==(const FHardObjectPtrCounter& A, const FHardObjectPtrCounter& B)
-	{
-		return A.Object == B.Object;
-	}
-};
-
-/***********************************
  * UPsDataSingleton
  ***********************************/
 
@@ -53,8 +24,8 @@ private:
 
 	static UPsDataHardObjectPtrSingleton* Get();
 
-	UPROPERTY()
-	TSet<FHardObjectPtrCounter> List;
+	// @TODO ZEN-770 UPROPERTY()
+	TMap<const UObject*, int32> ObjectCounters;
 };
 
 template <class T>
@@ -89,28 +60,58 @@ public:
 
 	~THardObjectPtr()
 	{
-		Reset();
-	}
-
-	void Reset()
-	{
 		if (Value != nullptr)
 		{
-			TSet<FHardObjectPtrCounter>& List = UPsDataHardObjectPtrSingleton::Get()->List;
-
-			auto CounterPtr = List.Find(Value);
-			check(CounterPtr);
-
-			FHardObjectPtrCounter& Counter = *CounterPtr;
-			Counter.Num -= 1;
-			check(Counter.Num >= 0);
-
-			if (Counter.Num == 0)
-			{
-				List.Remove(Counter);
-			}
+			// Sometimes we don't know type in destructor. We can trust "set" method to verify T
+			ResetInternal(static_cast<const UObject*>(static_cast<const void*>(Value))); // TODO: see std::~unique_ptr
 			Value = nullptr;
 		}
+	}
+
+private:
+	static void ResetInternal(const UObject* Object)
+	{
+		if (GExitPurge)
+		{
+			return;
+		}
+
+		if (Object != nullptr)
+		{
+			auto& Count = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters.FindChecked(Object);
+			Count--;
+
+			check(Count >= 0);
+			if (Count == 0)
+			{
+				UPsDataHardObjectPtrSingleton::Get()->ObjectCounters.Remove(Object);
+				const_cast<UObject*>(Object)->ClearFlags(RF_StrongRefOnFrame);
+			}
+		}
+	}
+
+	static void SetInternal(const UObject* Object)
+	{
+		if (Object != nullptr)
+		{
+			auto& Count = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters.FindOrAdd(Object);
+			check(Count >= 0);
+			Count++;
+
+			// Add to root on first usage
+			if (Count == 1)
+			{
+				// @TODO ZEN-770 Check cluster add instead of root one
+				const_cast<UObject*>(Object)->SetFlags(RF_StrongRefOnFrame);
+			}
+		}
+	}
+
+public:
+	void Reset()
+	{
+		ResetInternal(Value);
+		Value = nullptr;
 	}
 
 	void Set(T* NewValue)
@@ -120,22 +121,8 @@ public:
 			return;
 		}
 
-		Reset();
-
-		if (NewValue != nullptr)
-		{
-			TSet<FHardObjectPtrCounter>& List = UPsDataHardObjectPtrSingleton::Get()->List;
-			if (auto CounterPtr = List.Find(NewValue))
-			{
-				CounterPtr->Num += 1;
-			}
-			else
-			{
-				FHardObjectPtrCounter Counter(NewValue);
-				Counter.Num += 1;
-				List.Add(Counter);
-			}
-		}
+		ResetInternal(Value);
+		SetInternal(NewValue);
 		Value = NewValue;
 	}
 
@@ -146,7 +133,17 @@ public:
 
 	bool IsValid() const
 	{
-		return Value->IsValidLowLevel();
+		return Value != nullptr && Value->IsValidLowLevel();
+	}
+
+	operator bool() const
+	{
+		return IsValid();
+	}
+
+	bool operator!() const
+	{
+		return !IsValid();
 	}
 
 	T* operator*() const
