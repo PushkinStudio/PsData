@@ -110,7 +110,12 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
 
-		Get().Add(Key, Element);
+		TMap<FString, T>& Map = Get();
+		if (auto Find = Map.Find(Key))
+		{
+			FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(*Instance, *Find);
+		}
+		Map.Add(Key, Element);
 		FDataReflectionTools::FMapChangeBehavior<T>::AddToMap(*Instance, Key, Field->Name, Element);
 		UPsDataEvent::DispatchChange(Instance.Get(), Field);
 		return true;
@@ -131,18 +136,6 @@ public:
 			return true;
 		}
 		return false;
-	}
-
-	void Clear()
-	{
-		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
-
-		TArray<FString> Keys;
-		Get().GetKeys(Keys);
-		for (auto& Key : Keys)
-		{
-			Remove(Key);
-		}
 	}
 
 	bool Contains(const FString& Key) const
@@ -185,6 +178,30 @@ public:
 	void Reserve(int32 Number)
 	{
 		Get().Reserve(Number);
+	}
+
+	void Empty()
+	{
+		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
+
+		TMap<FString, T>& Map = Get();
+		TArray<FString> Keys;
+		Map.GetKeys(Keys);
+		for (auto& Key : Keys)
+		{
+			if (T* ElementPtr = Map.Find(Key))
+			{
+				T& Element = *ElementPtr;
+				FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(*Instance, Element);
+				Map.Remove(Key);
+				UPsDataEvent::DispatchChange(Instance.Get(), Field);
+			}
+		}
+	}
+
+	bool IsEmpty() const
+	{
+		return Num() == 0;
 	}
 
 	void Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const

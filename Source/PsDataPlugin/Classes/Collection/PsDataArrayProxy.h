@@ -152,6 +152,24 @@ public:
 		return Index;
 	}
 
+	typename FDataReflectionTools::TConstRef<T, bConst>::Type Set(typename FDataReflectionTools::TConstRef<T>::Type Element, int32 Index)
+	{
+		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
+
+		TArray<T>& Array = Get();
+		T& OldElement = Array[Index];
+		FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), OldElement);
+		Array[Index] = Element;
+		FDataReflectionTools::FArrayChangeBehavior<T>::AddToArray(Instance.Get(), Index, Field->Name, Element);
+		UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		return OldElement;
+	}
+
+	int32 Find(typename FDataReflectionTools::TConstRef<T>::Type Element)
+	{
+		return Get().Find(Element);
+	}
+
 	typename FDataReflectionTools::TConstRef<T, bConst>::Type Get(int32 Index) const
 	{
 		return Get()[Index];
@@ -165,6 +183,30 @@ public:
 	void Reserve(int32 Number)
 	{
 		Get().Reserve(Number);
+	}
+
+	void Empty()
+	{
+		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
+
+		TArray<T>& Array = Get();
+		bool bHasElements = Array.Num() > 0;
+		while (Array.Num() > 0)
+		{
+			const int32 Index = Array.Num() - 1;
+			FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), Array[Index]);
+			Array.RemoveAt(Index, 1, false);
+		}
+
+		if (bHasElements)
+		{
+			UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		}
+	}
+
+	bool IsEmpty() const
+	{
+		return Num() == 0;
 	}
 
 	void Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const

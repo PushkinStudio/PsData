@@ -76,13 +76,13 @@ struct FDelegateWrapper
  * FPsDataReport
  ***********************************/
 
-enum class EPsDataReportType : uint8
+enum class PSDATAPLUGIN_API EPsDataReportType : uint8
 {
 	Logic = 0,
 	Link = 1,
 };
 
-struct FPsDataReport
+struct PSDATAPLUGIN_API FPsDataReport
 {
 	EPsDataReportType Type;
 	FString SourcePath;
