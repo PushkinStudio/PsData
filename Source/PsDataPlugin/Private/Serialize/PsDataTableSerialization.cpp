@@ -106,7 +106,7 @@ TSharedPtr<FJsonObject> FPsDataTableDeserializer::CreateJsonFromTable(UDataTable
 		TSharedPtr<FJsonObject> JsonObject(new FJsonObject());
 		for (auto& Pair : RowMap)
 		{
-			JsonObject->SetObjectField(Pair.Key.ToString(), FPsDataStructDeserializer::CreateJsonFromStruct(Struct, Pair.Value));
+			JsonObject->SetObjectField(Pair.Key.ToString().ToLower(), FPsDataStructDeserializer::CreateJsonFromStruct(Struct, Pair.Value));
 		}
 		RootJsonObject->SetObjectField(PropertyName, JsonObject);
 	}

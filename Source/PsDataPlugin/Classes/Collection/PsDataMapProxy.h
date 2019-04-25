@@ -204,14 +204,14 @@ public:
 		return Num() == 0;
 	}
 
-	void Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
+	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 	{
-		Instance->BindInternal(Type, Delegate, Field);
+		return Instance->BindInternal(Type, Delegate, Field);
 	}
 
-	void Bind(const FString& Type, const FPsDataDelegate& Delegate) const
+	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate) const
 	{
-		Instance->BindInternal(Type, Delegate, Field);
+		return Instance->BindInternal(Type, Delegate, Field);
 	}
 
 	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const

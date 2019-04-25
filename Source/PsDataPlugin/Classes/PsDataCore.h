@@ -23,7 +23,7 @@ template <typename Type, int32 Hash>
 struct FDProp;
 struct FDMeta;
 template <typename Type, class ReturnType, int32 Hash>
-struct FDLink;
+struct FDLinkBase;
 } // namespace FDataReflectionTools
 
 struct PSDATAPLUGIN_API FDataReflection
@@ -44,7 +44,7 @@ protected:
 	friend struct FDataReflectionTools::FDProp;
 	friend struct FDataReflectionTools::FDMeta;
 	template <typename Type, class ReturnType, int32 Hash>
-	friend struct FDataReflectionTools::FDLink;
+	friend struct FDataReflectionTools::FDLinkBase;
 	friend class UPsData;
 
 	static void AddField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context);
@@ -313,6 +313,38 @@ struct FDataTypeContext<TMap<FString, FText>> : public FAbstractDataTypeContext
 	}
 
 	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FText>, TextMap);
+};
+
+/***********************************
+ * FName context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<FName> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, FName, Name);
+};
+
+template <>
+struct FDataTypeContext<TArray<FName>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<FName>, NameArray);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, FName>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA FName>, NameMap);
 };
 
 /***********************************
@@ -1105,108 +1137,196 @@ struct FDMeta
 namespace FDataReflectionTools
 {
 
-template <typename Type, class ReturnType, int32 Hash>
+template <class ReturnType, int32 Hash>
 struct FDLinkHelper
 {
-	typedef typename TConstRef<typename TRemovePointer<ReturnType>::Type*, true>::Type LinkType;
-	typedef LinkType Value;
+	typedef typename TRemovePointer<ReturnType>::Type NonPointerReturnType;
+	typedef typename TConstRef<NonPointerReturnType*, true>::Type CompleteReturnType;
 
-	static LinkType Get(const UPsData* Instance)
+	static CompleteReturnType Get(const UPsData* Instance)
 	{
-		return Cast<typename TRemovePointer<ReturnType>::Type>(UPsDataFunctionLibrary::GetDataByLinkHash(Instance, Hash));
+		return Cast<NonPointerReturnType>(UPsDataFunctionLibrary::GetDataByLinkHash(Instance, Hash));
 	}
 
-	static bool IsEmpty(const UPsData* Instance)
+	static TArray<CompleteReturnType> GetAsArray(const UPsData* Instance)
 	{
-		TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Instance->GetClass(), Hash);
-		if (!Link->Meta.bNullable)
-		{
-			return false;
-		}
-
-		FString* PropertyPtr = nullptr;
-		GetByName<FString>(const_cast<UPsData*>(Instance), Link->Name, PropertyPtr); //TODO: PS-136
-		const FString& Property = *PropertyPtr;
-		if (Property.Len() == 0)
-		{
-			return true;
-		}
-
-		return false;
-	}
-};
-
-template <typename Type, class ReturnType, int32 Hash>
-struct FDLinkHelper<TArray<Type>, ReturnType, Hash>
-{
-	typedef typename TConstRef<typename TRemovePointer<ReturnType>::Type*, true>::Type LinkType;
-	typedef TArray<LinkType> Value;
-
-	static TArray<LinkType> Get(const UPsData* Instance)
-	{
-		TArray<LinkType> Result;
+		TArray<CompleteReturnType> Result;
 		for (UPsData* Data : UPsDataFunctionLibrary::GetDataArrayByLinkHash(Instance, Hash))
 		{
-			Result.Add(Cast<typename TRemovePointer<ReturnType>::Type>(Data));
+			Result.Add(Cast<NonPointerReturnType>(Data));
 		}
 		return Result;
 	}
 
 	static bool IsEmpty(const UPsData* Instance)
 	{
-		TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Instance->GetClass(), Hash);
-		if (!Link->Meta.bNullable)
-		{
-			return false;
-		}
-
-		TArray<FString>* PropertyPtr = nullptr;
-		GetByName<TArray<FString>>(const_cast<UPsData*>(Instance), Link->Name, PropertyPtr); //TODO: PS-136
-		const TArray<FString>& Property = *PropertyPtr;
-
-		if (Property.Num() == 0)
-		{
-			return true;
-		}
-
-		return false;
+		return UPsDataFunctionLibrary::IsLinkEmpty(Instance, Hash);
 	}
 };
 
 template <typename Type, class ReturnType, int32 Hash>
-struct FDLink
+struct FDLinkBase
 {
-private:
+protected:
 	const UPsData* Instance;
 
 public:
-	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+	FDLinkBase(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract)
 		: Instance(InInstance)
 	{
-		static_assert(std::is_base_of<FString, Type>::value || std::is_base_of<TArray<FString>, Type>::value, "Only FString or TArray<FString> property can be linked");
 		static_assert(FDataReflectionTools::TIsContainer<ReturnType>::Value, "ReturnType must be non-container type");
-
 		if (FDataReflection::InQueue())
 		{
-			FDataReflection::AddLink(Name, Path, CharReturnType, Hash, bAbstract, std::is_base_of<TArray<FString>, Type>::value);
+			FDataReflection::AddLink(Name, Path, CharReturnType, Hash, bAbstract, !FDataReflectionTools::TIsContainer<Type>::Value);
 			FDataReflection::ClearMeta();
 		}
 	}
 
-	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
-		: FDLink(Name, "<ABSTRACT>", CharReturnType, InInstance, true)
+	FDLinkBase(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+		: FDLinkBase(Name, "<ABSTRACT>", CharReturnType, InInstance, true)
 	{
 	}
 
-	typename FDLinkHelper<Type, ReturnType, Hash>::Value Get() const
+	FDLinkBase(const FDLinkBase&) = delete;
+	FDLinkBase(FDLinkBase&&) = delete;
+	FDLinkBase& operator=(const FDLinkBase&) = delete;
+	FDLinkBase& operator=(FDLinkBase&&) = delete;
+};
+
+template <typename Type, class ReturnType, int32 Hash>
+struct FDLink : public FDLinkBase<Type, ReturnType, Hash>
+{
+public:
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+		: FDLinkBase<Type, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
 	{
-		static_assert(std::is_base_of<UPsData, typename TRemovePointer<ReturnType>::Type>::value, "ReturnType must be only UPsData");
-		return FDLinkHelper<Type, ReturnType, Hash>::Get(Instance);
+		static_assert(FDataReflectionTools::TAlwaysFalse<Type>::value, "Unsupported link type");
+	}
+
+	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+		: FDLinkBase<Type, ReturnType, Hash>(Name, CharReturnType, InInstance)
+	{
+		static_assert(FDataReflectionTools::TAlwaysFalse<Type>::value, "Unsupported link type");
+	}
+
+	FDLink(const FDLink&) = delete;
+	FDLink(FDLink&&) = delete;
+	FDLink& operator=(const FDLink&) = delete;
+	FDLink& operator=(FDLink&&) = delete;
+};
+
+template <class ReturnType, int32 Hash>
+struct FDLink<FString, ReturnType, Hash> : public FDLinkBase<FString, ReturnType, Hash>
+{
+public:
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+		: FDLinkBase<FString, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
+	{
+	}
+
+	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+		: FDLinkBase<FString, ReturnType, Hash>(Name, CharReturnType, InInstance)
+	{
+	}
+
+	typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const
+	{
+		return FDLinkHelper<ReturnType, Hash>::Get(this->Instance);
 	}
 
 	bool IsEmpty() const
 	{
-		return FDLinkHelper<Type, ReturnType, Hash>::IsEmpty(Instance);
+		return FDLinkHelper<ReturnType, Hash>::IsEmpty(this->Instance);
+	}
+
+	FDLink(const FDLink&) = delete;
+	FDLink(FDLink&&) = delete;
+	FDLink& operator=(const FDLink&) = delete;
+	FDLink& operator=(FDLink&&) = delete;
+};
+
+template <class ReturnType, int32 Hash>
+struct FDLink<TArray<FString>, ReturnType, Hash> : public FDLinkBase<TArray<FString>, ReturnType, Hash>
+{
+public:
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+		: FDLinkBase<TArray<FString>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
+	{
+	}
+
+	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+		: FDLinkBase<TArray<FString>, ReturnType, Hash>(Name, CharReturnType, InInstance)
+	{
+	}
+
+	TArray<typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType> Get() const
+	{
+		return FDLinkHelper<ReturnType, Hash>::GetAsArray(this->Instance);
+	}
+
+	bool IsEmpty() const
+	{
+		return FDLinkHelper<ReturnType, Hash>::IsEmpty(this->Instance);
+	}
+
+	FDLink(const FDLink&) = delete;
+	FDLink(FDLink&&) = delete;
+	FDLink& operator=(const FDLink&) = delete;
+	FDLink& operator=(FDLink&&) = delete;
+};
+
+template <class ReturnType, int32 Hash>
+struct FDLink<FName, ReturnType, Hash> : public FDLinkBase<FName, ReturnType, Hash>
+{
+public:
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+		: FDLinkBase<FName, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
+	{
+	}
+
+	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+		: FDLinkBase<FName, ReturnType, Hash>(Name, CharReturnType, InInstance)
+	{
+	}
+
+	typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const
+	{
+		return FDLinkHelper<ReturnType, Hash>::Get(this->Instance);
+	}
+
+	bool IsEmpty() const
+	{
+		return FDLinkHelper<ReturnType, Hash>::IsEmpty(this->Instance);
+	}
+
+	FDLink(const FDLink&) = delete;
+	FDLink(FDLink&&) = delete;
+	FDLink& operator=(const FDLink&) = delete;
+	FDLink& operator=(FDLink&&) = delete;
+};
+
+template <class ReturnType, int32 Hash>
+struct FDLink<TArray<FName>, ReturnType, Hash> : public FDLinkBase<TArray<FName>, ReturnType, Hash>
+{
+public:
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+		: FDLinkBase<TArray<FName>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
+	{
+	}
+
+	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+		: FDLinkBase<TArray<FName>, ReturnType, Hash>(Name, CharReturnType, InInstance)
+	{
+	}
+
+	TArray<typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType> Get() const
+	{
+		return FDLinkHelper<ReturnType, Hash>::GetAsArray(this->Instance);
+	}
+
+	bool IsEmpty() const
+	{
+		return FDLinkHelper<ReturnType, Hash>::IsEmpty(this->Instance);
 	}
 
 	FDLink(const FDLink&) = delete;

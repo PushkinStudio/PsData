@@ -73,6 +73,51 @@ struct FDelegateWrapper
 };
 
 /***********************************
+ * FPsDataBind
+ ***********************************/
+
+struct FPsDataBind
+{
+private:
+	friend UPsData;
+	friend struct FPsDataBindCollection;
+
+	/** Delegate wrapper */
+	TSharedPtr<FDelegateWrapper> DelegateWrapper;
+
+	/** Constructor */
+	FPsDataBind(TSharedRef<FDelegateWrapper> InWrapper);
+
+	/** Empty constructor */
+	FPsDataBind();
+
+public:
+	/** Unbind */
+	void Unbind();
+};
+
+/***********************************
+ * FPsDataBindCollection
+ ***********************************/
+
+struct FPsDataBindCollection
+{
+private:
+	/** Collection */
+	TArray<TSharedRef<FDelegateWrapper>> Collection;
+
+public:
+	/** Constructor */
+	FPsDataBindCollection();
+
+	/** Add */
+	void Add(const FPsDataBind& Bind);
+
+	/** Unbind */
+	void Unbind();
+};
+
+/***********************************
  * FPsDataReport
  ***********************************/
 
@@ -156,7 +201,7 @@ private:
 	bool bChanged;
 
 	/** Map of delegat wrappers */
-	mutable TMap<FString, TArray<FDelegateWrapper>> Delegates;
+	mutable TMap<FString, TArray<TSharedRef<FDelegateWrapper>>> Delegates;
 
 private:
 	/** Post init properties */
@@ -174,10 +219,10 @@ public:
 	void Broadcast(UPsDataEvent* Event) const;
 
 	/** Bind */
-	void Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const;
+	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const;
 
 	/** Bind */
-	void Bind(const FString& Type, const FPsDataDelegate& Delegate) const;
+	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate) const;
 
 	/** Bind */
 	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const;
@@ -187,10 +232,10 @@ public:
 
 protected:
 	/** Bind */
-	void Bind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const;
+	FPsDataBind Bind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const;
 
 	/** Bind */
-	void Bind(int32 Hash, const FPsDataDelegate& Delegate) const;
+	FPsDataBind Bind(int32 Hash, const FPsDataDelegate& Delegate) const;
 
 	/** Bind */
 	void Unbind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const;
@@ -220,10 +265,10 @@ private:
 	void BroadcastInternal(UPsDataEvent* Event, UClass* Previous = nullptr) const;
 
 	/** Bind internal */
-	void BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
+	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
 
 	/** Bind internal */
-	void BindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
+	FPsDataBind BindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
 
 	/** Unbind internal */
 	void UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;

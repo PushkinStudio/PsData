@@ -29,9 +29,9 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 	TArray<FHelperStruct> Children;
 	TArray<TSharedPtr<FEventPath>> Events;
 
-	Events.Add(MakeShareable(new FEventPath(TEXT("Added"), TEXT(""), true)));
-	Events.Add(MakeShareable(new FEventPath(TEXT("Removing"), TEXT(""), true)));
-	Events.Add(MakeShareable(new FEventPath(TEXT("Changed"), TEXT(""), true)));
+	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Added, TEXT(""), true)));
+	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Removing, TEXT(""), true)));
+	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Changed, TEXT(""), true)));
 
 	for (auto& Pair : FDataReflection::GetFields(TargetClass))
 	{

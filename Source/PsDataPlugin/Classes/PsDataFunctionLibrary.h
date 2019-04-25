@@ -166,25 +166,53 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
 	static FText GetTextProperty(UPsData* Target, int32 Crc32);
 
-	/** Set soft object property */
+	/** Set text property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	static void SetTextProperty(UPsData* Target, int32 Crc32, const FText& Value);
 
-	/** Get soft object array property */
+	/** Get text array property */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
 	static const TArray<FText>& GetTextArrayProperty(UPsData* Target, int32 Crc32);
 
-	/** Set soft object array property */
+	/** Set text array property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	static void SetTextArrayProperty(UPsData* Target, int32 Crc32, const TArray<FText>& Value);
 
-	/** Get soft object map property */
+	/** Get text map property */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
 	static const TMap<FString, FText>& GetTextMapProperty(UPsData* Target, int32 Crc32);
 
-	/** Set soft object map property */
+	/** Set text map property */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	static void SetTextMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FText>& Value);
+
+	/***********************************
+	 * FName
+	 ***********************************/
+
+	/** Get name property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static FName GetNameProperty(UPsData* Target, int32 Crc32);
+
+	/** Set name property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetNameProperty(UPsData* Target, int32 Crc32, const FName& Value);
+
+	/** Get name array property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static const TArray<FName>& GetNameArrayProperty(UPsData* Target, int32 Crc32);
+
+	/** Set name array property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetNameArrayProperty(UPsData* Target, int32 Crc32, const TArray<FName>& Value);
+
+	/** Get name map property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static const TMap<FString, FName>& GetNameMapProperty(UPsData* Target, int32 Crc32);
+
+	/** Set name map property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetNameMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FName>& Value);
 
 	/***********************************
 	 * Data
@@ -299,16 +327,24 @@ public:
 	static void SetLinearColorMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FLinearColor>& Value);
 
 	/***********************************
-	 * Path
+	 * Link
 	 ***********************************/
+
+	/** Get keys by link hash */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static void GetKeysByLinkHash(const UPsData* Target, int32 Crc32, TArray<FString>& OutKeys);
+
+	/** Get data array property by hash */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static TArray<UPsData*> GetDataArrayByLinkHash(const UPsData* Target, int32 Crc32);
 
 	/** Get data property by hash */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
 	static UPsData* GetDataByLinkHash(const UPsData* Target, int32 Crc32);
 
-	/** Get data array property by hash */
+	/** Is link empty? */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static TArray<UPsData*> GetDataArrayByLinkHash(const UPsData* Target, int32 Crc32);
+	static bool IsLinkEmpty(const UPsData* Target, int32 Crc32);
 
 	/***********************************
 	 * Blueprint collections proxy

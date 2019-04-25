@@ -315,6 +315,58 @@ void UPsDataFunctionLibrary::SetTextMapProperty(UPsData* Target, int32 Hash, con
 }
 
 /***********************************
+ * FName
+ ***********************************/
+
+FName UPsDataFunctionLibrary::GetNameProperty(UPsData* Target, int32 Hash)
+{
+	FName* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const FName Default = FName();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetNameProperty(UPsData* Target, int32 Hash, const FName& Value)
+{
+	FDataReflectionTools::SetByHash<FName>(Target, Hash, Value);
+}
+
+const TArray<FName>& UPsDataFunctionLibrary::GetNameArrayProperty(UPsData* Target, int32 Hash)
+{
+	TArray<FName>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TArray<FName> Default = TArray<FName>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetNameArrayProperty(UPsData* Target, int32 Hash, const TArray<FName>& Value)
+{
+	FDataReflectionTools::SetByHash<TArray<FName>>(Target, Hash, Value);
+}
+
+const TMap<FString, FName>& UPsDataFunctionLibrary::GetNameMapProperty(UPsData* Target, int32 Hash)
+{
+	TMap<FString, FName>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TMap<FString, FName> Default = TMap<FString, FName>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetNameMapProperty(UPsData* Target, int32 Hash, const TMap<FString, FName>& Value)
+{
+	FDataReflectionTools::SetByHash<TMap<FString, FName>>(Target, Hash, Value);
+}
+
+/***********************************
  * Data
  ***********************************/
 
@@ -522,38 +574,93 @@ void UPsDataFunctionLibrary::SetLinearColorMapProperty(UPsData* Target, int32 Ha
 }
 
 /***********************************
- * Path
+ * Link
  ***********************************/
 
-UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, int32 Hash)
+void UPsDataFunctionLibrary::GetKeysByLinkHash(const UPsData* ConstTarget, int32 Hash, TArray<FString>& OutKeys)
 {
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
 
-	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
+	UClass* TargetClass = Target->GetClass();
+	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(TargetClass, Hash);
 	if (!Link.IsValid())
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't find link 0x%08x in \"%s\""), Hash, *Target->GetClass()->GetName())
+		UE_LOG(LogData, Fatal, TEXT("Can't find link 0x%08x in \"%s\""), Hash, *TargetClass->GetName())
 	}
 
+	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByName(TargetClass, Link->Name);
+	check(Field.IsValid());
+
+	if (Field->Context->IsA(&FDataReflectionTools::GetContext<FString>()))
+	{
+		FString* PropertyPtr = nullptr;
+		if (FDataReflectionTools::GetByField<FString>(Target, Field, PropertyPtr))
+		{
+			OutKeys.Add(*PropertyPtr);
+			return;
+		}
+	}
+	else if (Field->Context->IsA(&FDataReflectionTools::GetContext<TArray<FString>>()))
+	{
+		TArray<FString>* PropertyPtr = nullptr;
+		if (FDataReflectionTools::GetByField<TArray<FString>>(Target, Field, PropertyPtr))
+		{
+			OutKeys.Append(*PropertyPtr);
+			return;
+		}
+	}
+	else if (Field->Context->IsA(&FDataReflectionTools::GetContext<FName>()))
+	{
+		FName* PropertyPtr = nullptr;
+		if (FDataReflectionTools::GetByField<FName>(Target, Field, PropertyPtr))
+		{
+			OutKeys.Add(PropertyPtr->ToString().ToLower());
+			return;
+		}
+	}
+	else if (Field->Context->IsA(&FDataReflectionTools::GetContext<TArray<FName>>()))
+	{
+		TArray<FName>* PropertyPtr = nullptr;
+		if (FDataReflectionTools::GetByField<TArray<FName>>(Target, Field, PropertyPtr))
+		{
+			OutKeys.Reserve(PropertyPtr->Num());
+			for (const FName& Name : *PropertyPtr)
+			{
+				OutKeys.Add(Name.ToString().ToLower());
+			}
+			return;
+		}
+	}
+	else
+	{
+		UE_LOG(LogData, Fatal, TEXT("Unsupported type \"%s\" in \"%s\""), *Link->Name, *TargetClass->GetName())
+	}
+
+	UE_LOG(LogData, Fatal, TEXT("Can't find property \"%s\" in \"%s\""), *Field->Name, *TargetClass->GetName())
+}
+
+UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, int32 Hash)
+{
+	TArray<FString> Keys;
+	GetKeysByLinkHash(ConstTarget, Hash, Keys);
+
+	//TODO: PS-136
+	UPsData* Target = const_cast<UPsData*>(ConstTarget);
+	UClass* TargetClass = Target->GetClass();
+	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
 	if (Link->bAbstract)
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't link abstract path \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
-	}
-
-	FString* PropertyPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<FString>(Target, Link->Name, PropertyPtr))
-	{
-		UE_LOG(LogData, Fatal, TEXT("Can't find property \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
+		UE_LOG(LogData, Fatal, TEXT("Can't link abstract path \"%s\" in \"%s\""), *Link->Name, *TargetClass->GetName())
 	}
 
 	TMap<FString, UPsData*>* MapPtr = nullptr;
 	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), Link->Path, MapPtr))
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *Link->Path, *Target->GetRoot()->GetClass()->GetName())
+		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *Link->Path, *TargetClass->GetName())
 	}
 
-	UPsData** Find = MapPtr->Find(*PropertyPtr);
+	UPsData** Find = MapPtr->Find(Keys[0]);
 	if (Find)
 	{
 		return *Find;
@@ -569,37 +676,28 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 
 TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* ConstTarget, int32 Hash)
 {
+	TArray<FString> Keys;
+	GetKeysByLinkHash(ConstTarget, Hash, Keys);
+
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
-
+	UClass* TargetClass = Target->GetClass();
 	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
-	if (!Link.IsValid())
-	{
-		UE_LOG(LogData, Fatal, TEXT("Can't find link 0x%08x in \"%s\""), Hash, *Target->GetClass()->GetName())
-	}
-
 	if (Link->bAbstract)
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't link abstract path \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
-	}
-
-	TArray<FString>* PropertyPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<TArray<FString>>(Target, Link->Name, PropertyPtr))
-	{
-		UE_LOG(LogData, Fatal, TEXT("Can't find property \"%s\" in \"%s\""), *Link->Name, *Target->GetClass()->GetName())
+		UE_LOG(LogData, Fatal, TEXT("Can't link abstract path \"%s\" in \"%s\""), *Link->Name, *TargetClass->GetName())
 	}
 
 	TMap<FString, UPsData*>* MapPtr = nullptr;
 	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), Link->Path, MapPtr))
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *Link->Path, *Target->GetRoot()->GetClass()->GetName())
+		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *Link->Path, *TargetClass->GetName())
 	}
 
 	TArray<UPsData*> Result;
-	const TArray<FString>& Array = *PropertyPtr;
-	for (const FString& Element : Array)
+	for (const FString& Key : Keys)
 	{
-		UPsData** Find = MapPtr->Find(Element);
+		UPsData** Find = MapPtr->Find(Key);
 		if (Find)
 		{
 			Result.Add(*Find);
@@ -610,6 +708,29 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 		}
 	}
 	return Result;
+}
+
+bool UPsDataFunctionLibrary::IsLinkEmpty(const UPsData* ConstTarget, int32 Hash)
+{
+	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(ConstTarget->GetClass(), Hash);
+	if (Link.IsValid())
+	{
+		if (!Link->Meta.bNullable)
+		{
+			return false;
+		}
+
+		TArray<FString> Keys;
+		GetKeysByLinkHash(ConstTarget, Hash, Keys);
+		for (const FString& Key : Keys)
+		{
+			if (Key.Len() > 0)
+			{
+				return false;
+			}
+		}
+	}
+	return true;
 }
 
 /***********************************

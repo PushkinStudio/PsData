@@ -9,6 +9,7 @@
 
 const FString UPsDataEvent::Added(TEXT("Added"));
 const FString UPsDataEvent::Removing(TEXT("Removing"));
+const FString UPsDataEvent::Changed(TEXT("Changed"));
 
 UPsDataEvent::UPsDataEvent(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -35,7 +36,7 @@ void UPsDataEvent::DispatchChange(UPsData* Instance, TSharedPtr<const FDataField
 			if (InstanceWeakPtr.IsValid())
 			{
 				FDataReflectionTools::FPsDataFriend::SetIsChanged(InstanceWeakPtr.Get(), false);
-				InstanceWeakPtr->Broadcast(UPsDataEvent::ConstructEvent(TEXT("Changed"), false));
+				InstanceWeakPtr->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
 			}
 		});
 	}

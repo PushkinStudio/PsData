@@ -35,7 +35,7 @@ void FPsDataFriend::AddChild(UPsData* Parent, UPsData* Data)
 
 	Data->Parent = Parent;
 	Parent->Children.Add(Data);
-	Data->Broadcast(UPsDataEvent::ConstructEvent(TEXT("Added"), true));
+	Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
 }
 
 void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
@@ -46,7 +46,7 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 		return;
 	}
 
-	Data->Broadcast(UPsDataEvent::ConstructEvent(TEXT("Removing"), true));
+	Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Removing, true));
 	Parent->Children.Remove(Data);
 	Data->Parent = nullptr;
 }
@@ -71,6 +71,56 @@ TArray<TUniquePtr<FAbstractDataMemory>>& FPsDataFriend::GetMemory(UPsData* Data)
 	return Data->Memory;
 }
 } // namespace FDataReflectionTools
+
+/***********************************
+ * FPsDataBind
+ ***********************************/
+
+FPsDataBind::FPsDataBind(TSharedRef<FDelegateWrapper> InDelegateWrapper)
+	: DelegateWrapper(InDelegateWrapper)
+{
+}
+
+FPsDataBind::FPsDataBind()
+	: DelegateWrapper(nullptr)
+{
+}
+
+void FPsDataBind::Unbind()
+{
+	if (DelegateWrapper.IsValid())
+	{
+		DelegateWrapper->Delegate.Unbind();
+		DelegateWrapper->DynamicDelegate.Unbind();
+	}
+}
+
+/***********************************
+ * FPsDataBindCollection
+ ***********************************/
+
+FPsDataBindCollection::FPsDataBindCollection()
+{
+	Collection.Reserve(2);
+}
+
+void FPsDataBindCollection::Add(const FPsDataBind& Bind)
+{
+	if (Bind.DelegateWrapper.IsValid())
+	{
+		Collection.Add(Bind.DelegateWrapper.ToSharedRef());
+	}
+}
+
+void FPsDataBindCollection::Unbind()
+{
+	for (auto& DelegateWrapper : Collection)
+	{
+		DelegateWrapper->Delegate.Unbind();
+		DelegateWrapper->DynamicDelegate.Unbind();
+	}
+	Collection.Reset();
+}
 
 /***********************************
  * FPsDataReport
@@ -141,14 +191,14 @@ void UPsData::Broadcast(UPsDataEvent* Event) const
 	}
 }
 
-void UPsData::Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
+FPsDataBind UPsData::Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 {
-	BindInternal(Type, Delegate);
+	return BindInternal(Type, Delegate);
 }
 
-void UPsData::Bind(const FString& Type, const FPsDataDelegate& Delegate) const
+FPsDataBind UPsData::Bind(const FString& Type, const FPsDataDelegate& Delegate) const
 {
-	BindInternal(Type, Delegate);
+	return BindInternal(Type, Delegate);
 }
 
 void UPsData::Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
@@ -161,18 +211,18 @@ void UPsData::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 	UnbindInternal(Type, Delegate);
 }
 
-void UPsData::Bind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const
+FPsDataBind UPsData::Bind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const
 {
 	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
 	check(Field.IsValid());
-	BindInternal(Field->GenerateChangePropertyEventName(), Delegate);
+	return BindInternal(Field->GenerateChangePropertyEventName(), Delegate);
 }
 
-void UPsData::Bind(int32 Hash, const FPsDataDelegate& Delegate) const
+FPsDataBind UPsData::Bind(int32 Hash, const FPsDataDelegate& Delegate) const
 {
 	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
 	check(Field.IsValid());
-	BindInternal(Field->GenerateChangePropertyEventName(), Delegate);
+	return BindInternal(Field->GenerateChangePropertyEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const
@@ -210,8 +260,8 @@ void UPsData::UpdateDelegates() const
 	{
 		for (auto ArrayIt = MapIt->Value.CreateIterator(); ArrayIt; ++ArrayIt)
 		{
-			const FDelegateWrapper& Wrapper = *ArrayIt;
-			if (!Wrapper.DynamicDelegate.IsBound() && !Wrapper.Delegate.IsBound())
+			TSharedRef<FDelegateWrapper>& Wrapper = *ArrayIt;
+			if (!Wrapper->DynamicDelegate.IsBound() && !Wrapper->Delegate.IsBound())
 			{
 				ArrayIt.RemoveCurrent();
 			}
@@ -238,23 +288,23 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, UClass* Previous) const
 		auto Find = Delegates.Find(Event->Type);
 		if (Find)
 		{
-			TArray<FDelegateWrapper> Copy = *Find;
-			for (FDelegateWrapper& Wrapper : Copy)
+			TArray<TSharedRef<FDelegateWrapper>> Copy = *Find;
+			for (auto& Wrapper : Copy)
 			{
 				bool bExecute = true;
-				if (Wrapper.Field.IsValid())
+				if (Wrapper->Field.IsValid())
 				{
 					bExecute = false;
 					if (Previous == nullptr)
 					{
-						if (Event->Type == Wrapper.Field->GenerateChangePropertyEventName())
+						if (Event->Type == Wrapper->Field->GenerateChangePropertyEventName())
 						{
 							bExecute = true;
 						}
 					}
-					else if (Wrapper.Field->Context->IsData())
+					else if (Wrapper->Field->Context->IsData())
 					{
-						if (Wrapper.Field->Context->GetUE4Type() == Previous)
+						if (Wrapper->Field->Context->GetUE4Type() == Previous)
 						{
 							bExecute = true;
 						}
@@ -262,8 +312,8 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, UClass* Previous) const
 				}
 				if (bExecute)
 				{
-					Wrapper.DynamicDelegate.ExecuteIfBound(Event);
-					Wrapper.Delegate.ExecuteIfBound(Event);
+					Wrapper->DynamicDelegate.ExecuteIfBound(Event);
+					Wrapper->Delegate.ExecuteIfBound(Event);
 					if (Event->bStopImmediate)
 					{
 						break;
@@ -283,26 +333,32 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, UClass* Previous) const
 	UpdateDelegates();
 }
 
-void UPsData::BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field) const
+FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field) const
 {
 	if (!Delegate.IsBound())
 	{
-		return;
+		return {};
 	}
 
-	Delegates.FindOrAdd(Type).Add(FDelegateWrapper(Delegate, Field));
+	TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
+	Delegates.FindOrAdd(Type).Add(Ref);
 	UpdateDelegates();
+
+	return FPsDataBind(Ref);
 }
 
-void UPsData::BindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field) const
+FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field) const
 {
 	if (!Delegate.IsBound())
 	{
-		return;
+		return FPsDataBind();
 	}
 
-	Delegates.FindOrAdd(Type).Add(FDelegateWrapper(Delegate, Field));
+	TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
+	Delegates.FindOrAdd(Type).Add(Ref);
 	UpdateDelegates();
+
+	return FPsDataBind(Ref);
 }
 
 void UPsData::UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field) const
@@ -312,11 +368,11 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& 
 		auto Find = Delegates.Find(Type);
 		if (Find)
 		{
-			for (FDelegateWrapper& Wrapper : *Find)
+			for (auto& Wrapper : *Find)
 			{
-				if (Wrapper.DynamicDelegate == Delegate && Wrapper.Field == Field)
+				if (Wrapper->DynamicDelegate == Delegate && Wrapper->Field == Field)
 				{
-					Wrapper.DynamicDelegate.Unbind();
+					Wrapper->DynamicDelegate.Unbind();
 				}
 			}
 		}
@@ -332,11 +388,11 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDelegate& Delegat
 		auto Find = Delegates.Find(Type);
 		if (Find)
 		{
-			for (FDelegateWrapper& Wrapper : *Find)
+			for (auto& Wrapper : *Find)
 			{
-				if (Wrapper.Delegate.GetHandle() == Delegate.GetHandle() && Wrapper.Field == Field)
+				if (Wrapper->Delegate.GetHandle() == Delegate.GetHandle() && Wrapper->Field == Field)
 				{
-					Wrapper.Delegate.Unbind();
+					Wrapper->Delegate.Unbind();
 				}
 			}
 		}
@@ -485,75 +541,31 @@ TArray<FPsDataReport> UPsData::Validation() const
 		}
 		else
 		{
-			if (Pair.Value->bCollection)
+			TArray<FString> Keys;
+			UPsDataFunctionLibrary::GetKeysByLinkHash(Data, Pair.Value->Hash, Keys);
+			TMap<FString, UPsData*>* MapPtr = nullptr;
+			if (FDataReflectionTools::GetByName(RootData, Pair.Value->Path, MapPtr))
 			{
-				TArray<FString>* PropertiesPtr = nullptr;
-				if (FDataReflectionTools::GetByName<TArray<FString>>(Data, Pair.Value->Name, PropertiesPtr))
+				TMap<FString, UPsData*> Map = *MapPtr;
+				for (const FString& Key : Keys)
 				{
-					TMap<FString, UPsData*>* MapPtr = nullptr;
-					if (FDataReflectionTools::GetByName(RootData, Pair.Value->Path, MapPtr))
+					if (Key.Len() > 0)
 					{
-						TMap<FString, UPsData*> Map = *MapPtr;
-
-						const TArray<FString>& Properties = *PropertiesPtr;
-						for (const FString& Property : Properties)
+						UPsData** Find = Map.Find(Key);
+						if (Find == nullptr)
 						{
-							if (Property.Len() > 0)
-							{
-								UPsData** Find = Map.Find(Property);
-								if (Find == nullptr)
-								{
-									Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property not found"), Pair.Value->Path + TEXT(".") + Property));
-								}
-							}
-							else if (!Pair.Value->Meta.bNullable)
-							{
-								Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property is empty"), Pair.Value->Path + TEXT(".?")));
-							}
+							Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property not found"), Pair.Value->Path + TEXT(".") + Key));
 						}
 					}
-					else
+					else if (!Pair.Value->Meta.bNullable)
 					{
-						Result.Add(FPsDataReport(EPsDataReportType::Logic, Pair.Value->Path, TEXT("Used undeclared property")));
+						Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property is empty"), Pair.Value->Path + TEXT(".?")));
 					}
-				}
-				else
-				{
-					Result.Add(FPsDataReport(EPsDataReportType::Logic, FieldPath, TEXT("Used undeclared property")));
 				}
 			}
 			else
 			{
-				FString* PropertyPtr = nullptr;
-				if (FDataReflectionTools::GetByName<FString>(Data, Pair.Value->Name, PropertyPtr))
-				{
-					TMap<FString, UPsData*>* MapPtr = nullptr;
-					if (FDataReflectionTools::GetByName(RootData, Pair.Value->Path, MapPtr))
-					{
-						TMap<FString, UPsData*> Map = *MapPtr;
-						const FString& Property = *PropertyPtr;
-						if (Property.Len() > 0)
-						{
-							UPsData** Find = Map.Find(Property);
-							if (Find == nullptr)
-							{
-								Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property not found"), Pair.Value->Path + TEXT(".") + Property));
-							}
-						}
-						else if (!Pair.Value->Meta.bNullable)
-						{
-							Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property is empty"), Pair.Value->Path + TEXT(".?")));
-						}
-					}
-					else
-					{
-						Result.Add(FPsDataReport(EPsDataReportType::Logic, Pair.Value->Path, TEXT("Used undeclared property")));
-					}
-				}
-				else
-				{
-					Result.Add(FPsDataReport(EPsDataReportType::Logic, FieldPath, TEXT("Used undeclared property")));
-				}
+				Result.Add(FPsDataReport(EPsDataReportType::Logic, Pair.Value->Path, TEXT("Used undeclared property")));
 			}
 		}
 	}

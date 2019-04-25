@@ -352,6 +352,31 @@ struct FTypeDeserializer<FText>
 	}
 };
 
+template <>
+struct FTypeSerializer<FName>
+{
+	static void Serialize(FPsDataSerializer* Serializer, const FName& Value)
+	{
+		Serializer->WriteValue(Value.ToString().ToLower());
+	}
+};
+
+template <>
+struct FTypeDeserializer<FName>
+{
+	static FName Deserialize(FPsDataDeserializer* Deserializer)
+	{
+		FString String;
+		Deserializer->ReadValue(String);
+		return FName(*String.ToLower());
+	}
+
+	static FName Deserialize(FPsDataDeserializer* Deserializer, const FName& Value)
+	{
+		return Deserialize(Deserializer);
+	}
+};
+
 template <typename T>
 struct FTypeSerializer<TSoftObjectPtr<T>>
 {
