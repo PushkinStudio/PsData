@@ -76,7 +76,7 @@ struct FDelegateWrapper
  * FPsDataBind
  ***********************************/
 
-struct FPsDataBind
+struct PSDATAPLUGIN_API FPsDataBind
 {
 private:
 	friend UPsData;
@@ -100,7 +100,7 @@ public:
  * FPsDataBindCollection
  ***********************************/
 
-struct FPsDataBindCollection
+struct PSDATAPLUGIN_API FPsDataBindCollection
 {
 private:
 	/** Collection */
