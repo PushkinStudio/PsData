@@ -88,10 +88,10 @@ private:
 	/** Constructor */
 	FPsDataBind(TSharedRef<FDelegateWrapper> InWrapper);
 
+public:
 	/** Empty constructor */
 	FPsDataBind();
 
-public:
 	/** Unbind */
 	void Unbind();
 };
@@ -262,7 +262,7 @@ private:
 	void UpdateDelegates() const;
 
 	/** Broadcast internal */
-	void BroadcastInternal(UPsDataEvent* Event, UClass* Previous = nullptr) const;
+	void BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous = nullptr) const;
 
 	/** Bind internal */
 	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
@@ -319,6 +319,16 @@ public:
 
 	/** Reset */
 	void Reset();
+
+	/** Make copy from current object */
+	UPsData* Copy() const;
+
+	/** Make copy from current object (templatized version) */
+	template <typename T>
+	T* Copy() const
+	{
+		return CastChecked<T>(Copy());
+	}
 
 	/** Validation */
 	TArray<FPsDataReport> Validation() const;

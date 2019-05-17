@@ -37,7 +37,7 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 	{
 		if (Pair.Value->Meta.bEvent)
 		{
-			Events.Add(MakeShareable(new FEventPath(Pair.Value->GenerateChangePropertyEventName(), TEXT(""), true)));
+			Events.Add(MakeShareable(new FEventPath(Pair.Value->GetChangeEventName(), TEXT(""), true)));
 		}
 
 		if (Pair.Value->Context->IsData())
@@ -62,7 +62,7 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 			FString Path = Child.Path + TEXT(".") + Pair.Value->Name;
 			if (Pair.Value->Meta.bEvent && Pair.Value->Meta.bBubbles)
 			{
-				Events.Add(MakeShareable(new FEventPath(Pair.Value->GenerateChangePropertyEventName(), Path, false)));
+				Events.Add(MakeShareable(new FEventPath(Pair.Value->GetChangeEventName(), Path, false)));
 			}
 
 			if (Pair.Value->Context->IsData())

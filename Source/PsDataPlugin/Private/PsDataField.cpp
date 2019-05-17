@@ -82,6 +82,11 @@ bool FAbstractDataTypeContext::IsData() const
 	return false;
 }
 
+bool FAbstractDataTypeContext::IsEnum() const
+{
+	return false;
+}
+
 bool FAbstractDataTypeContext::HasExtendedTypeCheck() const
 {
 	return false;
@@ -378,7 +383,7 @@ FDataField::FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbst
 	ParseMeta<FDataField>(this, MetaCollection);
 }
 
-const FString& FDataField::GenerateChangePropertyEventName() const
+const FString& FDataField::GetChangeEventName() const
 {
 	return Meta.EventType;
 }
@@ -387,9 +392,10 @@ const FString& FDataField::GenerateChangePropertyEventName() const
  * FDataLink
  ***********************************/
 
-FDataLink::FDataLink(const FString& InName, const FString& InPath, const FString& InReturnType, int32 InHash, bool bInAbstract, bool bInCollection, const TArray<const char*>& MetaCollection)
+FDataLink::FDataLink(const FString& InName, const FString& InPath, bool bInPathProperty, const FString& InReturnType, int32 InHash, bool bInAbstract, bool bInCollection, const TArray<const char*>& MetaCollection)
 	: Name(InName)
 	, Path(InPath)
+	, bPathProperty(bInPathProperty)
 	, ReturnType(InReturnType)
 	, Hash(InHash)
 	, bCollection(bInCollection)

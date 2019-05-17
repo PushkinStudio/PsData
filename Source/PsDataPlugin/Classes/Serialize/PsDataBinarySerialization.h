@@ -11,7 +11,27 @@
 class UPsData;
 
 /***********************************
- * FJsonDataSerializer
+ * Tokens for binary serializer/deserializer
+ ***********************************/
+
+enum class EBinaryTokens : uint8
+{
+	Key = 1,
+	ArrayBegin = 2,
+	ArrayEnd = 3,
+	ObjectBegin = 4,
+	ObjectEnd = 5,
+	Value_int32 = 6,
+	Value_uint8 = 7,
+	Value_float = 8,
+	Value_bool = 9,
+	Value_FString = 10,
+	Value_FName = 11,
+	Value_null = 12,
+};
+
+/***********************************
+ * FPsDataBinarySerializer
  ***********************************/
 
 struct PSDATAPLUGIN_API FPsDataBinarySerializer : public FPsDataSerializer
@@ -37,6 +57,42 @@ public:
 	virtual void WriteValue(const UPsData* Value) override;
 
 	virtual void PopKey(const FString& Key) override;
+	virtual void PopArray() override;
+	virtual void PopObject() override;
+};
+
+/***********************************
+ * FPsDataBinaryDeserializer
+ ***********************************/
+
+struct PSDATAPLUGIN_API FPsDataBinaryDeserializer : public FPsDataDeserializer
+{
+private:
+	const TArray<char>& Buffer;
+	uint32 BufferIndex;
+
+public:
+	FPsDataBinaryDeserializer(const TArray<char>& InBuffer);
+	virtual ~FPsDataBinaryDeserializer(){};
+
+private:
+	bool ReadToken(EBinaryTokens Token);
+
+public:
+	virtual bool ReadKey(FString& OutKey) override;
+	virtual bool ReadIndex() override;
+	virtual bool ReadArray() override;
+	virtual bool ReadObject() override;
+	virtual bool ReadValue(int32& OutValue) override;
+	virtual bool ReadValue(uint8& OutValue) override;
+	virtual bool ReadValue(float& OutValue) override;
+	virtual bool ReadValue(bool& OutValue) override;
+	virtual bool ReadValue(FString& OutValue) override;
+	virtual bool ReadValue(FName& OutValue) override;
+	virtual bool ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator) override;
+
+	virtual void PopKey(const FString& Key) override;
+	virtual void PopIndex() override;
 	virtual void PopArray() override;
 	virtual void PopObject() override;
 };

@@ -660,6 +660,11 @@ struct FEnumDataTypeContext : public FAbstractDataTypeContext
 		return true;
 	}
 
+	virtual bool IsEnum() const override
+	{
+		return true;
+	}
+
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
 		static constexpr const int32 Hash = FDataReflectionTools::FType<uint8>::Hash();
@@ -1115,6 +1120,10 @@ namespace FDataReflectionTools
 {
 struct FDMeta
 {
+	FDMeta()
+	{
+	}
+
 	FDMeta(const char* Meta)
 	{
 		if (FDataReflection::InQueue())
@@ -1136,7 +1145,6 @@ struct FDMeta
 
 namespace FDataReflectionTools
 {
-
 template <class ReturnType, int32 Hash>
 struct FDLinkHelper
 {

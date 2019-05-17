@@ -80,6 +80,7 @@ struct PSDATAPLUGIN_API FAbstractDataTypeContext
 	virtual bool IsMap() const;
 	virtual bool IsContainer() const;
 	virtual bool IsData() const;
+	virtual bool IsEnum() const;
 
 	virtual bool HasExtendedTypeCheck() const;
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const;
@@ -99,7 +100,7 @@ public:
 	FDataFieldMeta Meta;
 
 	FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, const TArray<const char*>& MetaCollection);
-	const FString& GenerateChangePropertyEventName() const;
+	const FString& GetChangeEventName() const;
 };
 
 /***********************************
@@ -111,11 +112,12 @@ struct PSDATAPLUGIN_API FDataLink
 public:
 	FString Name;
 	FString Path;
+	bool bPathProperty;
 	FString ReturnType;
 	int32 Hash;
 	bool bCollection;
 	bool bAbstract;
 	FDataLinkMeta Meta;
 
-	FDataLink(const FString& InName, const FString& InPath, const FString& InReturnType, int32 InHash, bool bInCollection, bool bInAbstract, const TArray<const char*>& MetaCollection);
+	FDataLink(const FString& InName, const FString& InPath, bool bInPathProperty, const FString& InReturnType, int32 InHash, bool bInAbstract, bool bInCollection, const TArray<const char*>& MetaCollection);
 };

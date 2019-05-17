@@ -56,6 +56,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                        \
 	{                                                                                                                  \
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
+	}                                                                                                                  \
+                                                                                                                       \
+	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	{                                                                                                                  \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
 	}
 
 /***********************************
@@ -97,6 +102,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                        \
 	{                                                                                                                  \
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
+	}                                                                                                                  \
+                                                                                                                       \
+	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	{                                                                                                                  \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
 	}
 
 /***********************************
@@ -145,6 +155,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                        \
 	{                                                                                                                  \
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
+	}                                                                                                                  \
+                                                                                                                       \
+	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	{                                                                                                                  \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
 	}
 
 /***********************************
@@ -196,6 +211,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                        \
 	{                                                                                                                  \
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
+	}                                                                                                                  \
+                                                                                                                       \
+	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	{                                                                                                                  \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
 	}
 
 /***********************************
@@ -223,6 +243,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                        \
 	{                                                                                                                  \
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
+	}                                                                                                                  \
+                                                                                                                       \
+	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	{                                                                                                                  \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
 	}
 
 /***********************************
@@ -254,6 +279,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                        \
 	{                                                                                                                  \
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
+	}                                                                                                                  \
+                                                                                                                       \
+	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	{                                                                                                                  \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
 	}
 
 /***********************************
@@ -281,6 +311,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                      \
 	{                                                                                                                \
 		return Bind(_UNIQ(hash), Delegate);                                                                          \
+	}                                                                                                                \
+                                                                                                                     \
+	static const FString& Get##__Name__##ChangeEventName()                                                           \
+	{                                                                                                                \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                    \
 	}
 
 /***********************************
@@ -312,6 +347,11 @@ public:                                                                         
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                      \
 	{                                                                                                                \
 		return Bind(_UNIQ(hash), Delegate);                                                                          \
+	}                                                                                                                \
+                                                                                                                     \
+	static const FString& Get##__Name__##ChangeEventName()                                                           \
+	{                                                                                                                \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                    \
 	}
 
 /***********************************
@@ -364,15 +404,43 @@ public:                                                     \
  * Macro DESCRIBE_ENUM
  ***********************************/
 
-#define DESCRIBE_ENUM(__Type__)                                               \
-	template <>                                                               \
-	struct FDataMemory<__Type__> : public FEnumDataMemory<__Type__>           \
-	{                                                                         \
-		virtual ~FDataMemory() {}                                             \
-	};                                                                        \
-                                                                              \
-	template <>                                                               \
-	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__> \
-	{                                                                         \
-		virtual ~FDataTypeContext() {}                                        \
-	};
+#define DESCRIBE_ENUM(__Type__)                                                                                                   \
+	template <>                                                                                                                   \
+	struct FDataMemory<__Type__> : public FEnumDataMemory<__Type__>                                                               \
+	{                                                                                                                             \
+		virtual ~FDataMemory() {}                                                                                                 \
+	};                                                                                                                            \
+                                                                                                                                  \
+	template <>                                                                                                                   \
+	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                     \
+	{                                                                                                                             \
+		virtual ~FDataTypeContext() {}                                                                                            \
+	};                                                                                                                            \
+                                                                                                                                  \
+	namespace FDataReflectionTools                                                                                                \
+	{                                                                                                                             \
+	template <class ReturnType, int32 Hash>                                                                                       \
+	struct FDLink<__Type__, ReturnType, Hash> : public FDLinkBase<__Type__, ReturnType, Hash>                                     \
+	{                                                                                                                             \
+	public:                                                                                                                       \
+		FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false) \
+			: FDLinkBase<__Type__, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                           \
+		{                                                                                                                         \
+		}                                                                                                                         \
+                                                                                                                                  \
+		FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)                                           \
+			: FDLinkBase<__Type__, ReturnType, Hash>(Name, CharReturnType, InInstance)                                            \
+		{                                                                                                                         \
+		}                                                                                                                         \
+                                                                                                                                  \
+		typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const                                                   \
+		{                                                                                                                         \
+			return FDLinkHelper<ReturnType, Hash>::Get(this->Instance);                                                           \
+		}                                                                                                                         \
+                                                                                                                                  \
+		FDLink(const FDLink&) = delete;                                                                                           \
+		FDLink(FDLink&&) = delete;                                                                                                \
+		FDLink& operator=(const FDLink&) = delete;                                                                                \
+		FDLink& operator=(FDLink&&) = delete;                                                                                     \
+	};                                                                                                                            \
+	}

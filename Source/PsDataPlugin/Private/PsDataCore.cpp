@@ -59,6 +59,23 @@ void FDataReflection::AddLink(const char* CharName, const char* CharPath, const 
 
 	UClass* OwnerClass = GetLastClassInQueue();
 
+	bool bPathProperty = false;
+	if (!bAbstract)
+	{
+		auto PathField = GetFieldByName(OwnerClass, Path);
+		if (PathField.IsValid())
+		{
+			if (PathField->Context->IsA(&FDataReflectionTools::GetContext<FString>()))
+			{
+				bPathProperty = true;
+			}
+			else
+			{
+				UE_LOG(LogData, Fatal, TEXT("Can't describe link \"%s\" because path property \"%s\" has unsupported type \"%s\""), *Name, *Path, *PathField->Context->GetCppType());
+			}
+		}
+	}
+
 	TMap<FString, const TSharedPtr<const FDataLink>>& MapByName = LinksByName.FindOrAdd(OwnerClass);
 	TMap<int32, const TSharedPtr<const FDataLink>>& MapByHash = LinksByHash.FindOrAdd(OwnerClass);
 
@@ -67,10 +84,11 @@ void FDataReflection::AddLink(const char* CharName, const char* CharPath, const 
 		auto Link = *Find;
 		if (!Link->bAbstract)
 		{
-			UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s (path: %s) 0x%08x"), *OwnerClass->GetName(), *Link->Name, *Link->Path, Hash);
+			UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s 0x%08x"), *OwnerClass->GetName(), *Link->Name, Hash);
 		}
 	}
-	TSharedPtr<const FDataLink> Link(new FDataLink(Name, Path, ReturnType, Hash, bAbstract, bCollection, MetaCollection));
+
+	TSharedPtr<const FDataLink> Link(new FDataLink(Name, Path, bPathProperty, ReturnType, Hash, bAbstract, bCollection, MetaCollection));
 	MetaCollection.Reset();
 
 	MapByName.Add(Name, Link);
@@ -202,7 +220,11 @@ void FDataReflection::Fill(UPsData* Instance)
 			}
 		}
 	}
-	FDataReflectionTools::FPsDataFriend::InitProperties(Instance);
+
+	if (!bDefaultObject)
+	{
+		FDataReflectionTools::FPsDataFriend::InitProperties(Instance);
+	}
 }
 
 TSharedPtr<const FDataField> FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
