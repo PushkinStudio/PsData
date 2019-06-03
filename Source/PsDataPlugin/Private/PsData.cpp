@@ -517,6 +517,16 @@ UPsData* UPsData::Copy() const
 	return Copy;
 }
 
+UPsData* UPsData::Copy() const
+{
+	FPsDataBinarySerializer Serializer;
+	DataSerialize(&Serializer);
+	UPsData* Copy = NewObject<UPsData>(GetTransientPackage(), GetClass());
+	FPsDataBinaryDeserializer Deserializer(Serializer.GetBuffer());
+	Copy->DataDeserialize(&Deserializer);
+	return Copy;
+}
+
 TArray<FPsDataReport> UPsData::Validation() const
 {
 	TArray<FPsDataReport> Result;
