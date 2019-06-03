@@ -58,9 +58,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
 	}                                                                                                                  \
                                                                                                                        \
-	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	static const FString& Get##__Name__##ChangedEventName()                                                            \
 	{                                                                                                                  \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                     \
 	}
 
 /***********************************
@@ -104,9 +104,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
 	}                                                                                                                  \
                                                                                                                        \
-	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	static const FString& Get##__Name__##ChangedEventName()                                                            \
 	{                                                                                                                  \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                     \
 	}
 
 /***********************************
@@ -157,9 +157,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
 	}                                                                                                                  \
                                                                                                                        \
-	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	static const FString& Get##__Name__##ChangedEventName()                                                            \
 	{                                                                                                                  \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                     \
 	}
 
 /***********************************
@@ -213,9 +213,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
 	}                                                                                                                  \
                                                                                                                        \
-	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	static const FString& Get##__Name__##ChangedEventName()                                                            \
 	{                                                                                                                  \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                     \
 	}
 
 /***********************************
@@ -245,9 +245,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
 	}                                                                                                                  \
                                                                                                                        \
-	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	static const FString& Get##__Name__##ChangedEventName()                                                            \
 	{                                                                                                                  \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                     \
 	}
 
 /***********************************
@@ -281,9 +281,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                            \
 	}                                                                                                                  \
                                                                                                                        \
-	static const FString& Get##__Name__##ChangeEventName()                                                             \
+	static const FString& Get##__Name__##ChangedEventName()                                                            \
 	{                                                                                                                  \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                      \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                     \
 	}
 
 /***********************************
@@ -313,9 +313,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                          \
 	}                                                                                                                \
                                                                                                                      \
-	static const FString& Get##__Name__##ChangeEventName()                                                           \
+	static const FString& Get##__Name__##ChangedEventName()                                                          \
 	{                                                                                                                \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                    \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                   \
 	}
 
 /***********************************
@@ -349,9 +349,9 @@ public:                                                                         
 		return Bind(_UNIQ(hash), Delegate);                                                                          \
 	}                                                                                                                \
                                                                                                                      \
-	static const FString& Get##__Name__##ChangeEventName()                                                           \
+	static const FString& Get##__Name__##ChangedEventName()                                                          \
 	{                                                                                                                \
-		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangeEventName();                    \
+		return FDataReflection::GetFieldByHash(StaticClass(), _UNIQ(hash))->GetChangedEventName();                   \
 	}
 
 /***********************************

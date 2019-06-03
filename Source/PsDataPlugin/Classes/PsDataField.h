@@ -100,7 +100,7 @@ public:
 	FDataFieldMeta Meta;
 
 	FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, const TArray<const char*>& MetaCollection);
-	const FString& GetChangeEventName() const;
+	const FString& GetChangedEventName() const;
 };
 
 /***********************************

@@ -223,28 +223,28 @@ FPsDataBind UPsData::Bind(int32 Hash, const FPsDataDynamicDelegate& Delegate) co
 {
 	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
 	check(Field.IsValid());
-	return BindInternal(Field->GetChangeEventName(), Delegate);
+	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 FPsDataBind UPsData::Bind(int32 Hash, const FPsDataDelegate& Delegate) const
 {
 	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
 	check(Field.IsValid());
-	return BindInternal(Field->GetChangeEventName(), Delegate);
+	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const
 {
 	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
 	check(Field.IsValid());
-	UnbindInternal(Field->GetChangeEventName(), Delegate);
+	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 Hash, const FPsDataDelegate& Delegate) const
 {
 	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
 	check(Field.IsValid());
-	UnbindInternal(Field->GetChangeEventName(), Delegate);
+	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
@@ -305,7 +305,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 					bExecute = false;
 					if (Previous == nullptr)
 					{
-						if (Event->Type == Wrapper->Field->GetChangeEventName())
+						if (Event->Type == Wrapper->Field->GetChangedEventName())
 						{
 							bExecute = true;
 						}
@@ -505,16 +505,6 @@ void UPsData::Reset()
 	}
 	InitProperties();
 	PostDeserialize();
-}
-
-UPsData* UPsData::Copy() const
-{
-	FPsDataBinarySerializer Serializer;
-	DataSerialize(&Serializer);
-	UPsData* Copy = NewObject<UPsData>(GetTransientPackage(), GetClass());
-	FPsDataBinaryDeserializer Deserializer(Serializer.GetBuffer());
-	Copy->DataDeserialize(&Deserializer);
-	return Copy;
 }
 
 UPsData* UPsData::Copy() const

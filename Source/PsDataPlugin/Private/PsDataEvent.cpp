@@ -25,7 +25,7 @@ void UPsDataEvent::DispatchChange(UPsData* Instance, TSharedPtr<const FDataField
 {
 	if (Field->Meta.bEvent)
 	{
-		Instance->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangeEventName(), Field->Meta.bBubbles));
+		Instance->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
 	}
 
 	if (!FDataReflectionTools::FPsDataFriend::IsChanged(Instance))

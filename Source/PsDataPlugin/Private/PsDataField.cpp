@@ -383,7 +383,7 @@ FDataField::FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbst
 	ParseMeta<FDataField>(this, MetaCollection);
 }
 
-const FString& FDataField::GetChangeEventName() const
+const FString& FDataField::GetChangedEventName() const
 {
 	return Meta.EventType;
 }
