@@ -660,9 +660,76 @@ struct FEnumDataTypeContext : public FAbstractDataTypeContext
 		return true;
 	}
 
+	virtual bool IsEnum() const override
+	{
+		return true;
+	}
+
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
 		static constexpr const int32 Hash = FDataReflectionTools::FType<uint8>::Hash();
+		return Hash == RightContext->GetHash() || GetHash() == RightContext->GetHash();
+	}
+};
+
+template <typename T>
+struct FEnumDataTypeContext<TArray<T>> : public FAbstractDataTypeContext
+{
+	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
+
+	virtual UField* GetUE4Type() const override
+	{
+		return FindObject<UEnum>(ANY_PACKAGE, *FDataReflectionTools::FType<T>::ContentType());
+	}
+
+	virtual TSharedPtr<const FDataFieldFunctions> GetUFunctions() const override
+	{
+		static TSharedPtr<const FDataFieldFunctions> Functions(
+			new FDataFieldFunctions(
+				UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(TEXT("GetByteArrayProperty"))),
+				UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(TEXT("SetByteArrayProperty")))));
+		return Functions;
+	}
+
+	virtual FAbstractDataMemory* AllocateMemory() const override
+	{
+		return new FDataMemory<TArray<T>>();
+	}
+
+	virtual const FString& GetCppType() const override
+	{
+		return FDataReflectionTools::FType<TArray<T>>::Type();
+	}
+
+	virtual const FString& GetCppContentType() const override
+	{
+		return FDataReflectionTools::FType<TArray<T>>::ContentType();
+	}
+
+	virtual uint32 GetHash() const override
+	{
+		static constexpr const int32 Hash = FDataReflectionTools::FType<TArray<T>>::Hash();
+		return Hash;
+	}
+
+	bool HasExtendedTypeCheck() const override
+	{
+		return true;
+	}
+
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	virtual bool IsEnum() const override
+	{
+		return true;
+	}
+
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		static constexpr const int32 Hash = FDataReflectionTools::FType<TArray<uint8>>::Hash();
 		return Hash == RightContext->GetHash() || GetHash() == RightContext->GetHash();
 	}
 };
@@ -1115,6 +1182,10 @@ namespace FDataReflectionTools
 {
 struct FDMeta
 {
+	FDMeta()
+	{
+	}
+
 	FDMeta(const char* Meta)
 	{
 		if (FDataReflection::InQueue())
@@ -1136,7 +1207,6 @@ struct FDMeta
 
 namespace FDataReflectionTools
 {
-
 template <class ReturnType, int32 Hash>
 struct FDLinkHelper
 {

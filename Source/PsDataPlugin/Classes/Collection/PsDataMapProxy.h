@@ -57,6 +57,13 @@ private:
 		return *Output;
 	}
 
+protected:
+	friend class UPsDataBlueprintMapProxy;
+
+	FPsDataBaseMapProxy()
+	{
+	}
+
 public:
 	FPsDataBaseMapProxy(UPsData* InInstance, TSharedPtr<const FDataField> InField)
 		: Instance(InInstance)
@@ -70,10 +77,6 @@ public:
 		, Field(FDataReflection::GetFieldByHash(InInstance->GetClass(), Hash))
 	{
 		check(IsValid());
-	}
-
-	FPsDataBaseMapProxy()
-	{
 	}
 
 	template <bool bOtherConst>

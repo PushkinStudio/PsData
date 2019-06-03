@@ -11,6 +11,7 @@
 class UPsData;
 class UPsDataBlueprintMapProxy;
 class UPsDataBlueprintArrayProxy;
+struct FDataLink;
 
 UCLASS()
 class PSDATAPLUGIN_API UPsDataFunctionLibrary : public UBlueprintFunctionLibrary
@@ -330,9 +331,11 @@ public:
 	 * Link
 	 ***********************************/
 
+	/** Get path by link hash */
+	static const FString& GetLinkPath(const UPsData* Target, TSharedPtr<const FDataLink> Link);
+
 	/** Get keys by link hash */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static void GetKeysByLinkHash(const UPsData* Target, int32 Crc32, TArray<FString>& OutKeys);
+	static void GetLinkKeys(const UPsData* Target, TSharedPtr<const FDataLink> Link, TArray<FString>& OutKeys);
 
 	/** Get data array property by hash */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")

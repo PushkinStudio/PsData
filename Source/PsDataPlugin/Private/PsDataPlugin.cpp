@@ -3,6 +3,7 @@
 #include "PsDataPlugin.h"
 
 #include "PsDataCore.h"
+#include "PsDataHardObjectPtr.h"
 
 #include "Misc/CoreDelegates.h"
 
@@ -10,8 +11,11 @@
 
 void FPsDataPluginModule::StartupModule()
 {
-	FCoreDelegates::OnFEngineLoopInitComplete.AddLambda([] {
+	FCoreDelegates::OnPostEngineInit.AddLambda([] {
 		FDataReflection::Compile();
+		UPsDataHardObjectPtrSingleton::Init();
+
+		FDataDelegates::OnPostDataModuleInit.Broadcast();
 	});
 }
 

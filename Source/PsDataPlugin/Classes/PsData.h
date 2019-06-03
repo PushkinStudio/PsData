@@ -7,6 +7,7 @@
 #include "Serialize/PsDataSerialization.h"
 
 #include "CoreMinimal.h"
+#include "Delegates/Delegate.h"
 
 #include "PsData.generated.h"
 
@@ -16,6 +17,16 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FPsDataDynamicDelegate, UPsDataEvent*, Event);
 DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsDataEvent*);						 // TBaseDelegate
 
 class UPsData;
+
+class PSDATAPLUGIN_API FDataDelegates
+{
+public:
+	static FSimpleMulticastDelegate OnPostDataModuleInit;
+
+private:
+	// This class is only for namespace use
+	FDataDelegates() {}
+};
 
 /***********************************
 * Abstract memory
@@ -76,7 +87,7 @@ struct FDelegateWrapper
  * FPsDataBind
  ***********************************/
 
-struct FPsDataBind
+struct PSDATAPLUGIN_API FPsDataBind
 {
 private:
 	friend UPsData;
@@ -88,10 +99,10 @@ private:
 	/** Constructor */
 	FPsDataBind(TSharedRef<FDelegateWrapper> InWrapper);
 
+public:
 	/** Empty constructor */
 	FPsDataBind();
 
-public:
 	/** Unbind */
 	void Unbind();
 };
@@ -100,7 +111,7 @@ public:
  * FPsDataBindCollection
  ***********************************/
 
-struct FPsDataBindCollection
+struct PSDATAPLUGIN_API FPsDataBindCollection
 {
 private:
 	/** Collection */
@@ -211,6 +222,9 @@ protected:
 	/** Init properties */
 	virtual void InitProperties();
 
+	/** Post Deserialize */
+	virtual void PostDeserialize();
+
 	/***********************************
 	 * Event system
 	 ***********************************/
@@ -262,7 +276,7 @@ private:
 	void UpdateDelegates() const;
 
 	/** Broadcast internal */
-	void BroadcastInternal(UPsDataEvent* Event, UClass* Previous = nullptr) const;
+	void BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous = nullptr) const;
 
 	/** Bind internal */
 	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
@@ -319,6 +333,16 @@ public:
 
 	/** Reset */
 	void Reset();
+
+	/** Make copy from current object */
+	UPsData* Copy() const;
+
+	/** Make copy from current object (templatized version) */
+	template <typename T>
+	T* Copy() const
+	{
+		return CastChecked<T>(Copy());
+	}
 
 	/** Validation */
 	TArray<FPsDataReport> Validation() const;

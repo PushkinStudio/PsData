@@ -11,16 +11,25 @@ UPsDataHardObjectPtrSingleton* UPsDataHardObjectPtrSingleton::Singleton = nullpt
 UPsDataHardObjectPtrSingleton::UPsDataHardObjectPtrSingleton(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+}
+
+void UPsDataHardObjectPtrSingleton::Init()
+{
 	check(!Singleton);
+	Singleton = NewObject<UPsDataHardObjectPtrSingleton>();
+	Singleton->AddToRoot();
 }
 
 UPsDataHardObjectPtrSingleton* UPsDataHardObjectPtrSingleton::Get()
 {
-	if (Singleton == nullptr)
+#if WITH_HOT_RELOAD
+	if (!Singleton)
 	{
-		Singleton = NewObject<UPsDataHardObjectPtrSingleton>();
-		Singleton->SetFlags(RF_Standalone);
+		Init();
 	}
-
 	return Singleton;
+#else
+	check(Singleton);
+	return Singleton;
+#endif //WITH_HOT_RELOAD
 }

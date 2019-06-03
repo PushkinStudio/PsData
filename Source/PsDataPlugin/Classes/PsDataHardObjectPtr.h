@@ -3,12 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PsDataTraits.h"
 
 #include "PsDataHardObjectPtr.generated.h"
 
 /***********************************
- * UPsDataSingleton
+ * UPsDataHardObjectPtrSingleton
  ***********************************/
 
 UCLASS()
@@ -17,14 +16,18 @@ class PSDATAPLUGIN_API UPsDataHardObjectPtrSingleton : public UObject
 	GENERATED_UCLASS_BODY()
 
 private:
+	static UPsDataHardObjectPtrSingleton* Singleton;
+
+public:
+	static void Init();
+
+protected:
 	template <class T>
 	friend struct THardObjectPtr;
 
-	static UPsDataHardObjectPtrSingleton* Singleton;
-
 	static UPsDataHardObjectPtrSingleton* Get();
 
-	// @TODO ZEN-770 UPROPERTY()
+	UPROPERTY(Transient)
 	TMap<const UObject*, int32> ObjectCounters;
 };
 
@@ -78,14 +81,13 @@ private:
 
 		if (Object != nullptr)
 		{
-			auto& Count = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters.FindChecked(Object);
-			Count--;
-
-			check(Count >= 0);
+			auto& ObjectCounters = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters;
+			auto& Count = ObjectCounters.FindChecked(Object);
+			check(Count > 0);
+			--Count;
 			if (Count == 0)
 			{
-				UPsDataHardObjectPtrSingleton::Get()->ObjectCounters.Remove(Object);
-				const_cast<UObject*>(Object)->ClearFlags(RF_Standalone);
+				ObjectCounters.Remove(Object);
 			}
 		}
 	}
@@ -94,16 +96,15 @@ private:
 	{
 		if (Object != nullptr)
 		{
-			auto& Count = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters.FindOrAdd(Object);
+			auto& ObjectCounters = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters;
+			if (!ObjectCounters.Contains(Object))
+			{
+				ObjectCounters.Add(Object, 0);
+			}
+
+			auto& Count = ObjectCounters.FindChecked(Object);
 			check(Count >= 0);
 			Count++;
-
-			// Add to root on first usage
-			if (Count == 1)
-			{
-				// @TODO ZEN-770 Check cluster add instead of root one
-				const_cast<UObject*>(Object)->SetFlags(RF_Standalone);
-			}
 		}
 	}
 
@@ -148,12 +149,12 @@ public:
 
 	T* operator*() const
 	{
-		return Get();
+		return Value;
 	}
 
 	T* operator->() const
 	{
-		return Get();
+		return Value;
 	}
 
 	void operator=(T* NewValue)

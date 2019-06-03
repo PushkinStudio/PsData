@@ -57,6 +57,13 @@ private:
 		return *Output;
 	}
 
+protected:
+	friend class UPsDataBlueprintArrayProxy;
+
+	FPsDataBaseArrayProxy()
+	{
+	}
+
 public:
 	FPsDataBaseArrayProxy(UPsData* InInstance, TSharedPtr<const FDataField> InField)
 		: Instance(InInstance)
@@ -90,10 +97,6 @@ public:
 		check(IsValid());
 		ArrayProxy.Instance = nullptr;
 		ArrayProxy.Field = nullptr;
-	}
-
-	FPsDataBaseArrayProxy()
-	{
 	}
 
 	TSharedPtr<const FDataField> GetField() const
@@ -165,7 +168,7 @@ public:
 		return OldElement;
 	}
 
-	int32 Find(typename FDataReflectionTools::TConstRef<T>::Type Element)
+	int32 Find(typename FDataReflectionTools::TConstRef<T>::Type Element) const
 	{
 		return Get().Find(Element);
 	}
