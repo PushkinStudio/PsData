@@ -74,7 +74,7 @@ public:
 private:
 	static void ResetInternal(const UObject* Object)
 	{
-		if (GExitPurge)
+		if (GExitPurge || IsIncrementalPurgePending())
 		{
 			return;
 		}

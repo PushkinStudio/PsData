@@ -626,7 +626,14 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 		FName* PropertyPtr = nullptr;
 		if (FDataReflectionTools::GetByField<FName>(Target, Field, PropertyPtr))
 		{
-			OutKeys.Add(PropertyPtr->ToString().ToLower());
+			if (*PropertyPtr == NAME_None)
+			{
+				OutKeys.Add(TEXT(""));
+			}
+			else
+			{
+				OutKeys.Add(PropertyPtr->ToString().ToLower());
+			}
 			return;
 		}
 	}
@@ -638,7 +645,10 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 			OutKeys.Reserve(PropertyPtr->Num());
 			for (const FName& Name : *PropertyPtr)
 			{
-				OutKeys.Add(Name.ToString().ToLower());
+				if (Name != NAME_None)
+				{
+					OutKeys.Add(Name.ToString().ToLower());
+				}
 			}
 			return;
 		}
