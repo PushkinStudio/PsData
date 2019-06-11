@@ -3,6 +3,8 @@
 #pragma once
 
 #include "Serialize/PsDataSerialization.h"
+#include "Serialize/Stream/PsDataInputStream.h"
+#include "Serialize/Stream/PsDataOutputStream.h"
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
@@ -37,13 +39,13 @@ enum class EBinaryTokens : uint8
 struct PSDATAPLUGIN_API FPsDataBinarySerializer : public FPsDataSerializer
 {
 private:
-	TArray<char> Buffer;
+	TSharedRef<FPsDataOutputStream> OutputStream;
 
 public:
-	FPsDataBinarySerializer();
+	FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream);
 	virtual ~FPsDataBinarySerializer(){};
 
-	const TArray<char>& GetBuffer() const;
+	TSharedRef<FPsDataOutputStream> GetOutputStream() const;
 
 	virtual void WriteKey(const FString& Key) override;
 	virtual void WriteArray() override;
@@ -68,11 +70,10 @@ public:
 struct PSDATAPLUGIN_API FPsDataBinaryDeserializer : public FPsDataDeserializer
 {
 private:
-	const TArray<char>& Buffer;
-	uint32 BufferIndex;
+	TSharedRef<FPsDataInputStream> InputStream;
 
 public:
-	FPsDataBinaryDeserializer(const TArray<char>& InBuffer);
+	FPsDataBinaryDeserializer(TSharedRef<FPsDataInputStream> InInputStream);
 	virtual ~FPsDataBinaryDeserializer(){};
 
 private:

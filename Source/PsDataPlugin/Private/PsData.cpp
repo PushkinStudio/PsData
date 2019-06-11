@@ -5,9 +5,11 @@
 #include "PsDataCore.h"
 #include "PsDataMemory.h"
 #include "Serialize/PsDataBinarySerialization.h"
+#include "Serialize/Stream/PsDataBufferInputStream.h"
+#include "Serialize/Stream/PsDataBufferOutputStream.h"
+#include "Serialize/Stream/PsDataMD5OutputStream.h"
 
 #include "Async/Async.h"
-#include "Core/Public/Misc/SecureHash.h"
 
 FSimpleMulticastDelegate FDataDelegates::OnPostDataModuleInit;
 
@@ -475,21 +477,10 @@ UPsData* UPsData::GetRoot() const
 FString UPsData::GetHash() const
 {
 	//TODO: Sort keys
-	//TODO: Streaming
-	FPsDataBinarySerializer Serializer;
+	auto OutputStream = MakeShared<FPsDataMD5OutputStream>();
+	FPsDataBinarySerializer Serializer(OutputStream);
 	DataSerialize(&Serializer);
-
-	uint8 Digest[16];
-	FMD5 Md5Gen;
-	Md5Gen.Update((uint8*)Serializer.GetBuffer().GetData(), Serializer.GetBuffer().Num());
-	Md5Gen.Final(Digest);
-
-	return FString::Printf(
-		TEXT("%08x%08x%08x%08x"),
-		(static_cast<uint32>(Digest[0]) << 24) | (static_cast<uint32>(Digest[1]) << 16) | (static_cast<uint32>(Digest[2]) << 8) | static_cast<uint32>(Digest[3]),
-		(static_cast<uint32>(Digest[4]) << 24) | (static_cast<uint32>(Digest[5]) << 16) | (static_cast<uint32>(Digest[6]) << 8) | static_cast<uint32>(Digest[7]),
-		(static_cast<uint32>(Digest[8]) << 24) | (static_cast<uint32>(Digest[9]) << 16) | (static_cast<uint32>(Digest[10]) << 8) | static_cast<uint32>(Digest[11]),
-		(static_cast<uint32>(Digest[12]) << 24) | (static_cast<uint32>(Digest[13]) << 16) | (static_cast<uint32>(Digest[14]) << 8) | static_cast<uint32>(Digest[15]));
+	return OutputStream->GetHash();
 }
 
 /***********************************
@@ -509,10 +500,11 @@ void UPsData::Reset()
 
 UPsData* UPsData::Copy() const
 {
-	FPsDataBinarySerializer Serializer;
+	auto OutputStream = MakeShared<FPsDataBufferOutputStream>();
+	FPsDataBinarySerializer Serializer(OutputStream);
 	DataSerialize(&Serializer);
 	UPsData* Copy = NewObject<UPsData>(GetTransientPackage(), GetClass());
-	FPsDataBinaryDeserializer Deserializer(Serializer.GetBuffer());
+	FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(OutputStream->GetBuffer()));
 	Copy->DataDeserialize(&Deserializer);
 	return Copy;
 }
