@@ -14,6 +14,7 @@ struct PSDATAPLUGIN_API FPsDataBufferOutputStream : public FPsDataOutputStream
 {
 public:
 	FPsDataBufferOutputStream();
+	virtual ~FPsDataBufferOutputStream(){};
 
 private:
 	TArray<char> Buffer;

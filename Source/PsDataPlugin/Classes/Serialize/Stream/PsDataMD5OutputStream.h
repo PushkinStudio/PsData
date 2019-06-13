@@ -15,6 +15,7 @@ struct PSDATAPLUGIN_API FPsDataMD5OutputStream : public FPsDataOutputStream
 {
 public:
 	FPsDataMD5OutputStream();
+	virtual ~FPsDataMD5OutputStream(){};
 
 private:
 	FMD5 Md5Gen;
