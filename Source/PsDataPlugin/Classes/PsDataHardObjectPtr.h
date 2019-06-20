@@ -3,6 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Templates/EnableIf.h"
+#include "Templates/PointerIsConvertibleFromTo.h"
+#include "Templates/SharedPointerInternals.h"
 
 #include "PsDataHardObjectPtr.generated.h"
 
@@ -23,7 +26,7 @@ public:
 
 protected:
 	template <class T>
-	friend struct THardObjectPtr;
+	friend class THardObjectPtr;
 
 	static UPsDataHardObjectPtrSingleton* Get();
 
@@ -32,30 +35,39 @@ protected:
 };
 
 template <class T>
-struct THardObjectPtr
+class THardObjectPtr
 {
 private:
 	T* Value;
 
 public:
-	THardObjectPtr()
+	THardObjectPtr(SharedPointerInternals::FNullTag* = nullptr)
 		: Value(nullptr)
 	{
 	}
 
-	THardObjectPtr(T* NewValue)
+	template <
+		typename OtherType,
+		typename = typename TEnableIf<TPointerIsConvertibleFromTo<OtherType, T>::Value>::Type>
+	THardObjectPtr(OtherType* NewValue)
 		: Value(nullptr)
 	{
 		Set(NewValue);
 	}
 
-	THardObjectPtr(const THardObjectPtr& Other)
+	template <
+		typename OtherType,
+		typename = typename TEnableIf<TPointerIsConvertibleFromTo<OtherType, T>::Value>::Type>
+	THardObjectPtr(const THardObjectPtr<OtherType>& Other)
 		: Value(nullptr)
 	{
 		Set(Other.Value);
 	}
 
-	THardObjectPtr(THardObjectPtr&& Other)
+	template <
+		typename OtherType,
+		typename = typename TEnableIf<TPointerIsConvertibleFromTo<OtherType, T>::Value>::Type>
+	THardObjectPtr(THardObjectPtr<OtherType>&& Other)
 		: Value(Other.Value)
 	{
 		Other.Value = nullptr;
@@ -70,6 +82,9 @@ public:
 			Value = nullptr;
 		}
 	}
+
+	template <class OtherType>
+	friend class THardObjectPtr;
 
 private:
 	static void ResetInternal(const UObject* Object)
