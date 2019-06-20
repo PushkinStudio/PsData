@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Templates/EnableIf.h"
 #include "Templates/PointerIsConvertibleFromTo.h"
-#include "Templates/SharedPointerInternals.h"
 
 #include "PsDataHardObjectPtr.generated.h"
 
@@ -41,18 +40,27 @@ private:
 	T* Value;
 
 public:
-	THardObjectPtr(SharedPointerInternals::FNullTag* = nullptr)
+	THardObjectPtr()
 		: Value(nullptr)
 	{
 	}
 
-	template <
-		typename OtherType,
-		typename = typename TEnableIf<TPointerIsConvertibleFromTo<OtherType, T>::Value>::Type>
-	THardObjectPtr(OtherType* NewValue)
+	THardObjectPtr(T* NewValue)
 		: Value(nullptr)
 	{
 		Set(NewValue);
+	}
+
+	THardObjectPtr(const THardObjectPtr& Other)
+		: Value(nullptr)
+	{
+		Set(Other.Value);
+	}
+
+	THardObjectPtr(THardObjectPtr&& Other)
+		: Value(Other.Value)
+	{
+		Other.Value = nullptr;
 	}
 
 	template <
