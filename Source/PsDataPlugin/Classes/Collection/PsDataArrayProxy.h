@@ -128,13 +128,7 @@ public:
 		UPsDataEvent::DispatchChange(Instance.Get(), Field);
 	}
 
-	void RemoveAt(int32 Index)
-	{
-		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
-		RemoveAt(Index, true);
-	}
-
-	void RemoveAt(int32 Index, bool bAllowShrinking)
+	void RemoveAt(int32 Index, bool bAllowShrinking = false)
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
@@ -144,13 +138,19 @@ public:
 		UPsDataEvent::DispatchChange(Instance.Get(), Field);
 	}
 
-	int32 Remove(typename FDataReflectionTools::TConstRef<T>::Type Element)
+	int32 Remove(typename FDataReflectionTools::TConstRef<T>::Type Element, bool bAllowShrinking = false)
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
 		TArray<T>& Array = Get();
+		const int32 Index = Array.Find(Element);
+		if (Index == INDEX_NONE)
+		{
+			return INDEX_NONE;
+		}
+
 		FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), Element);
-		int32 Index = Array.Remove(Element);
+		Array.RemoveAt(Index, 1, bAllowShrinking);
 		UPsDataEvent::DispatchChange(Instance.Get(), Field);
 		return Index;
 	}
@@ -210,6 +210,11 @@ public:
 	bool IsEmpty() const
 	{
 		return Num() == 0;
+	}
+
+	bool IsValidIndex(int32 Index) const
+	{
+		return Get().IsValidIndex(Index);
 	}
 
 	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
@@ -282,7 +287,7 @@ public:
 			static_assert(!bIteratorConst, "Unsupported method for FPsDataConstArrayProxy::TProxyIterator, use FPsDataArrayProxy::TProxyIterator");
 
 			T& Element = *Iterator;
-			FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Proxy.Instance, Element);
+			FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Proxy.Instance.Get(), Element);
 			Iterator.RemoveCurrent();
 			UPsDataEvent::DispatchChange(Proxy.Instance.Get(), Proxy.Field);
 		}

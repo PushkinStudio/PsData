@@ -279,9 +279,9 @@ public:
 			static_assert(!bIteratorConst, "Unsupported method for FPsDataConstMapProxy::TProxyIterator, use FPsDataMapProxy::TProxyIterator");
 
 			T& Element = Iterator->Value();
-			FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(Proxy.Instance, Element);
-			UPsDataEvent::DispatchChange(Proxy.Instance.Get(), Proxy.Field);
+			FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(Proxy.Instance.Get(), Element);
 			Iterator.RemoveCurrent();
+			UPsDataEvent::DispatchChange(Proxy.Instance.Get(), Proxy.Field);
 		}
 
 		TProxyIterator& operator++()
