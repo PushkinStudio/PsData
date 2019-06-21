@@ -31,6 +31,9 @@ protected:
 
 	UPROPERTY(Transient)
 	TMap<const UObject*, int32> ObjectCounters;
+
+	static void RetainObject(const UObject* Object);
+	static void ReleaseObject(const UObject* Object);
 };
 
 template <class T>
@@ -85,69 +88,52 @@ public:
 	{
 		if (Value != nullptr)
 		{
-			// Sometimes we don't know type in destructor. We can trust "set" method to verify T
-			ResetInternal(static_cast<const UObject*>(static_cast<const void*>(Value))); // TODO: see std::~unique_ptr
-			Value = nullptr;
+			// In the case of a forward declaration we don't know complete type of T and need to use ResetUnsafe
+			ResetUnsafe();
 		}
 	}
 
 	template <class OtherType>
 	friend class THardObjectPtr;
 
-private:
-	static void ResetInternal(const UObject* Object)
-	{
-		if (GExitPurge || IsIncrementalPurgePending())
-		{
-			return;
-		}
-
-		if (Object != nullptr)
-		{
-			auto& ObjectCounters = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters;
-			auto& Count = ObjectCounters.FindChecked(Object);
-			check(Count > 0);
-			--Count;
-			if (Count == 0)
-			{
-				ObjectCounters.Remove(Object);
-			}
-		}
-	}
-
-	static void SetInternal(const UObject* Object)
-	{
-		if (Object != nullptr)
-		{
-			auto& ObjectCounters = UPsDataHardObjectPtrSingleton::Get()->ObjectCounters;
-			if (!ObjectCounters.Contains(Object))
-			{
-				ObjectCounters.Add(Object, 0);
-			}
-
-			auto& Count = ObjectCounters.FindChecked(Object);
-			check(Count >= 0);
-			Count++;
-		}
-	}
-
 public:
 	void Reset()
 	{
-		ResetInternal(Value);
+		ResetImpl(Value);
+	}
+
+	void ResetUnsafe()
+	{
+		// Implementation of the Set method guarantees that this cast is safety
+		const auto Object = static_cast<const UObject*>(static_cast<const void*>(Value));
+		ResetImpl(Object);
+	}
+
+	void ResetImpl(const UObject* Object)
+	{
+		UPsDataHardObjectPtrSingleton::ReleaseObject(Object);
 		Value = nullptr;
 	}
 
 	void Set(T* NewValue)
 	{
+		static_assert(TPointerIsConvertibleFromTo<T, const UObject>::Value, "Only UObjects are allowed");
+
 		if (Value == NewValue)
 		{
 			return;
 		}
 
-		ResetInternal(Value);
-		SetInternal(NewValue);
-		Value = NewValue;
+		if (Value != nullptr)
+		{
+			Reset();
+		}
+
+		if (NewValue != nullptr)
+		{
+			UPsDataHardObjectPtrSingleton::RetainObject(NewValue);
+			Value = NewValue;
+		}
 	}
 
 	T* Get() const
