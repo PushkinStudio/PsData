@@ -33,3 +33,39 @@ UPsDataHardObjectPtrSingleton* UPsDataHardObjectPtrSingleton::Get()
 	return Singleton;
 #endif //WITH_HOT_RELOAD
 }
+
+void UPsDataHardObjectPtrSingleton::RetainObject(const UObject* Object)
+{
+	if (Object != nullptr)
+	{
+		auto& ObjectCounters = Get()->ObjectCounters;
+		if (!ObjectCounters.Contains(Object))
+		{
+			ObjectCounters.Add(Object, 0);
+		}
+
+		auto& Count = ObjectCounters.FindChecked(Object);
+		check(Count >= 0);
+		Count++;
+	}
+}
+
+void UPsDataHardObjectPtrSingleton::ReleaseObject(const UObject* Object)
+{
+	if (GExitPurge || IsIncrementalPurgePending())
+	{
+		return;
+	}
+
+	if (Object != nullptr)
+	{
+		auto& ObjectCounters = Get()->ObjectCounters;
+		auto& Count = ObjectCounters.FindChecked(Object);
+		check(Count > 0);
+		--Count;
+		if (Count == 0)
+		{
+			ObjectCounters.Remove(Object);
+		}
+	}
+}
