@@ -561,7 +561,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 			UPsDataFunctionLibrary::GetLinkKeys(Data, Pair.Value, Keys);
 			TMap<FString, UPsData*>* MapPtr = nullptr;
 			const FString& LinkPath = UPsDataFunctionLibrary::GetLinkPath(Data, Pair.Value);
-			if (FDataReflectionTools::GetByName(RootData, LinkPath, MapPtr))
+			if (FDataReflectionTools::GetByPath(RootData, LinkPath, MapPtr))
 			{
 				TMap<FString, UPsData*> Map = *MapPtr;
 				for (const FString& Key : Keys)

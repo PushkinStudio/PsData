@@ -709,7 +709,7 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), LinkPath, MapPtr))
+	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(Target->GetRoot(), LinkPath, MapPtr))
 	{
 		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *LinkPath, *Target->GetClass()->GetName())
 	}
@@ -741,7 +741,7 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByName<TMap<FString, UPsData*>>(Target->GetRoot(), LinkPath, MapPtr))
+	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(Target->GetRoot(), LinkPath, MapPtr))
 	{
 		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *LinkPath, *Target->GetClass()->GetName())
 	}

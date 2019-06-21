@@ -771,8 +771,8 @@ bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, T*& OutVa
 	}
 	else
 	{
+		check(false && "Can't cast property to T");
 		OutValue = nullptr;
-		UE_LOG(LogData, Fatal, TEXT("Property %s::%s has type \"%s\" can't cast to \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *Field->Context->GetCppType(), *GetContext<T>().GetCppType());
 		return false;
 	}
 }
@@ -784,32 +784,32 @@ bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, T*& OutVa
 template <typename T>
 bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TArray<T>>*& OutValue)
 {
+	checkNoEntry();
 	OutValue = nullptr;
-	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
 	return false;
 }
 
 template <typename T>
 bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TMap<FString, T>>*& OutValue)
 {
+	checkNoEntry();
 	OutValue = nullptr;
-	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
 	return false;
 }
 
 template <typename T>
 bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FString, TArray<T>>*& OutValue)
 {
+	checkNoEntry();
 	OutValue = nullptr;
-	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
 	return false;
 }
 
 template <typename T>
 bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FString, TMap<FString, T>>*& OutValue)
 {
+	checkNoEntry();
 	OutValue = nullptr;
-	UE_LOG(LogData, Fatal, TEXT("Unsupported type"));
 	return false;
 }
 
@@ -826,7 +826,7 @@ bool GetByHash(UPsData* Instance, int32 Hash, T*& OutValue)
 		return GetByField(Instance, Field, OutValue);
 	}
 
-	UE_LOG(LogData, Error, TEXT("Can't find property in %s by hash: 0x%08x"), *Instance->GetClass()->GetName(), Hash);
+	check(false && "Can't find property by hash");
 	return false;
 }
 
@@ -871,7 +871,7 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 						}
 						else
 						{
-							UE_LOG(LogData, Error, TEXT("Property %s::%s is null"), *Instance->GetClass()->GetName(), *Field->Name);
+							check(false && "Can't use nullptr property");
 							return false;
 						}
 					}
@@ -882,7 +882,7 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 				}
 				else
 				{
-					UE_LOG(LogData, Error, TEXT("Property %s::%s doesn't contain children"), *Instance->GetClass()->GetName(), *Field->Name);
+					check(false && "Can't use property without childeren");
 					return false;
 				}
 			}
@@ -906,19 +906,19 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 								}
 								else
 								{
-									UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is null"), *Instance->GetClass()->GetName(), *Field->Name, ArrayIndex);
+									check(false && "Can't use nullptr property");
 									return false;
 								}
 							}
 							else
 							{
-								UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field->Name, ArrayIndex);
+								check(false && "Can't find property by index");
 								return false;
 							}
 						}
 						else
 						{
-							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field->Name, *StringArrayIndex);
+							check(false && "Can't use property as index");
 							return false;
 						}
 					}
@@ -944,13 +944,13 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 							}
 							else
 							{
-								UE_LOG(LogData, Error, TEXT("Property %s::%s[%d] is not found"), *Instance->GetClass()->GetName(), *Field->Name, ArrayIndex);
+								check(false && "Can't find property by index");
 								return false;
 							}
 						}
 						else
 						{
-							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] index is not valid"), *Instance->GetClass()->GetName(), *Field->Name, *StringArrayIndex);
+							check(false && "Can't use property as index");
 							return false;
 						}
 					}
@@ -976,7 +976,7 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 						}
 						else
 						{
-							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field->Name, *Key);
+							check(false && "Can't find property by name");
 							return false;
 						}
 					}
@@ -1000,7 +1000,7 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 						}
 						else
 						{
-							UE_LOG(LogData, Error, TEXT("Property %s::%s[%s] is not found"), *Instance->GetClass()->GetName(), *Field->Name, *Key);
+							check(false && "Can't find property by name");
 							return false;
 						}
 					}
@@ -1014,10 +1014,37 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 	}
 	else
 	{
-		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Path[PathOffset]);
+		check(false && "Can't find property by name");
 		return false;
 	}
 
+	return false;
+}
+
+/***********************************
+ * GET PROPERTY VALUE BY PATH
+ ***********************************/
+
+template <typename T>
+bool GetByPath(UPsData* Instance, const FString& Path, T*& OutValue)
+{
+	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Path);
+	if (Find)
+	{
+		return GetByField(Instance, *Find, OutValue);
+	}
+	else
+	{
+		TArray<FString> PathArray;
+		Path.ParseIntoArray(PathArray, TEXT("."));
+		if (PathArray.Num() > 1)
+		{
+			return GetByPath<T>(Instance, PathArray, 0, PathArray.Num(), OutValue);
+		}
+	}
+
+	check(false && "Can't find property by name");
+	OutValue = nullptr;
 	return false;
 }
 
@@ -1033,19 +1060,18 @@ bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
 	{
 		return GetByField(Instance, *Find, OutValue);
 	}
-	else
-	{
-		TArray<FString> Path;
-		Name.ParseIntoArray(Path, TEXT("."));
-		if (Path.Num() > 1)
-		{
-			return GetByPath<T>(Instance, Path, 0, Path.Num(), OutValue);
-		}
-	}
+	//	else
+	//	{
+	//		TArray<FString> Path;
+	//		Name.ParseIntoArray(Path, TEXT("."));
+	//		if (Path.Num() > 1)
+	//		{
+	//			return GetByPath<T>(Instance, Path, 0, Path.Num(), OutValue);
+	//		}
+	//	}
 
+	check(false && "Can't find property by name");
 	OutValue = nullptr;
-
-	UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
 	return false;
 }
 
@@ -1058,7 +1084,7 @@ void SetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, typename 
 {
 	if (Field->Meta.bStrict && !Instance->HasAnyFlags(EObjectFlags::RF_NeedInitialization))
 	{
-		UE_LOG(LogData, Error, TEXT("Can't set strict %s::%s property"), *Instance->GetClass()->GetName(), *Field->Name);
+		check(false && "Can't set strict property");
 		return;
 	}
 
@@ -1068,7 +1094,7 @@ void SetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, typename 
 	}
 	else
 	{
-		UE_LOG(LogData, Fatal, TEXT("Property %s::%s has type (%s) can't cast from (%s)"), *Instance->GetClass()->GetName(), *Field->Name, *Field->Context->GetCppType(), *GetContext<T>().GetCppType());
+		check(false && "Can't cast property to T");
 	}
 }
 
@@ -1086,7 +1112,7 @@ void SetByHash(UPsData* Instance, int32 Hash, typename FDataReflectionTools::TCo
 		return;
 	}
 
-	UE_LOG(LogData, Error, TEXT("Can't find property in %s by hash: 0x%08x"), *Instance->GetClass()->GetName(), Hash);
+	check(false && "Can't find property by hash");
 }
 
 /***********************************
@@ -1101,10 +1127,8 @@ void SetByName(UPsData* Instance, const FString& Name, typename FDataReflectionT
 	{
 		SetByField<T>(Instance, *Find, NewValue);
 	}
-	else
-	{
-		UE_LOG(LogData, Error, TEXT("Property %s::%s is not found"), *Instance->GetClass()->GetName(), *Name);
-	}
+
+	check(false && "Can't find property by name");
 }
 } // namespace FDataReflectionTools
 
@@ -1128,7 +1152,7 @@ struct FPsDataCastHelper
 			}
 			else
 			{
-				UE_LOG(LogData, Fatal, TEXT("Can't cast \"%s\" to \"%s\""), *Data->GetClass()->GetName(), *T::StaticClass()->GetName());
+				check(false && "Can't cast property to T");
 			}
 		}
 		return nullptr;

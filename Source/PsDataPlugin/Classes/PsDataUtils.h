@@ -62,35 +62,25 @@ constexpr int GetSize(const char* s, int start = 0)
 	return (*s != 0) ? GetSize(s + 1, start + 1) : start;
 }
 
-constexpr bool Equal(const char* s, const char* c)
+constexpr bool Equal(const char* s, const int s_size, const char* c, const int c_size)
 {
-	const int s_size = GetSize(s);
-	const int c_size = GetSize(c);
-	return (s_size > 0 && c_size > 0) ? ((s[0] == c[0]) ? Equal(&s[1], &c[1]) : false) : true;
+	return (s_size > 0 && c_size > 0) ? ((s[0] == c[0]) ? Equal(&s[1], s_size - 1, &c[1], c_size - 1) : false) : true;
+}
+constexpr int Find(const char* s, const int s_size, const char* c, const int c_size, const int index)
+{
+	const int new_s_size = s_size - index;
+	return (new_s_size >= c_size) ? ((Equal(&s[index], new_s_size, c, c_size) ? index : Find(s, s_size, c, c_size, index + 1))) : -1;
 }
 
-constexpr int Find(const char* s, const char* c, int index = 0)
+constexpr std::pair<int, int> GetSignatureRange(const char* s)
 {
-	const int s_size = GetSize(s);
-	const int c_size = GetSize(c);
-	return (s_size >= c_size) ? ((Equal(&s[1], c) ? index : Find(&s[1], c, index + 1))) : -1;
-}
-
-constexpr std::pair<int, int> GetRangeFromPRETTY_FUNCTION(const char* s)
-{
-	const char* Prefix = "FType<";
-	const char* Postfix = ">::ContentType";
-	const int pos0 = Find(s, Prefix) + GetSize(Prefix) + 1;
-	const int pos1 = Find(s, Postfix) + 1;
-	return std::pair<int, int>{pos0, pos1 - pos0};
-}
-
-constexpr std::pair<int, int> GetRangeFromFUNCSIG(const char* s)
-{
-	const char* Prefix = "FType<";
-	const char* Postfix = ">::ContentType";
-	const int pos0 = Find(s, Prefix) + GetSize(Prefix) + 1;
-	const int pos1 = Find(s, Postfix) + 1;
+	constexpr const char* Prefix = "FType<";
+	constexpr const char* Postfix = ">::ContentType";
+	constexpr const int PrefixSize = GetSize(Prefix);
+	constexpr const int PostfixSize = GetSize(Postfix);
+	const int Size = GetSize(s);
+	const int pos0 = Find(s, Size, Prefix, PrefixSize, 0) + GetSize(Prefix);
+	const int pos1 = Find(s, Size, Postfix, PostfixSize, pos0);
 	return std::pair<int, int>{pos0, pos1 - pos0};
 }
 
@@ -107,12 +97,14 @@ struct FType
 {
 	static const FString& ContentType()
 	{
+		constexpr const std::pair<int, int> Range = Type::GetSignatureRange(__FUNCTION_SIGNATURE__);
+		constexpr const int Len = Range.second;
+		const char* Signature = &__FUNCTION_SIGNATURE__[Range.first];
+
 #if defined(__clang__)
-		static constexpr const std::pair<int, int> Range = Type::GetRangeFromPRETTY_FUNCTION(__PRETTY_FUNCTION__);
-		static const FString Result = FString(Range.second, &__PRETTY_FUNCTION__[Range.first]).Replace(TEXT("> "), TEXT(">")); //TODO: Remove replace
+		static const FString Result = FString(Len, Signature).Replace(TEXT("> "), TEXT(">"));
 #else
-		static constexpr const std::pair<int, int> Range = Type::GetRangeFromFUNCSIG(__FUNCSIG__);
-		static const FString Result = FString(Range.second, &__FUNCSIG__[Range.first]).Replace(TEXT("> "), TEXT(">")).Replace(TEXT("enum "), TEXT("")).Replace(TEXT("class "), TEXT("")).Replace(TEXT("struct "), TEXT("")); //TODO: Remove replace
+		static const FString Result = FString(Len, Signature).Replace(TEXT("> "), TEXT(">")).Replace(TEXT("enum "), TEXT("")).Replace(TEXT("class "), TEXT("")).Replace(TEXT("struct "), TEXT(""));
 #endif
 		return Result;
 	}
