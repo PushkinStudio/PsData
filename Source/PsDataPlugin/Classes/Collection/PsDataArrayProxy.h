@@ -161,7 +161,7 @@ public:
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
 		int32 RemovedElements = 0;
-		auto Array = Get();
+		auto& Array = Get();
 		for (auto It = Array.CreateIterator(); It; ++It)
 		{
 			typename FDataReflectionTools::TConstRef<T, true>::Type Element = *It;
