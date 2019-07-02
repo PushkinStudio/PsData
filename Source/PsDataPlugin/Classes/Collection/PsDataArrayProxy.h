@@ -199,6 +199,12 @@ public:
 		return Get().Find(Element);
 	}
 
+	template <typename Predicate>
+	typename FDataReflectionTools::TConstRef<T*, bConst>::Type FindByPredicate(Predicate Pred) const
+	{
+		return Get().FindByPredicate(Pred);
+	}
+
 	typename FDataReflectionTools::TConstRef<T, bConst>::Type Get(int32 Index) const
 	{
 		return Get()[Index];
