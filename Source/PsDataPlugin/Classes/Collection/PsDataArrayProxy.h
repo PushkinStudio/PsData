@@ -155,6 +155,27 @@ public:
 		return Index;
 	}
 
+	template <typename PredicateType>
+	int32 RemoveAll(const PredicateType& Predicate)
+	{
+		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
+
+		int32 RemovedElements = 0;
+		TArray<T>& Array = Get();
+		for (auto It = Array.CreateIterator(); It; ++It)
+		{
+			if (Predicate(*It))
+			{
+				FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), *It);
+				It.RemoveCurrent();
+				UPsDataEvent::DispatchChange(Instance.Get(), Field);
+				RemovedElements += 1;
+			}
+		}
+
+		return RemovedElements;
+	}
+
 	typename FDataReflectionTools::TConstRef<T, bConst>::Type Set(typename FDataReflectionTools::TConstRef<T>::Type Element, int32 Index)
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
