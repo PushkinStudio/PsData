@@ -161,16 +161,21 @@ public:
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
 		int32 RemovedElements = 0;
-		TArray<T>& Array = Get();
+		auto Array = Get();
 		for (auto It = Array.CreateIterator(); It; ++It)
 		{
-			if (Predicate(*It))
+			typename FDataReflectionTools::TConstRef<T, true>::Type Element = *It;
+			if (Predicate(Element))
 			{
+				RemovedElements += 1;
 				FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), *It);
 				It.RemoveCurrent();
-				UPsDataEvent::DispatchChange(Instance.Get(), Field);
-				RemovedElements += 1;
 			}
+		}
+
+		if (RemovedElements > 0)
+		{
+			UPsDataEvent::DispatchChange(Instance.Get(), Field);
 		}
 
 		return RemovedElements;
