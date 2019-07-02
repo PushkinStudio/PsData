@@ -110,7 +110,7 @@ struct TConstRef<T*, true>
 template <typename T>
 struct TConstRef<T**, false>
 {
-	typedef T** Type;
+	typedef T* const* Type;
 };
 
 template <typename T>
