@@ -111,13 +111,18 @@ FPsDataBinaryDeserializer::FPsDataBinaryDeserializer(TSharedRef<FPsDataInputStre
 
 bool FPsDataBinaryDeserializer::ReadToken(EBinaryTokens Token)
 {
-	if (static_cast<EBinaryTokens>(InputStream->ReadUint8()) == Token)
+	if (!InputStream->HasData())
+	{
+		return false;
+	}
+
+	if (InputStream->ReadUint8() == static_cast<uint8>(Token))
 	{
 		return true;
 	}
 	else
 	{
-		InputStream->SubtractOffset(sizeof(EBinaryTokens));
+		InputStream->ShiftBack();
 		return false;
 	}
 }
@@ -136,7 +141,7 @@ bool FPsDataBinaryDeserializer::ReadIndex()
 {
 	if (ReadToken(EBinaryTokens::ArrayEnd))
 	{
-		InputStream->SubtractOffset(sizeof(EBinaryTokens));
+		InputStream->ShiftBack();
 		return false;
 	}
 	return true;

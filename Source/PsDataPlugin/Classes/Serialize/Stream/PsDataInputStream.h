@@ -15,9 +15,6 @@ struct PSDATAPLUGIN_API FPsDataInputStream
 	virtual float ReadFloat() = 0;
 	virtual bool ReadBool() = 0;
 	virtual FString ReadString() = 0;
-
-	virtual int32 GetIndex() = 0;
-	virtual void SetIndex(int32 Index) = 0;
-	virtual void AddOffset(int32 Offset) = 0;
-	virtual void SubtractOffset(int32 Offset) = 0;
+	virtual bool HasData() = 0;
+	virtual void ShiftBack() = 0;
 };

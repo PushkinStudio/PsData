@@ -11,8 +11,12 @@ void Write(TArray<char>& Buffer, const T& Data)
 template <>
 void Write<FString>(TArray<char>& Buffer, const FString& Data)
 {
-	Write<int32>(Buffer, Data.Len());
-	Buffer.Append(static_cast<const char*>(static_cast<const void*>(Data.GetCharArray().GetData())), Data.Len() * sizeof(TCHAR));
+	const int32 Size = Data.Len();
+	Write<int32>(Buffer, Size);
+	if (Size > 0)
+	{
+		Buffer.Append(static_cast<const char*>(static_cast<const void*>(Data.GetCharArray().GetData())), Size * sizeof(TCHAR));
+	}
 }
 
 /***********************************

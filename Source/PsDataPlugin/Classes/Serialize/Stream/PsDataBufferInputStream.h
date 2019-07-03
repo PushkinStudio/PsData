@@ -18,6 +18,7 @@ public:
 private:
 	const TArray<char>& Buffer;
 	int32 Index;
+	int32 PrevIndex;
 
 public:
 	virtual int32 ReadInt32() override;
@@ -25,9 +26,6 @@ public:
 	virtual float ReadFloat() override;
 	virtual bool ReadBool() override;
 	virtual FString ReadString() override;
-
-	virtual int32 GetIndex() override;
-	virtual void SetIndex(int32 InIndex) override;
-	virtual void AddOffset(int32 Offset) override;
-	virtual void SubtractOffset(int32 Offset) override;
+	virtual bool HasData() override;
+	virtual void ShiftBack() override;
 };
