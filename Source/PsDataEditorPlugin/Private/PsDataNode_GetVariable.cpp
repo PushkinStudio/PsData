@@ -29,14 +29,13 @@ FText UPsDataNode_GetVariable::GetNodeTitle(ENodeTitleType::Type TitleType) cons
 		return FText::FromString(TEXT("Bad PsDataNode_GetVariable node"));
 	}
 
-	switch (TitleType)
+	if (TitleType == ENodeTitleType::FullTitle)
 	{
-	case ENodeTitleType::MenuTitle:
-		return FText::FromString(FString::Printf(TEXT("Get %s"), *PropertyName));
-	case ENodeTitleType::FullTitle:
 		return FText::FromString(FString::Printf(TEXT("Get %s::%s"), *TargetClass->GetName(), *PropertyName));
-	default:
-		return FText::FromString(TEXT("Get"));
+	}
+	else
+	{
+		return FText::FromString(FString::Printf(TEXT("Get %s"), *PropertyName));
 	}
 }
 
