@@ -42,14 +42,13 @@ FText UPsDataNode_CollectionProxy::GetNodeTitle(ENodeTitleType::Type TitleType) 
 		return FText::FromString(TEXT("Bad UPsDataNode_CollectionProxy node"));
 	}
 
-	switch (TitleType)
+	if (TitleType == ENodeTitleType::FullTitle)
 	{
-	case ENodeTitleType::MenuTitle:
-		return FText::FromString(FString::Printf(TEXT("Get %s Proxy"), *PropertyName));
-	case ENodeTitleType::FullTitle:
 		return FText::FromString(FString::Printf(TEXT("Get %s::%s Proxy"), *TargetClass->GetName(), *PropertyName));
-	default:
-		return FText::FromString(TEXT("Get Proxy"));
+	}
+	else
+	{
+		return FText::FromString(FString::Printf(TEXT("Get %s Proxy"), *PropertyName));
 	}
 }
 
