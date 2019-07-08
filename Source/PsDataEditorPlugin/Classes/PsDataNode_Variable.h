@@ -31,6 +31,9 @@ public:
 	UPROPERTY()
 	FString PropertyName;
 
+	UPROPERTY()
+	FString PropertyCppType;
+
 public:
 	// Begin UEdGraphNode interface.
 	virtual void AllocateDefaultPins() override;
@@ -38,7 +41,7 @@ public:
 	virtual FLinearColor GetNodeTitleColor() const override;
 	virtual FSlateIcon GetIconAndTint(FLinearColor& OutColor) const override;
 	virtual bool IsDeprecated() const override;
-	// End UEdGraphNode interface.
+	// End UEdGraphNode interface
 
 	// Begin UK2Node interface
 	virtual bool DrawNodeAsVariable() const override { return true; }

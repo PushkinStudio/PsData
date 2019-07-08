@@ -37,7 +37,7 @@ public:
 	void UpdateLink();
 
 	/** Update allocated pin */
-	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin);
+	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) override;
 
 	/** Update function reference */
 	virtual void UpdateFunctionReference();
