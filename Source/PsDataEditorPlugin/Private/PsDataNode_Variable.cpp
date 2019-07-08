@@ -13,7 +13,6 @@
 UPsDataNode_Variable::UPsDataNode_Variable(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, TargetClass(nullptr)
-	, PropertyName()
 {
 }
 
@@ -70,15 +69,7 @@ FLinearColor UPsDataNode_Variable::GetNodeTitleColor() const
 	}
 
 	UFunction* Function = Field->Context->GetUFunctions()->GetFunction;
-	UProperty* Property = nullptr;
-	for (TFieldIterator<UProperty> PropIt(Function); PropIt && (PropIt->PropertyFlags & CPF_Parm); ++PropIt)
-	{
-		if (PropIt->HasAnyPropertyFlags(CPF_ReturnParm))
-		{
-			Property = *PropIt;
-			break;
-		}
-	}
+	UProperty* Property = Function->GetReturnProperty();
 
 	if (Property)
 	{
@@ -129,10 +120,22 @@ bool UPsDataNode_Variable::IsDeprecated() const
 void UPsDataNode_Variable::ValidateNodeDuringCompilation(class FCompilerResultsLog& MessageLog) const
 {
 	Super::ValidateNodeDuringCompilation(MessageLog);
-	TSharedPtr<const FDataField> Field = GetProperty();
+
+	auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
 		MessageLog.Error(*LOCTEXT("UPsDataNode_Variable", "Node @@: property has been removed").ToString(), this);
+	}
+	else
+	{
+		if (PropertyCppType.IsEmpty())
+		{
+			MessageLog.Warning(*LOCTEXT("UPsDataNode_Variable", "Node @@ does not contain type information, please recreate the node").ToString(), this);
+		}
+		else if (PropertyCppType != Field->Context->GetCppType())
+		{
+			MessageLog.Error(*LOCTEXT("UPsDataNode_Variable", "Node @@: type of property has changed, please recreate the node").ToString(), this);
+		}
 	}
 }
 
@@ -143,6 +146,7 @@ TSharedPtr<const FDataField> UPsDataNode_Variable::GetProperty() const
 	{
 		return *Find;
 	}
+
 	return TSharedPtr<const FDataField>(nullptr);
 }
 
@@ -176,9 +180,11 @@ void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin
 		{
 			Pin->PinFriendlyName = FText::FromString(PropertyName);
 		}
+
 		if (Field.IsValid() && Field->Context->GetUE4Type() != nullptr)
 		{
 			UField* UE4Type = Field->Context->GetUE4Type();
+
 			if (UEnum* Enum = Cast<UEnum>(UE4Type))
 			{
 				if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Byte)
@@ -190,15 +196,15 @@ void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin
 			{
 				if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_SoftObject)
 				{
-					Pin->PinType.PinSubCategoryObject = Field->Context->GetUE4Type();
+					Pin->PinType.PinSubCategoryObject = UE4Type;
 				}
 				else if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Object && Pin->PinType.PinSubCategoryObject == UPsData::StaticClass())
 				{
-					Pin->PinType.PinSubCategoryObject = Field->Context->GetUE4Type();
+					Pin->PinType.PinSubCategoryObject = UE4Type;
 				}
 				else if (Pin->PinType.ContainerType == EPinContainerType::Map && Pin->PinType.PinValueType.TerminalSubCategoryObject == UPsData::StaticClass())
 				{
-					Pin->PinType.PinValueType.TerminalSubCategoryObject = Field->Context->GetUE4Type();
+					Pin->PinType.PinValueType.TerminalSubCategoryObject = UE4Type;
 				}
 			}
 		}

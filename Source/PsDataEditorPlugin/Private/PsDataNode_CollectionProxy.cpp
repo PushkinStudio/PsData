@@ -65,6 +65,7 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 				UPsDataNode_CollectionProxy* Node = CastChecked<UPsDataNode_CollectionProxy>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
 				Node->PropertyName = Field.Name;
+				Node->PropertyCppType = Field.Context->GetCppType();
 				Node->UpdateFunctionReference();
 			});
 
