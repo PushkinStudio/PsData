@@ -104,6 +104,7 @@ void UPsDataNode_Link::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionR
 				UPsDataNode_Link* Node = CastChecked<UPsDataNode_Link>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
 				Node->PropertyName = Field.Name;
+				Node->PropertyCppType = Field.Context->GetCppType();
 			});
 
 			NodeSpawner->DefaultMenuSignature.Category = FText::FromString(FString::Printf(TEXT("PsData|%s"), *TargetClass->GetName()));
