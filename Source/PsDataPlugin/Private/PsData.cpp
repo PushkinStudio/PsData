@@ -478,7 +478,7 @@ FString UPsData::GetHash() const
 {
 	//TODO: Sort keys
 	auto OutputStream = MakeShared<FPsDataMD5OutputStream>();
-	FPsDataBinarySerializer Serializer(OutputStream);
+	FPsDataBinarySerializer Serializer(OutputStream, true);
 	DataSerialize(&Serializer);
 	return OutputStream->GetHash();
 }
@@ -501,7 +501,7 @@ void UPsData::Reset()
 UPsData* UPsData::Copy() const
 {
 	auto OutputStream = MakeShared<FPsDataBufferOutputStream>();
-	FPsDataBinarySerializer Serializer(OutputStream);
+	FPsDataBinarySerializer Serializer(OutputStream, false);
 	DataSerialize(&Serializer);
 	UPsData* Copy = NewObject<UPsData>(GetTransientPackage(), GetClass());
 	FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(OutputStream->GetBuffer()));

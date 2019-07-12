@@ -2,23 +2,6 @@
 
 #include "Serialize/Stream/PsDataBufferOutputStream.h"
 
-template <typename T>
-void Write(TArray<char>& Buffer, const T& Data)
-{
-	Buffer.Append(static_cast<const char*>(static_cast<const void*>(&Data)), sizeof(T));
-}
-
-template <>
-void Write<FString>(TArray<char>& Buffer, const FString& Data)
-{
-	const int32 Size = Data.Len();
-	Write<int32>(Buffer, Size);
-	if (Size > 0)
-	{
-		Buffer.Append(static_cast<const char*>(static_cast<const void*>(Data.GetCharArray().GetData())), Size * sizeof(TCHAR));
-	}
-}
-
 /***********************************
  * FPsDataBufferOutputStream
  ***********************************/
@@ -27,32 +10,66 @@ FPsDataBufferOutputStream::FPsDataBufferOutputStream()
 {
 }
 
-const TArray<char>& FPsDataBufferOutputStream::GetBuffer()
+const TArray<uint8>& FPsDataBufferOutputStream::GetBuffer()
 {
 	return Buffer;
 }
 
+void FPsDataBufferOutputStream::Reset()
+{
+	Buffer.Reset();
+}
+
+void FPsDataBufferOutputStream::WriteUint32(uint32 Value)
+{
+	Buffer.Push(static_cast<uint8>(Value >> 24));
+	Buffer.Push(static_cast<uint8>(Value >> 16));
+	Buffer.Push(static_cast<uint8>(Value >> 8));
+	Buffer.Push(static_cast<uint8>(Value));
+}
+
 void FPsDataBufferOutputStream::WriteInt32(int32 Value)
 {
-	Write<int32>(Buffer, Value);
+	if (Value < 0)
+	{
+		WriteUint32(static_cast<uint32>(Value * -1) | 0x80000000);
+	}
+	else
+	{
+		WriteUint32(static_cast<uint32>(Value));
+	}
 }
 
 void FPsDataBufferOutputStream::WriteUint8(uint8 Value)
 {
-	Write<uint8>(Buffer, Value);
+	Buffer.Push(Value);
 }
 
 void FPsDataBufferOutputStream::WriteFloat(float Value)
 {
-	Write<float>(Buffer, Value);
+	WriteUint32(*reinterpret_cast<uint32*>(&Value));
 }
 
 void FPsDataBufferOutputStream::WriteBool(bool Value)
 {
-	Write<bool>(Buffer, Value);
+	WriteUint8(Value ? 0x01 : 0x00);
+}
+
+void FPsDataBufferOutputStream::WriteTCHAR(TCHAR Value)
+{
+	const auto Codepoint = static_cast<uint32>(Value);
+	WriteUint32(Codepoint);
 }
 
 void FPsDataBufferOutputStream::WriteString(const FString& Value)
 {
-	Write<FString>(Buffer, Value);
+	const uint32 Len = static_cast<uint32>(Value.Len());
+	WriteUint32(Len);
+	if (Len > 0)
+	{
+		for (uint32 i = 0; i < Len; ++i)
+		{
+			WriteTCHAR(Value[i]);
+		}
+	}
 }

@@ -239,14 +239,40 @@ struct FTypeDeserializer<TArray<T>>
 template <typename T>
 struct FTypeSerializer<TMap<FString, T>>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value)
+	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value, bool bUseSortedKeys = false)
 	{
 		Serializer->WriteObject();
-		for (auto& Pair : Value)
+		if (bUseSortedKeys)
 		{
-			Serializer->WriteKey(Pair.Key);
-			FDataReflectionTools::FTypeSerializer<T>::Serialize(Field, Serializer, Pair.Value);
-			Serializer->PopKey(Pair.Key);
+			//TODO: Bad problem solving:
+			using FPair = typename TMap<FString, T>::ElementType;
+
+			TArray<const FPair*> Pairs;
+			Pairs.Reserve(Value.Num());
+			for (auto& Pair : Value)
+			{
+				Pairs.Add(&Pair);
+			}
+
+			Pairs.Sort([](const FPair& A, const FPair& B) {
+				return A.Key < B.Key;
+			});
+
+			for (auto PairPtr : Pairs)
+			{
+				Serializer->WriteKey(PairPtr->Key);
+				FDataReflectionTools::FTypeSerializer<T>::Serialize(Field, Serializer, PairPtr->Value);
+				Serializer->PopKey(PairPtr->Key);
+			}
+		}
+		else
+		{
+			for (auto& Pair : Value)
+			{
+				Serializer->WriteKey(Pair.Key);
+				FDataReflectionTools::FTypeSerializer<T>::Serialize(Field, Serializer, Pair.Value);
+				Serializer->PopKey(Pair.Key);
+			}
 		}
 		Serializer->PopObject();
 	}
@@ -659,11 +685,12 @@ struct FDataMemory<TMap<FString, T>> : public FAbstractDataMemory
 		: Value()
 	{
 	}
+
 	virtual ~FDataMemory() {}
 
 	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Field, Serializer, Value);
+		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Field, Serializer, Value, Serializer->UseSortedKeys());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override

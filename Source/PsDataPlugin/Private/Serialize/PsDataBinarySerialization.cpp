@@ -8,8 +8,8 @@
  * FBinaryDataSerializer
  ***********************************/
 
-FPsDataBinarySerializer::FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream)
-	: FPsDataSerializer()
+FPsDataBinarySerializer::FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream, bool bUseSortedKeys)
+	: FPsDataSerializer(bUseSortedKeys)
 	, OutputStream(InOutputStream)
 {
 }

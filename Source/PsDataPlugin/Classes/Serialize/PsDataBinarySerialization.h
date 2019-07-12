@@ -42,7 +42,7 @@ private:
 	TSharedRef<FPsDataOutputStream> OutputStream;
 
 public:
-	FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream);
+	FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream, bool bUseSortedKeys);
 	virtual ~FPsDataBinarySerializer(){};
 
 	TSharedRef<FPsDataOutputStream> GetOutputStream() const;

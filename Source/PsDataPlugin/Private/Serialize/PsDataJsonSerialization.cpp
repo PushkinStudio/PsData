@@ -9,7 +9,7 @@
  ***********************************/
 
 FPsDataJsonSerializer::FPsDataJsonSerializer(TSharedPtr<FJsonObject> InJson)
-	: FPsDataSerializer()
+	: FPsDataSerializer(false)
 	, RootJson(InJson)
 {
 	check(InJson.IsValid());

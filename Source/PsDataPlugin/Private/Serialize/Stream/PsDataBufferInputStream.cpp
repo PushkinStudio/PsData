@@ -2,74 +2,84 @@
 
 #include "Serialize/Stream/PsDataBufferInputStream.h"
 
-template <typename T>
-T Read(const TArray<char>& Buffer, int32& Index)
-{
-	const int32 BytesCount = sizeof(T);
-	check(Buffer.Num() >= (Index + BytesCount));
-	auto Data = static_cast<const T*>(static_cast<const void*>(&Buffer.GetData()[Index]));
-	Index += BytesCount;
-	return *Data;
-}
-
-template <>
-FString Read<FString>(const TArray<char>& Buffer, int32& Index)
-{
-	const int32 Size = Read<int32>(Buffer, Index);
-	const int32 BytesCount = Size * sizeof(TCHAR);
-	if (BytesCount > 0)
-	{
-		check(Buffer.Num() >= (Index + BytesCount));
-		FString Data;
-		Data.Append(static_cast<const TCHAR*>(static_cast<const void*>(&Buffer.GetData()[Index])), Size);
-		Index += BytesCount;
-		return Data;
-	}
-	else
-	{
-		return TEXT("");
-	}
-}
-
 /***********************************
  * FPsDataBufferInputStream
  ***********************************/
 
-FPsDataBufferInputStream::FPsDataBufferInputStream(const TArray<char>& InBuffer)
+FPsDataBufferInputStream::FPsDataBufferInputStream(const TArray<uint8>& InBuffer)
 	: Buffer(InBuffer)
 	, Index(0)
 	, PrevIndex(-1)
 {
 }
 
+uint32 FPsDataBufferInputStream::ReadUint32()
+{
+	CheckRange();
+	PrevIndex = Index;
+	const uint32 b0 = (static_cast<uint32>(Buffer[Index + 0]) << 24);
+	const uint32 b1 = (static_cast<uint32>(Buffer[Index + 1]) << 16);
+	const uint32 b2 = (static_cast<uint32>(Buffer[Index + 2]) << 8);
+	const uint32 b3 = (static_cast<uint32>(Buffer[Index + 3]) << 0);
+	Index += 4;
+	return b0 | b1 | b2 | b3;
+}
+
 int32 FPsDataBufferInputStream::ReadInt32()
 {
-	PrevIndex = Index;
-	return Read<int32>(Buffer, Index);
+	const uint32 Value = ReadUint32();
+	if ((Value & 0x80000000) == 0)
+	{
+		return static_cast<int32>(Value);
+	}
+	else
+	{
+		return static_cast<int32>(Value ^ 0x80000000) * -1;
+	}
 }
 
 uint8 FPsDataBufferInputStream::ReadUint8()
 {
+	CheckRange();
 	PrevIndex = Index;
-	return Read<uint8>(Buffer, Index);
+	const auto b0 = Buffer[Index];
+	Index += 1;
+	return b0;
 }
 
 float FPsDataBufferInputStream::ReadFloat()
 {
-	PrevIndex = Index;
-	return Read<float>(Buffer, Index);
+	const uint32 Value = ReadUint32();
+	return *reinterpret_cast<const float*>(&Value);
 }
 
 bool FPsDataBufferInputStream::ReadBool()
 {
-	PrevIndex = Index;
-	return Read<bool>(Buffer, Index);
+	const auto b0 = ReadUint8();
+	return b0 == 0x01;
+}
+
+TCHAR FPsDataBufferInputStream::ReadTCHAR()
+{
+	const auto Codepoint = ReadUint32();
+	return static_cast<TCHAR>(Codepoint);
 }
 
 FString FPsDataBufferInputStream::ReadString()
 {
-	PrevIndex = Index;
-	return Read<FString>(Buffer, Index);
+	const int32 RealPrevIndex = Index;
+	const uint32 Len = ReadUint32();
+	FString Result;
+	if (Len > 0)
+	{
+		Result.Reserve(Len);
+		for (uint32 i = 0; i < Len; ++i)
+		{
+			Result.AppendChar(ReadTCHAR());
+		}
+	}
+	PrevIndex = RealPrevIndex;
+	return Result;
 }
 
 bool FPsDataBufferInputStream::HasData()
@@ -82,4 +92,9 @@ void FPsDataBufferInputStream::ShiftBack()
 	check(PrevIndex >= 0);
 	Index = PrevIndex;
 	PrevIndex = -1;
+}
+
+void FPsDataBufferInputStream::CheckRange()
+{
+	check(Index < Buffer.Num());
 }
