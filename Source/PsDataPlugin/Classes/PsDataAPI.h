@@ -9,6 +9,7 @@
 #include "PsDataEvent.h"
 #include "PsDataFunctionLibrary.h"
 #include "PsDataHardObjectPtr.h"
+#include "Serialize/PsDataJsonSerialization.h"
 #include "Serialize/PsDataSerialization.h"
 
 #include "Dom/JsonObject.h"
