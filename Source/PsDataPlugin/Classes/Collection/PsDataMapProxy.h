@@ -252,7 +252,7 @@ public:
 	template <bool bIteratorConst>
 	struct TProxyIterator
 	{
-		typedef typename TMap<FString, typename FDataReflectionTools::TSelector<const T, T, bIteratorConst>::Value>::ElementType PairType;
+		typedef typename TMap<FString, typename FDataReflectionTools::TConstValue<T, bIteratorConst>::Type>::ElementType PairType;
 
 	private:
 		friend struct FPsDataBaseMapProxy;

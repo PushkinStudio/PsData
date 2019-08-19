@@ -425,8 +425,13 @@ void UPsData::DataSerialize(FPsDataSerializer* Serializer) const
 	}
 }
 
-void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer)
+void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch)
 {
+	if (!bPatch)
+	{
+		Reset();
+	}
+
 	const auto& Fields = FDataReflection::GetFields(this->GetClass());
 	FString Key;
 	while (Deserializer->ReadKey(Key))
@@ -435,6 +440,10 @@ void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer)
 		{
 			auto& Field = *Find;
 			Memory[Field->Index]->Deserialize(this, Field, Deserializer);
+		}
+		else
+		{
+			UE_LOG(LogData, Warning, TEXT("Property \"%s\" not found in \"%s\""), *Key, *GetClass()->GetName())
 		}
 		Deserializer->PopKey(Key);
 	}
@@ -476,11 +485,43 @@ UPsData* UPsData::GetRoot() const
 
 FString UPsData::GetHash() const
 {
-	//TODO: Sort keys
 	auto OutputStream = MakeShared<FPsDataMD5OutputStream>();
 	FPsDataBinarySerializer Serializer(OutputStream, true);
 	DataSerialize(&Serializer);
 	return OutputStream->GetHash();
+}
+
+FString UPsData::GetPathFromRoot() const
+{
+	const UPsData* Current = this;
+	FString Path;
+	do
+	{
+		const FString& CollectionName = Current->GetCollectionKey();
+		if (CollectionName.IsEmpty())
+		{
+			if (Path.IsEmpty())
+			{
+				Path = Current->GetDataKey();
+			}
+			else
+			{
+				Path = Current->GetDataKey() + TEXT(".") + Path;
+			}
+		}
+		else
+		{
+			if (Path.IsEmpty())
+			{
+				Path = CollectionName + TEXT(".") + Current->GetDataKey();
+			}
+			else
+			{
+				Path = CollectionName + TEXT(".") + Current->GetDataKey() + TEXT(".") + Path;
+			}
+		}
+	} while ((Current = Current->GetParent()) != nullptr);
+	return Path;
 }
 
 /***********************************
@@ -494,6 +535,7 @@ void UPsData::Reset()
 		const auto& Field = Pair.Value;
 		Memory[Field->Index]->Reset(this, Field);
 	}
+
 	InitProperties();
 	PostDeserialize();
 }
@@ -515,37 +557,8 @@ TArray<FPsDataReport> UPsData::Validation() const
 
 	//TODO: PS-136
 	UPsData* Data = const_cast<UPsData*>(this);
-	UPsData* Current = Data;
 	UPsData* RootData = Data->GetRoot();
-
-	FString Path;
-	do
-	{
-		// TODO: need GetPath() function
-		const FString& CollectionName = Current->GetCollectionKey();
-		if (!CollectionName.IsEmpty())
-		{
-			if (Path.IsEmpty())
-			{
-				Path = CollectionName + TEXT(".") + Current->GetDataKey();
-			}
-			else
-			{
-				Path = CollectionName + TEXT(".") + Current->GetDataKey() + TEXT(".") + Path;
-			}
-		}
-		else
-		{
-			if (Path.IsEmpty())
-			{
-				Path = Current->GetDataKey();
-			}
-			else
-			{
-				Path = Current->GetDataKey() + TEXT(".") + Path;
-			}
-		}
-	} while ((Current = Current->GetParent()) != nullptr);
+	FString Path = GetPathFromRoot();
 
 	for (auto& Pair : FDataReflection::GetLinks(GetClass()))
 	{

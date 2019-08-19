@@ -122,6 +122,25 @@ struct TConstRef<T**, true>
 } // namespace FDataReflectionTools
 
 /***********************************
+ * TConstValue trait
+ ***********************************/
+
+namespace FDataReflectionTools
+{
+template <typename T, bool bConst>
+struct TConstValue
+{
+	typedef typename TSelector<const T, T, bConst>::Value Type;
+};
+
+template <typename T, bool bConst>
+struct TConstValue<T*, bConst>
+{
+	typedef typename TSelector<const T* const, T*, bConst>::Value Type;
+};
+} // namespace FDataReflectionTools
+
+/***********************************
 * Is collection trait
 ***********************************/
 

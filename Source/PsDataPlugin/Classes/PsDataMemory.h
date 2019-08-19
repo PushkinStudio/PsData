@@ -6,6 +6,7 @@
 #include "PsDataEvent.h"
 #include "PsDataField.h"
 #include "PsDataTraits.h"
+#include "PsDataUtils.h"
 #include "Serialize/PsDataSerialization.h"
 
 #include "CoreMinimal.h"
@@ -170,7 +171,7 @@ namespace FDataReflectionTools
 template <typename T>
 struct FTypeSerializer
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const T& Value)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const T& Value)
 	{
 		Serializer->WriteValue(Value);
 	}
@@ -179,17 +180,23 @@ struct FTypeSerializer
 template <typename T>
 struct FTypeDeserializer
 {
-	static T Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
+	static T Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
 	{
 		T NewValue = FDataReflectionTools::FTypeDefault<T>::GetDefaultValue();
-		Deserializer->ReadValue(NewValue);
+		if (!Deserializer->ReadValue(NewValue))
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<T>::Type());
+		}
 		return NewValue;
 	}
 
-	static T Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const T& Value)
+	static T Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const T& Value)
 	{
 		T NewValue = Value;
-		Deserializer->ReadValue(NewValue);
+		if (!Deserializer->ReadValue(NewValue))
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<T>::Type())
+		}
 		return NewValue;
 	}
 };
@@ -197,12 +204,12 @@ struct FTypeDeserializer
 template <typename T>
 struct FTypeSerializer<TArray<T>>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TArray<T>& Value)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TArray<T>& Value)
 	{
 		Serializer->WriteArray();
 		for (const T& Element : Value)
 		{
-			FDataReflectionTools::FTypeSerializer<T>::Serialize(Field, Serializer, Element);
+			FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Element);
 		}
 		Serializer->PopArray();
 	}
@@ -211,7 +218,7 @@ struct FTypeSerializer<TArray<T>>
 template <typename T>
 struct FTypeDeserializer<TArray<T>>
 {
-	static TArray<T> Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TArray<T>& Value)
+	static TArray<T> Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TArray<T>& Value)
 	{
 		TArray<T> NewValue;
 		if (Deserializer->ReadArray())
@@ -221,16 +228,20 @@ struct FTypeDeserializer<TArray<T>>
 			{
 				if (Value.IsValidIndex(i))
 				{
-					NewValue.Add(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Field, Deserializer, Value[i]));
+					NewValue.Add(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value[i]));
 				}
 				else
 				{
-					NewValue.Add(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Field, Deserializer));
+					NewValue.Add(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer));
 				}
 				i++;
 				Deserializer->PopIndex();
 			}
 			Deserializer->PopArray();
+		}
+		else
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TArray<T>>::Type())
 		}
 		return NewValue;
 	}
@@ -239,7 +250,7 @@ struct FTypeDeserializer<TArray<T>>
 template <typename T>
 struct FTypeSerializer<TMap<FString, T>>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value, bool bUseSortedKeys = false)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value, bool bUseSortedKeys = false)
 	{
 		Serializer->WriteObject();
 		if (bUseSortedKeys)
@@ -255,13 +266,13 @@ struct FTypeSerializer<TMap<FString, T>>
 			}
 
 			Pairs.Sort([](const FPair& A, const FPair& B) {
-				return A.Key < B.Key;
+				return A.Key.Compare(B.Key, ESearchCase::CaseSensitive) > 0;
 			});
 
 			for (auto PairPtr : Pairs)
 			{
 				Serializer->WriteKey(PairPtr->Key);
-				FDataReflectionTools::FTypeSerializer<T>::Serialize(Field, Serializer, PairPtr->Value);
+				FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, PairPtr->Value);
 				Serializer->PopKey(PairPtr->Key);
 			}
 		}
@@ -270,7 +281,7 @@ struct FTypeSerializer<TMap<FString, T>>
 			for (auto& Pair : Value)
 			{
 				Serializer->WriteKey(Pair.Key);
-				FDataReflectionTools::FTypeSerializer<T>::Serialize(Field, Serializer, Pair.Value);
+				FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Pair.Value);
 				Serializer->PopKey(Pair.Key);
 			}
 		}
@@ -281,7 +292,7 @@ struct FTypeSerializer<TMap<FString, T>>
 template <typename T>
 struct FTypeDeserializer<TMap<FString, T>>
 {
-	static TMap<FString, T> Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TMap<FString, T>& Value)
+	static TMap<FString, T> Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TMap<FString, T>& Value)
 	{
 		TMap<FString, T> NewValue;
 		if (Deserializer->ReadObject())
@@ -291,15 +302,19 @@ struct FTypeDeserializer<TMap<FString, T>>
 			{
 				if (Value.Contains(Key))
 				{
-					NewValue.Add(Key, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Field, Deserializer, Value[Key]));
+					NewValue.Add(Key, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value[Key]));
 				}
 				else
 				{
-					NewValue.Add(Key, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Field, Deserializer));
+					NewValue.Add(Key, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer));
 				}
 				Deserializer->PopKey(Key);
 			}
 			Deserializer->PopObject();
+		}
+		else
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TMap<FString, T>>::Type())
 		}
 		return NewValue;
 	}
@@ -308,7 +323,7 @@ struct FTypeDeserializer<TMap<FString, T>>
 template <>
 struct FTypeSerializer<FText>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FText& Value)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FText& Value)
 	{
 		static const FString TableIdParam(TEXT("TableId"));
 		static const FString KeyParam(TEXT("Key"));
@@ -338,7 +353,7 @@ struct FTypeSerializer<FText>
 template <>
 struct FTypeDeserializer<FText>
 {
-	static FText Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
+	static FText Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
 	{
 		static const FString TableIdParam(TEXT("TableId"));
 		static const FString KeyParam(TEXT("Key"));
@@ -362,26 +377,36 @@ struct FTypeDeserializer<FText>
 				Deserializer->PopKey(Key);
 			}
 			Deserializer->PopObject();
+
+			if (TableIdValue == NAME_None || KeyValue.IsEmpty())
+			{
+				UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\" (Object must have fields: \"%s\" and \"%s\")"), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FText>::Type(), *TableIdParam, *KeyParam)
+			}
+
 			return FText::FromStringTable(TableIdValue, KeyValue);
 		}
 		else
 		{
 			FString String;
-			Deserializer->ReadValue(String);
+			if (!Deserializer->ReadValue(String))
+			{
+				UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FText>::Type())
+			}
+
 			return FText::FromString(String);
 		}
 	}
 
-	static FText Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FText& Value)
+	static FText Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FText& Value)
 	{
-		return Deserialize(Field, Deserializer);
+		return Deserialize(Instance, Field, Deserializer);
 	}
 };
 
 template <>
 struct FTypeSerializer<FName>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FName& Value)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FName& Value)
 	{
 		Serializer->WriteValue(Value.ToString().ToLower());
 	}
@@ -390,23 +415,26 @@ struct FTypeSerializer<FName>
 template <>
 struct FTypeDeserializer<FName>
 {
-	static FName Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
+	static FName Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
 	{
 		FString String;
-		Deserializer->ReadValue(String);
+		if (!Deserializer->ReadValue(String))
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FName>::Type())
+		}
 		return FName(*String.ToLower());
 	}
 
-	static FName Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FName& Value)
+	static FName Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FName& Value)
 	{
-		return Deserialize(Field, Deserializer);
+		return Deserialize(Instance, Field, Deserializer);
 	}
 };
 
 template <typename T>
 struct FTypeSerializer<TSoftObjectPtr<T>>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TSoftObjectPtr<T>& Value)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TSoftObjectPtr<T>& Value)
 	{
 		static const FString AssetPathNameParam(TEXT("AssetPathName"));
 		static const FString SubPathStringParam(TEXT("SubPathString"));
@@ -426,7 +454,7 @@ struct FTypeSerializer<TSoftObjectPtr<T>>
 template <typename T>
 struct FTypeDeserializer<TSoftObjectPtr<T>>
 {
-	static TSoftObjectPtr<T> Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
+	static TSoftObjectPtr<T> Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
 	{
 		static const FString AssetPathNameParam(TEXT("AssetPathName"));
 		static const FString SubPathStringParam(TEXT("SubPathString"));
@@ -435,39 +463,50 @@ struct FTypeDeserializer<TSoftObjectPtr<T>>
 		{
 			FName AssetPathNameValue;
 			FString SubPathStringValue;
+			bool bHasAssetPathName = false;
+			bool bHasSubPathString = false;
 
 			FString Key;
 			while (Deserializer->ReadKey(Key))
 			{
 				if (Key == AssetPathNameParam)
 				{
+					bHasAssetPathName = true;
 					Deserializer->ReadValue(AssetPathNameValue);
 				}
 				else if (Key == SubPathStringParam)
 				{
+					bHasSubPathString = true;
 					Deserializer->ReadValue(SubPathStringValue);
 				}
 				Deserializer->PopKey(Key);
 			}
 			Deserializer->PopObject();
+
+			if (!bHasAssetPathName || !bHasSubPathString)
+			{
+				UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\" (Object must have field: \"%s\")"), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TSoftObjectPtr<T>>::Type(), *AssetPathNameParam);
+			}
+
 			return TSoftObjectPtr<T>(FSoftObjectPath(AssetPathNameValue, SubPathStringValue));
 		}
 		else
 		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TSoftObjectPtr<T>>::Type());
 			return TSoftObjectPtr<T>();
 		}
 	}
 
-	static TSoftObjectPtr<T> Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TSoftObjectPtr<T>& Value)
+	static TSoftObjectPtr<T> Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TSoftObjectPtr<T>& Value)
 	{
-		return Deserialize(Field, Deserializer);
+		return Deserialize(Instance, Field, Deserializer);
 	}
 };
 
 template <typename T>
 struct FTypeSerializer<TSoftClassPtr<T>>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TSoftClassPtr<T>& Value)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TSoftClassPtr<T>& Value)
 	{
 		static const FString AssetPathNameParam(TEXT("AssetPathName"));
 		static const FString SubPathStringParam(TEXT("SubPathString"));
@@ -487,7 +526,7 @@ struct FTypeSerializer<TSoftClassPtr<T>>
 template <typename T>
 struct FTypeDeserializer<TSoftClassPtr<T>>
 {
-	static TSoftClassPtr<T> Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
+	static TSoftClassPtr<T> Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
 	{
 		static const FString AssetPathNameParam(TEXT("AssetPathName"));
 		static const FString SubPathStringParam(TEXT("SubPathString"));
@@ -497,39 +536,50 @@ struct FTypeDeserializer<TSoftClassPtr<T>>
 		{
 			FName AssetPathNameValue;
 			FString SubPathStringValue;
+			bool bHasAssetPathName = false;
+			bool bHasSubPathString = false;
 
 			FString Key;
 			while (Deserializer->ReadKey(Key))
 			{
 				if (Key == AssetPathNameParam)
 				{
+					bHasAssetPathName = true;
 					Deserializer->ReadValue(AssetPathNameValue);
 				}
 				else if (Key == SubPathStringParam)
 				{
+					bHasSubPathString = true;
 					Deserializer->ReadValue(SubPathStringValue);
 				}
 				Deserializer->PopKey(Key);
 			}
 			Deserializer->PopObject();
+
+			if (!bHasAssetPathName || !bHasSubPathString)
+			{
+				UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\" (Object must have field: \"%s\")"), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TSoftClassPtr<T>>::Type(), *AssetPathNameParam);
+			}
+
 			return TSoftClassPtr<T>(FSoftObjectPath(AssetPathNameValue, SubPathStringValue));
 		}
 		else
 		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TSoftClassPtr<T>>::Type());
 			return TSoftClassPtr<T>();
 		}
 	}
 
-	static TSoftClassPtr<T> Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TSoftClassPtr<T>& Value)
+	static TSoftClassPtr<T> Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TSoftClassPtr<T>& Value)
 	{
-		return Deserialize(Field, Deserializer);
+		return Deserialize(Instance, Field, Deserializer);
 	}
 };
 
 template <>
 struct FTypeSerializer<FLinearColor>
 {
-	static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FLinearColor& Value)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FLinearColor& Value)
 	{
 		static const FString RParam(TEXT("r"));
 		static const FString GParam(TEXT("g"));
@@ -556,7 +606,7 @@ struct FTypeSerializer<FLinearColor>
 template <>
 struct FTypeDeserializer<FLinearColor>
 {
-	static FLinearColor Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
+	static FLinearColor Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
 	{
 		static const FString RParam(TEXT("r"));
 		static const FString GParam(TEXT("g"));
@@ -590,12 +640,16 @@ struct FTypeDeserializer<FLinearColor>
 			}
 			Deserializer->PopObject();
 		}
+		else
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FLinearColor>::Type());
+		}
 		return Result;
 	}
 
-	static FLinearColor Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FLinearColor& Value)
+	static FLinearColor Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FLinearColor& Value)
 	{
-		return Deserialize(Field, Deserializer);
+		return Deserialize(Instance, Field, Deserializer);
 	}
 };
 } // namespace FDataReflectionTools
@@ -616,12 +670,12 @@ struct FDataMemory : public FAbstractDataMemory
 
 	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
 	{
-		FDataReflectionTools::FTypeSerializer<T>::Serialize(Field, Serializer, Value);
+		FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Value);
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<T>(Instance, Field, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Field, Deserializer, Value));
+		FDataReflectionTools::UnsafeSet<T>(Instance, Field, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value));
 	}
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
@@ -651,12 +705,12 @@ struct FDataMemory<TArray<T>> : public FAbstractDataMemory
 
 	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
 	{
-		FDataReflectionTools::FTypeSerializer<TArray<T>>::Serialize(Field, Serializer, Value);
+		FDataReflectionTools::FTypeSerializer<TArray<T>>::Serialize(Instance, Field, Serializer, Value);
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TArray<T>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TArray<T>>::Deserialize(Field, Deserializer, Value));
+		FDataReflectionTools::UnsafeSet<TArray<T>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TArray<T>>::Deserialize(Instance, Field, Deserializer, Value));
 	}
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
@@ -690,12 +744,12 @@ struct FDataMemory<TMap<FString, T>> : public FAbstractDataMemory
 
 	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Field, Serializer, Value, Serializer->UseSortedKeys());
+		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Instance, Field, Serializer, Value, Serializer->UseSortedKeys());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TMap<FString, T>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TMap<FString, T>>::Deserialize(Field, Deserializer, Value));
+		FDataReflectionTools::UnsafeSet<TMap<FString, T>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TMap<FString, T>>::Deserialize(Instance, Field, Deserializer, Value));
 	}
 
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
@@ -741,7 +795,11 @@ struct FDataMemory<T*> : public FAbstractDataMemory
 		FPsDataAllocator Allocator = [InstancePtr]() -> UPsData* { return NewObject<T>(InstancePtr.Get()); };
 
 		UPsData* NewValue = Value;
-		Deserializer->ReadValue(NewValue, Allocator);
+		if (!Deserializer->ReadValue(NewValue, Allocator))
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<T*>::Type());
+		}
+
 		FDataReflectionTools::UnsafeSet<T*>(Instance, Field, Cast<T>(NewValue));
 	}
 
@@ -794,12 +852,7 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 
 	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
 	{
-		Serializer->WriteArray();
-		for (const T* Element : Value)
-		{
-			Serializer->WriteValue(Element);
-		}
-		Serializer->PopArray();
+		FDataReflectionTools::FTypeSerializer<TArray<T*>>::Serialize(Instance, Field, Serializer, Value);
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
@@ -826,6 +879,10 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 				Deserializer->PopIndex();
 			}
 			Deserializer->PopArray();
+		}
+		else
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TArray<T*>>::Type());
 		}
 		FDataReflectionTools::UnsafeSet<TArray<T*>>(Instance, Field, NewValue);
 	}
@@ -882,14 +939,7 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 
 	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
 	{
-		Serializer->WriteObject();
-		for (auto& Pair : Value)
-		{
-			Serializer->WriteKey(Pair.Key);
-			Serializer->WriteValue(Pair.Value);
-			Serializer->PopKey(Pair.Key);
-		}
-		Serializer->PopObject();
+		FDataReflectionTools::FTypeSerializer<TMap<FString, T*>>::Serialize(Instance, Field, Serializer, Value, Serializer->UseSortedKeys());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
@@ -915,6 +965,10 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 				Deserializer->PopKey(Key);
 			}
 			Deserializer->PopObject();
+		}
+		else
+		{
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TMap<FString, T*>>::Type());
 		}
 
 		FDataReflectionTools::UnsafeSet<TMap<FString, T*>>(Instance, Field, NewValue);

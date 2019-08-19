@@ -405,119 +405,126 @@ public:                                                     \
  * Macro DESCRIBE_ENUM
  ***********************************/
 
-#define DESCRIBE_ENUM(__Type__)                                                                                                   \
-	template <>                                                                                                                   \
-	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                     \
-	{                                                                                                                             \
-		virtual ~FDataTypeContext() {}                                                                                            \
-	};                                                                                                                            \
-                                                                                                                                  \
-	template <>                                                                                                                   \
-	struct FDataTypeContext<TArray<__Type__>> : public FEnumDataTypeContext<TArray<__Type__>>                                     \
-	{                                                                                                                             \
-		virtual ~FDataTypeContext() {}                                                                                            \
-	};                                                                                                                            \
-                                                                                                                                  \
-	namespace FDataReflectionTools                                                                                                \
-	{                                                                                                                             \
-	template <>                                                                                                                   \
-	struct FTypeDefault<__Type__>                                                                                                 \
-	{                                                                                                                             \
-		static const __Type__ GetDefaultValue() { return static_cast<__Type__>(0); }                                              \
-	};                                                                                                                            \
-                                                                                                                                  \
-	template <>                                                                                                                   \
-	struct FTypeSerializer<__Type__>                                                                                              \
-	{                                                                                                                             \
-		static void Serialize(const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const __Type__ Value)     \
-		{                                                                                                                         \
-			UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());                                                              \
-			if (Enum)                                                                                                             \
-			{                                                                                                                     \
-				Serializer->WriteValue(Enum->GetNameStringByValue(static_cast<int64>(Value)));                                    \
-			}                                                                                                                     \
-			else                                                                                                                  \
-			{                                                                                                                     \
-				Serializer->WriteValue(static_cast<uint8>(Value));                                                                \
-			}                                                                                                                     \
-		}                                                                                                                         \
-	};                                                                                                                            \
-                                                                                                                                  \
-	template <>                                                                                                                   \
-	struct FTypeDeserializer<__Type__>                                                                                            \
-	{                                                                                                                             \
-		static __Type__ Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)                 \
-		{                                                                                                                         \
-			UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());                                                              \
-			uint8 Result = 0;                                                                                                     \
-			if (Enum)                                                                                                             \
-			{                                                                                                                     \
-				FString String;                                                                                                   \
-				if (Deserializer->ReadValue(String))                                                                              \
-				{                                                                                                                 \
-					Result = static_cast<uint8>(Enum->GetValueByNameString(String, EGetByNameFlags::None));                       \
-				}                                                                                                                 \
-			}                                                                                                                     \
-			else                                                                                                                  \
-			{                                                                                                                     \
-				Deserializer->ReadValue(Result);                                                                                  \
-			}                                                                                                                     \
-			return static_cast<__Type__>(Result);                                                                                 \
-		}                                                                                                                         \
-                                                                                                                                  \
-		static __Type__ Deserialize(const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, __Type__ Value) \
-		{                                                                                                                         \
-			return Deserialize(Field, Deserializer);                                                                              \
-		}                                                                                                                         \
-	};                                                                                                                            \
-                                                                                                                                  \
-	template <class ReturnType, int32 Hash>                                                                                       \
-	struct FDLink<__Type__, ReturnType, Hash> : public FDLinkBase<__Type__, ReturnType, Hash>                                     \
-	{                                                                                                                             \
-	public:                                                                                                                       \
-		FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false) \
-			: FDLinkBase<__Type__, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                           \
-		{                                                                                                                         \
-		}                                                                                                                         \
-                                                                                                                                  \
-		FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)                                           \
-			: FDLinkBase<__Type__, ReturnType, Hash>(Name, CharReturnType, InInstance)                                            \
-		{                                                                                                                         \
-		}                                                                                                                         \
-                                                                                                                                  \
-		typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const                                                   \
-		{                                                                                                                         \
-			return FDLinkHelper<ReturnType, Hash>::Get(this->Instance);                                                           \
-		}                                                                                                                         \
-                                                                                                                                  \
-		FDLink(const FDLink&) = delete;                                                                                           \
-		FDLink(FDLink&&) = delete;                                                                                                \
-		FDLink& operator=(const FDLink&) = delete;                                                                                \
-		FDLink& operator=(FDLink&&) = delete;                                                                                     \
-	};                                                                                                                            \
-                                                                                                                                  \
-	template <class ReturnType, int32 Hash>                                                                                       \
-	struct FDLink<TArray<__Type__>, ReturnType, Hash> : public FDLinkBase<TArray<__Type__>, ReturnType, Hash>                     \
-	{                                                                                                                             \
-	public:                                                                                                                       \
-		FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false) \
-			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                   \
-		{                                                                                                                         \
-		}                                                                                                                         \
-                                                                                                                                  \
-		FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)                                           \
-			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, CharReturnType, InInstance)                                    \
-		{                                                                                                                         \
-		}                                                                                                                         \
-                                                                                                                                  \
-		typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const                                                   \
-		{                                                                                                                         \
-			return FDLinkHelper<ReturnType, Hash>::GetAsArray(this->Instance);                                                    \
-		}                                                                                                                         \
-                                                                                                                                  \
-		FDLink(const FDLink&) = delete;                                                                                           \
-		FDLink(FDLink&&) = delete;                                                                                                \
-		FDLink& operator=(const FDLink&) = delete;                                                                                \
-		FDLink& operator=(FDLink&&) = delete;                                                                                     \
-	};                                                                                                                            \
+#define DESCRIBE_ENUM(__Type__)                                                                                                                                                                      \
+	template <>                                                                                                                                                                                      \
+	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                                                                                        \
+	{                                                                                                                                                                                                \
+		virtual ~FDataTypeContext() {}                                                                                                                                                               \
+	};                                                                                                                                                                                               \
+                                                                                                                                                                                                     \
+	template <>                                                                                                                                                                                      \
+	struct FDataTypeContext<TArray<__Type__>> : public FEnumDataTypeContext<TArray<__Type__>>                                                                                                        \
+	{                                                                                                                                                                                                \
+		virtual ~FDataTypeContext() {}                                                                                                                                                               \
+	};                                                                                                                                                                                               \
+                                                                                                                                                                                                     \
+	namespace FDataReflectionTools                                                                                                                                                                   \
+	{                                                                                                                                                                                                \
+	template <>                                                                                                                                                                                      \
+	struct FTypeDefault<__Type__>                                                                                                                                                                    \
+	{                                                                                                                                                                                                \
+		static const __Type__ GetDefaultValue() { return static_cast<__Type__>(0); }                                                                                                                 \
+	};                                                                                                                                                                                               \
+                                                                                                                                                                                                     \
+	template <>                                                                                                                                                                                      \
+	struct FTypeSerializer<__Type__>                                                                                                                                                                 \
+	{                                                                                                                                                                                                \
+		static void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const __Type__ Value)                                         \
+		{                                                                                                                                                                                            \
+			UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());                                                                                                                                 \
+			if (Enum)                                                                                                                                                                                \
+			{                                                                                                                                                                                        \
+				Serializer->WriteValue(Enum->GetNameStringByValue(static_cast<int64>(Value)));                                                                                                       \
+			}                                                                                                                                                                                        \
+			else                                                                                                                                                                                     \
+			{                                                                                                                                                                                        \
+				Serializer->WriteValue(static_cast<uint8>(Value));                                                                                                                                   \
+			}                                                                                                                                                                                        \
+		}                                                                                                                                                                                            \
+	};                                                                                                                                                                                               \
+                                                                                                                                                                                                     \
+	template <>                                                                                                                                                                                      \
+	struct FTypeDeserializer<__Type__>                                                                                                                                                               \
+	{                                                                                                                                                                                                \
+		static __Type__ Deserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)                                                     \
+		{                                                                                                                                                                                            \
+			UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());                                                                                                                                 \
+			uint8 Result = 0;                                                                                                                                                                        \
+			if (Enum)                                                                                                                                                                                \
+			{                                                                                                                                                                                        \
+				FString String;                                                                                                                                                                      \
+				if (Deserializer->ReadValue(String))                                                                                                                                                 \
+				{                                                                                                                                                                                    \
+					Result = static_cast<uint8>(Enum->GetValueByNameString(String, EGetByNameFlags::None));                                                                                          \
+				}                                                                                                                                                                                    \
+				else                                                                                                                                                                                 \
+				{                                                                                                                                                                                    \
+					UE_LOG(LogData, Warning, TEXT("Can't deserialize key \"%s\" for \"%s\" as \"%s\""), *Field->Name, *Instance->GetPathFromRoot(), *FDataReflectionTools::FType<__Type__>::Type()); \
+				}                                                                                                                                                                                    \
+			}                                                                                                                                                                                        \
+			else                                                                                                                                                                                     \
+			{                                                                                                                                                                                        \
+				if (!Deserializer->ReadValue(Result))                                                                                                                                                \
+				{                                                                                                                                                                                    \
+					UE_LOG(LogData, Warning, TEXT("Can't deserialize key \"%s\" for \"%s\" as \"%s\""), *Field->Name, *Instance->GetPathFromRoot(), *FDataReflectionTools::FType<__Type__>::Type()); \
+				}                                                                                                                                                                                    \
+			}                                                                                                                                                                                        \
+			return static_cast<__Type__>(Result);                                                                                                                                                    \
+		}                                                                                                                                                                                            \
+                                                                                                                                                                                                     \
+		static __Type__ Deserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, __Type__ Value)                                     \
+		{                                                                                                                                                                                            \
+			return Deserialize(Instance, Field, Deserializer);                                                                                                                                       \
+		}                                                                                                                                                                                            \
+	};                                                                                                                                                                                               \
+                                                                                                                                                                                                     \
+	template <class ReturnType, int32 Hash>                                                                                                                                                          \
+	struct FDLink<__Type__, ReturnType, Hash> : public FDLinkBase<__Type__, ReturnType, Hash>                                                                                                        \
+	{                                                                                                                                                                                                \
+	public:                                                                                                                                                                                          \
+		FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)                                                                    \
+			: FDLinkBase<__Type__, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                                                                                              \
+		{                                                                                                                                                                                            \
+		}                                                                                                                                                                                            \
+                                                                                                                                                                                                     \
+		FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)                                                                                                              \
+			: FDLinkBase<__Type__, ReturnType, Hash>(Name, CharReturnType, InInstance)                                                                                                               \
+		{                                                                                                                                                                                            \
+		}                                                                                                                                                                                            \
+                                                                                                                                                                                                     \
+		typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const                                                                                                                      \
+		{                                                                                                                                                                                            \
+			return FDLinkHelper<ReturnType, Hash>::Get(this->Instance);                                                                                                                              \
+		}                                                                                                                                                                                            \
+                                                                                                                                                                                                     \
+		FDLink(const FDLink&) = delete;                                                                                                                                                              \
+		FDLink(FDLink&&) = delete;                                                                                                                                                                   \
+		FDLink& operator=(const FDLink&) = delete;                                                                                                                                                   \
+		FDLink& operator=(FDLink&&) = delete;                                                                                                                                                        \
+	};                                                                                                                                                                                               \
+                                                                                                                                                                                                     \
+	template <class ReturnType, int32 Hash>                                                                                                                                                          \
+	struct FDLink<TArray<__Type__>, ReturnType, Hash> : public FDLinkBase<TArray<__Type__>, ReturnType, Hash>                                                                                        \
+	{                                                                                                                                                                                                \
+	public:                                                                                                                                                                                          \
+		FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)                                                                    \
+			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                                                                                      \
+		{                                                                                                                                                                                            \
+		}                                                                                                                                                                                            \
+                                                                                                                                                                                                     \
+		FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)                                                                                                              \
+			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, CharReturnType, InInstance)                                                                                                       \
+		{                                                                                                                                                                                            \
+		}                                                                                                                                                                                            \
+                                                                                                                                                                                                     \
+		typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const                                                                                                                      \
+		{                                                                                                                                                                                            \
+			return FDLinkHelper<ReturnType, Hash>::GetAsArray(this->Instance);                                                                                                                       \
+		}                                                                                                                                                                                            \
+                                                                                                                                                                                                     \
+		FDLink(const FDLink&) = delete;                                                                                                                                                              \
+		FDLink(FDLink&&) = delete;                                                                                                                                                                   \
+		FDLink& operator=(const FDLink&) = delete;                                                                                                                                                   \
+		FDLink& operator=(FDLink&&) = delete;                                                                                                                                                        \
+	};                                                                                                                                                                                               \
 	}

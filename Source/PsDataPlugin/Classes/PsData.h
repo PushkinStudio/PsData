@@ -299,7 +299,7 @@ public:
 	void DataSerialize(FPsDataSerializer* Serializer) const;
 
 	/** Deserialize */
-	void DataDeserialize(FPsDataDeserializer* Deserializer);
+	void DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch = false);
 
 public:
 	/***********************************
@@ -322,9 +322,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	UPsData* GetRoot() const;
 
-	/** Get data hash. For example, the method can be used with the transaction system (Caution: Very slow!) */
+	/** Get data hash. For example, the method can be used with the transaction system */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	FString GetHash() const;
+
+	/** Get data path from root */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	FString GetPathFromRoot() const;
 
 public:
 	/***********************************
