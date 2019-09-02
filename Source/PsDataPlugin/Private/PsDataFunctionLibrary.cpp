@@ -754,7 +754,11 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 		{
 			Result.Add(*Find);
 		}
-		else if (!Link->Meta.bNullable)
+		else if (Link->Meta.bNullable)
+		{
+			Result.Add(nullptr);
+		}
+		else
 		{
 			UE_LOG(LogData, Fatal, TEXT("Link without Nullable meta can't be nullptr"))
 		}
