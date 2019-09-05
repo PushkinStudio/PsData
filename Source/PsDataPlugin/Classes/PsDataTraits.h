@@ -149,25 +149,25 @@ namespace FDataReflectionTools
 template <typename T>
 struct TIsContainer
 {
-	static const std::true_type Value;
-	static const std::false_type Array;
-	static const std::false_type Map;
+	static constexpr bool Value = true;
+	static constexpr bool Array = false;
+	static constexpr bool Map = false;
 };
 
 template <typename T>
 struct TIsContainer<TArray<T>>
 {
-	static const std::false_type Value;
-	static const std::true_type Array;
-	static const std::false_type Map;
+	static constexpr bool Value = false;
+	static constexpr bool Array = true;
+	static constexpr bool Map = false;
 };
 
 template <typename K, typename T>
 struct TIsContainer<TMap<K, T>>
 {
-	static const std::false_type Value;
-	static const std::false_type Array;
-	static const std::true_type Map;
+	static constexpr bool Value = false;
+	static constexpr bool Array = false;
+	static constexpr bool Map = true;
 };
 
 } // namespace FDataReflectionTools
