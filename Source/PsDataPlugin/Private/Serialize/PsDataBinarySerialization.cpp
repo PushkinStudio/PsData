@@ -256,10 +256,12 @@ void FPsDataBinaryDeserializer::PopIndex()
 
 void FPsDataBinaryDeserializer::PopArray()
 {
-	check(ReadToken(EBinaryTokens::ArrayEnd));
+	const bool bSuccess = ReadToken(EBinaryTokens::ArrayEnd);
+	check(bSuccess);
 }
 
 void FPsDataBinaryDeserializer::PopObject()
 {
-	check(ReadToken(EBinaryTokens::ObjectEnd));
+	const bool bSuccess = ReadToken(EBinaryTokens::ObjectEnd);
+	check(bSuccess);
 }
