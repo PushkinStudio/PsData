@@ -422,7 +422,12 @@ struct FTypeDeserializer<FName>
 		{
 			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FName>::Type())
 		}
-		return FName(*String.ToLower());
+		FString LowercaseString = String.ToLower();
+		if (LowercaseString == TEXT("none"))
+		{
+			return NAME_None;
+		}
+		return FName(*LowercaseString);
 	}
 
 	static FName Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FName& Value)
