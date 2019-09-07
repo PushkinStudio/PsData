@@ -36,13 +36,13 @@ void FDataReflection::AddField(const char* CharName, int32 Hash, FAbstractDataTy
 
 	if (MapByHash.Contains(Hash))
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't generate unique hash for %s::%s 0x%08x"), *OwnerClass->GetName(), *Name, Hash);
+		UE_LOG(LogData, Fatal, TEXT("Can't generate unique hash for %s::%s %d"), *OwnerClass->GetName(), *Name, Hash);
 	}
 
 	MapByName.Add(Name, Field);
 	MapByHash.Add(Hash, Field);
 
-	UE_LOG(LogData, VeryVerbose, TEXT(" %02d %s %s::%s (0x%08x)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *Name, Hash);
+	UE_LOG(LogData, VeryVerbose, TEXT(" %02d %s %s::%s (%d)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *Name, Hash);
 }
 
 void FDataReflection::AddLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection)
@@ -84,7 +84,7 @@ void FDataReflection::AddLink(const char* CharName, const char* CharPath, const 
 		auto Link = *Find;
 		if (!Link->bAbstract)
 		{
-			UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s 0x%08x"), *OwnerClass->GetName(), *Link->Name, Hash);
+			UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s %d"), *OwnerClass->GetName(), *Link->Name, Hash);
 		}
 	}
 
