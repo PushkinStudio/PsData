@@ -534,6 +534,11 @@ struct FDataTypeContext<TSoftClassPtr<T>> : public FAbstractDataTypeContext
 		return T::StaticClass();
 	}
 
+	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
+	{
+		return true; // TODO: check type
+	}
+
 	_DFUNC(UPsDataFunctionLibrary, TSoftClassPtr<T>, SoftClass);
 };
 

@@ -194,7 +194,8 @@ void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin
 			}
 			else
 			{
-				if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_SoftObject)
+				if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_SoftObject ||
+					Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_SoftClass)
 				{
 					Pin->PinType.PinSubCategoryObject = UE4Type;
 				}
