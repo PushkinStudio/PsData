@@ -21,7 +21,7 @@
 		},
 		{
 			"Name": "PsDataEditorPlugin",
-			"Type": "Developer",
+			"Type": "UncookedOnly",
 			"LoadingPhase": "EarliestPossible"
 		}
 	]
