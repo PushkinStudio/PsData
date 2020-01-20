@@ -82,7 +82,7 @@ struct FDelegateWrapper
 	{
 	}
 
-	bool IsBound()
+	bool IsBound() const
 	{
 		return DynamicDelegate.IsBound() || Delegate.IsBound();
 	}
