@@ -25,7 +25,10 @@ void FPsDataFriend::ChangeDataName(UPsData* Data, const FString& Name, const FSt
 	{
 		Data->DataKey = Name;
 		Data->CollectionKey = CollectionName;
-		Data->Broadcast(UPsDataEvent::ConstructEvent(TEXT("NameChanged"), false));
+		if (Data->IsBound(UPsDataEvent::NameChanged, false))
+		{
+			Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::NameChanged, false));
+		}
 	}
 }
 
@@ -39,7 +42,10 @@ void FPsDataFriend::AddChild(UPsData* Parent, UPsData* Data)
 
 	Data->Parent = Parent;
 	Parent->Children.Add(Data);
-	Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
+	if (Data->IsBound(UPsDataEvent::Added, true))
+	{
+		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
+	}
 }
 
 void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
@@ -50,7 +56,11 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 		return;
 	}
 
-	Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Removing, true));
+	if (Data->IsBound(UPsDataEvent::Removing, true))
+	{
+		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Removing, true));
+	}
+
 	Parent->Children.Remove(Data);
 	Data->Parent = nullptr;
 }
@@ -179,6 +189,28 @@ void UPsData::PostDeserialize()
 /***********************************
  * Event system
  ***********************************/
+
+bool UPsData::IsBound(const FString& Type, bool bBubbles) const
+{
+	auto Find = Delegates.Find(Type);
+	if (Find)
+	{
+		for (auto& Wrapper : *Find)
+		{
+			if (Wrapper->IsBound())
+			{
+				return true;
+			}
+		}
+	}
+
+	if (bBubbles && Parent)
+	{
+		return Parent->IsBound(Type, bBubbles);
+	}
+
+	return false;
+}
 
 void UPsData::Broadcast(UPsDataEvent* Event) const
 {

@@ -24,6 +24,9 @@ public:
 	/** Changed */
 	static const FString Changed;
 
+	/** Name Changed */
+	static const FString NameChanged;
+
 	/** Dispatch property changed */
 	static void DispatchChange(UPsData* Instance, TSharedPtr<const FDataField> Field);
 

@@ -81,6 +81,11 @@ struct FDelegateWrapper
 		, Field(InField)
 	{
 	}
+
+	bool IsBound()
+	{
+		return DynamicDelegate.IsBound() || Delegate.IsBound();
+	}
 };
 
 /***********************************
@@ -229,6 +234,9 @@ protected:
 	 * Event system
 	 ***********************************/
 public:
+	UFUNCTION(BlueprintCallable, meta = (Category = "PsData|Data"))
+	bool IsBound(const FString& Type, bool bBubbles) const;
+
 	/** Broadcat */
 	void Broadcast(UPsDataEvent* Event) const;
 

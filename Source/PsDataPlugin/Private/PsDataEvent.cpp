@@ -10,6 +10,7 @@
 const FString UPsDataEvent::Added(TEXT("Added"));
 const FString UPsDataEvent::Removing(TEXT("Removing"));
 const FString UPsDataEvent::Changed(TEXT("Changed"));
+const FString UPsDataEvent::NameChanged(TEXT("NameChanged"));
 
 UPsDataEvent::UPsDataEvent(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -25,7 +26,10 @@ void UPsDataEvent::DispatchChange(UPsData* Instance, TSharedPtr<const FDataField
 {
 	if (Field->Meta.bEvent)
 	{
-		Instance->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
+		if (Instance->IsBound(Field->GetChangedEventName(), Field->Meta.bBubbles))
+		{
+			Instance->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
+		}
 	}
 
 	if (!FDataReflectionTools::FPsDataFriend::IsChanged(Instance))
@@ -36,7 +40,11 @@ void UPsDataEvent::DispatchChange(UPsData* Instance, TSharedPtr<const FDataField
 			if (InstanceWeakPtr.IsValid())
 			{
 				FDataReflectionTools::FPsDataFriend::SetIsChanged(InstanceWeakPtr.Get(), false);
-				InstanceWeakPtr->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
+
+				if (InstanceWeakPtr->IsBound(UPsDataEvent::Changed, false))
+				{
+					InstanceWeakPtr->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
+				}
 			}
 		});
 	}
