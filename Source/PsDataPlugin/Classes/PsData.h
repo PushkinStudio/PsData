@@ -14,7 +14,7 @@
 DEFINE_LOG_CATEGORY_STATIC(LogData, VeryVerbose, All);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FPsDataDynamicDelegate, UPsDataEvent*, Event); // TBaseDynamicDelegate
-DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsDataEvent*);						 // TBaseDelegate
+DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsDataEvent*);                       // TBaseDelegate
 
 class UPsData;
 
