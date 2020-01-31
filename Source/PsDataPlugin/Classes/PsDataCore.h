@@ -33,6 +33,7 @@ private:
 	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FieldsByHash;
 	static TMap<UClass*, TMap<FString, const TSharedPtr<const FDataLink>>> LinksByName;
 	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> LinksByHash;
+	static TMap<FString, const TArray<FString>> SplittedPath;
 
 	static TArray<UClass*> ClassQueue;
 	static TArray<const char*> MetaCollection;
@@ -58,8 +59,8 @@ protected:
 	static void Fill(UPsData* Instance);
 
 public:
-	static TSharedPtr<const FDataField> GetFieldByName(UClass* OwnerClass, const FString& Name);
-	static TSharedPtr<const FDataField> GetFieldByHash(UClass* OwnerClass, int32 Hash);
+	static const TSharedPtr<const FDataField>& GetFieldByName(UClass* OwnerClass, const FString& Name);
+	static const TSharedPtr<const FDataField>& GetFieldByHash(UClass* OwnerClass, int32 Hash);
 	static const TMap<FString, const TSharedPtr<const FDataField>>& GetFields(const UClass* OwnerClass);
 	static TSharedPtr<const FDataLink> GetLinkByName(UClass* OwnerClass, const FString& Name);
 	static TSharedPtr<const FDataLink> GetLinkByHash(UClass* OwnerClass, int32 Hash);
@@ -67,6 +68,8 @@ public:
 	static bool HasClass(const UClass* OwnerClass);
 
 	static void Compile();
+
+	static const TArray<FString>& SplitPath(const FString& Path);
 };
 
 /***********************************
@@ -768,7 +771,7 @@ bool CheckType(FAbstractDataTypeContext* LeftContext, FAbstractDataTypeContext* 
  ***********************************/
 
 template <typename T>
-bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, T*& OutValue)
+bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue)
 {
 	if (CheckType<T>(&GetContext<T>(), Field->Context))
 	{
@@ -787,7 +790,7 @@ bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, T*& OutVa
  ***********************************/
 
 template <typename T>
-bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TArray<T>>*& OutValue)
+bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<TArray<T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -795,7 +798,7 @@ bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TA
 }
 
 template <typename T>
-bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TMap<FString, T>>*& OutValue)
+bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<TMap<FString, T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -803,7 +806,7 @@ bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TArray<TM
 }
 
 template <typename T>
-bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FString, TArray<T>>*& OutValue)
+bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, TArray<T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -811,7 +814,7 @@ bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FStr
 }
 
 template <typename T>
-bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FString, TMap<FString, T>>*& OutValue)
+bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, TMap<FString, T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -825,7 +828,7 @@ bool GetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, TMap<FStr
 template <typename T>
 bool GetByHash(UPsData* Instance, int32 Hash, T*& OutValue)
 {
-	auto Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
+	auto& Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
 	if (Field.IsValid())
 	{
 		return GetByField(Instance, Field, OutValue);
@@ -848,10 +851,9 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 	check(PathLength <= Path.Num());
 	check(Delta > 0);
 
-	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Path[PathOffset]);
-	if (Find)
+	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Path[PathOffset]);
+	if (Field.IsValid())
 	{
-		auto Field = *Find;
 		if (Delta == 1)
 		{
 			return GetByField(Instance, Field, OutValue);
@@ -887,7 +889,7 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 				}
 				else
 				{
-					check(false && "Can't use property without childeren");
+					check(false && "Can't use property without children");
 					return false;
 				}
 			}
@@ -1033,15 +1035,14 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 template <typename T>
 bool GetByPath(UPsData* Instance, const FString& Path, T*& OutValue)
 {
-	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Path);
-	if (Find)
+	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Path);
+	if (Field.IsValid())
 	{
-		return GetByField(Instance, *Find, OutValue);
+		return GetByField(Instance, Field, OutValue);
 	}
 	else
 	{
-		TArray<FString> PathArray;
-		Path.ParseIntoArray(PathArray, TEXT("."));
+		const auto& PathArray = FDataReflection::SplitPath(Path);
 		if (PathArray.Num() > 1)
 		{
 			return GetByPath<T>(Instance, PathArray, 0, PathArray.Num(), OutValue);
@@ -1060,10 +1061,10 @@ bool GetByPath(UPsData* Instance, const FString& Path, T*& OutValue)
 template <typename T>
 bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
 {
-	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
-	if (Find)
+	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Name);
+	if (Field.IsValid())
 	{
-		return GetByField(Instance, *Find, OutValue);
+		return GetByField(Instance, Field, OutValue);
 	}
 	//	else
 	//	{
@@ -1085,7 +1086,7 @@ bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
  ***********************************/
 
 template <typename T>
-void SetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
+void SetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
 {
 	if (Field->Meta.bStrict && !Instance->HasAnyFlags(EObjectFlags::RF_NeedInitialization))
 	{
@@ -1110,7 +1111,7 @@ void SetByField(UPsData* Instance, TSharedPtr<const FDataField> Field, typename 
 template <typename T>
 void SetByHash(UPsData* Instance, int32 Hash, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
 {
-	auto Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
+	auto& Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
 	if (Field.IsValid())
 	{
 		SetByField<T>(Instance, Field, NewValue);
@@ -1127,10 +1128,10 @@ void SetByHash(UPsData* Instance, int32 Hash, typename FDataReflectionTools::TCo
 template <typename T>
 void SetByName(UPsData* Instance, const FString& Name, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
 {
-	auto Find = FDataReflection::GetFields(Instance->GetClass()).Find(Name);
-	if (Find)
+	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Name);
+	if (Field.IsValid())
 	{
-		SetByField<T>(Instance, *Find, NewValue);
+		SetByField<T>(Instance, Field, NewValue);
 	}
 
 	check(false && "Can't find property by name");

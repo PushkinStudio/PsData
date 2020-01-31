@@ -600,7 +600,7 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 {
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByName(Target->GetClass(), Link->Name);
+	auto& Field = FDataReflection::GetFieldByName(Target->GetClass(), Link->Name);
 	check(Field.IsValid());
 
 	if (Field->Context->IsA(&FDataReflectionTools::GetContext<FString>()))

@@ -8,7 +8,7 @@ TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FDataReflection
 TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByHash;
 TMap<UClass*, TMap<FString, const TSharedPtr<const FDataLink>>> FDataReflection::LinksByName;
 TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> FDataReflection::LinksByHash;
-
+TMap<FString, const TArray<FString>> FDataReflection::SplittedPath;
 TArray<UClass*> FDataReflection::ClassQueue;
 TArray<const char*> FDataReflection::MetaCollection;
 
@@ -62,7 +62,7 @@ void FDataReflection::AddLink(const char* CharName, const char* CharPath, const 
 	bool bPathProperty = false;
 	if (!bAbstract)
 	{
-		auto PathField = GetFieldByName(OwnerClass, Path);
+		auto& PathField = GetFieldByName(OwnerClass, Path);
 		if (PathField.IsValid())
 		{
 			if (PathField->Context->IsA(&FDataReflectionTools::GetContext<FString>()))
@@ -227,23 +227,34 @@ void FDataReflection::Fill(UPsData* Instance)
 	}
 }
 
-TSharedPtr<const FDataField> FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
+const TArray<FString>& FDataReflection::SplitPath(const FString& Path)
 {
-	TMap<FString, const TSharedPtr<const FDataField>>* MapPtr = FieldsByName.Find(OwnerClass);
-	if (MapPtr)
+	if (auto Find = SplittedPath.Find(Path))
 	{
-		const TSharedPtr<const FDataField>* SharedPtr = MapPtr->Find(Name);
-		if (SharedPtr)
-		{
-			return *SharedPtr;
-		}
+		return *Find;
 	}
 
-	return nullptr;
+	TArray<FString> PathArray;
+	Path.ParseIntoArray(PathArray, TEXT("."));
+	return SplittedPath.Add(Path, std::move(PathArray));
 }
 
-TSharedPtr<const FDataField> FDataReflection::GetFieldByHash(UClass* OwnerClass, int32 Hash)
+const TSharedPtr<const FDataField>& FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
 {
+	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
+	if (auto MapPtr = FieldsByName.Find(OwnerClass))
+	{
+		if (auto FieldPtr = MapPtr->Find(Name))
+		{
+			return *FieldPtr;
+		}
+	}
+	return EmptySharedPtr;
+}
+
+const TSharedPtr<const FDataField>& FDataReflection::GetFieldByHash(UClass* OwnerClass, int32 Hash)
+{
+	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
 	if (auto MapPtr = FieldsByHash.Find(OwnerClass))
 	{
 		if (auto FieldPtr = MapPtr->Find(Hash))
@@ -251,7 +262,7 @@ TSharedPtr<const FDataField> FDataReflection::GetFieldByHash(UClass* OwnerClass,
 			return *FieldPtr;
 		}
 	}
-	return nullptr;
+	return EmptySharedPtr;
 }
 
 const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* OwnerClass)
