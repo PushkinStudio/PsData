@@ -36,6 +36,7 @@ public:
 	virtual void WriteArray() override;
 	virtual void WriteObject() override;
 	virtual void WriteValue(int32 Value) override;
+	virtual void WriteValue(int64 Value) override;
 	virtual void WriteValue(uint8 Value) override;
 	virtual void WriteValue(float Value) override;
 	virtual void WriteValue(bool Value) override;
@@ -79,6 +80,7 @@ public:
 	virtual bool ReadArray() override;
 	virtual bool ReadObject() override;
 	virtual bool ReadValue(int32& OutValue) override;
+	virtual bool ReadValue(int64& OutValue) override;
 	virtual bool ReadValue(uint8& OutValue) override;
 	virtual bool ReadValue(float& OutValue) override;
 	virtual bool ReadValue(bool& OutValue) override;

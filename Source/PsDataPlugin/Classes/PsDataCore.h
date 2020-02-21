@@ -191,6 +191,38 @@ struct FDataTypeContext<TMap<FString, uint8>> : public FAbstractDataTypeContext
 };
 
 /***********************************
+ * int64 context
+ ***********************************/
+
+template <>
+struct FDataTypeContext<int64> : public FAbstractDataTypeContext
+{
+	_DFUNC(UPsDataFunctionLibrary, int64, Int64);
+};
+
+template <>
+struct FDataTypeContext<TArray<int64>> : public FAbstractDataTypeContext
+{
+	virtual bool IsArray() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TArray<int64>, Int64Array);
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, int64>> : public FAbstractDataTypeContext
+{
+	virtual bool IsMap() const override
+	{
+		return true;
+	}
+
+	_DFUNC(UPsDataFunctionLibrary, TMap<FString COMMA int64>, Int64Map);
+};
+
+/***********************************
  * float context
  ***********************************/
 

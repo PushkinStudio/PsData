@@ -150,6 +150,12 @@ struct FTypeDefault<uint8>
 };
 
 template <>
+struct FTypeDefault<int64>
+{
+	static const int64 GetDefaultValue() { return 0; }
+};
+
+template <>
 struct FTypeDefault<float>
 {
 	static const float GetDefaultValue() { return 0.f; }

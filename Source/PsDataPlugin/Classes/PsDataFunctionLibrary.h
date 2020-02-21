@@ -76,6 +76,34 @@ public:
 	static void SetByteMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, uint8>& Value);
 
 	/***********************************
+	 * int64
+	 ***********************************/
+
+	/** Get int64 property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static int64 GetInt64Property(UPsData* Target, int32 Crc32);
+
+	/** Set int64 property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetInt64Property(UPsData* Target, int32 Crc32, int64 Value);
+
+	/** Get int64 array property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static const TArray<int64>& GetInt64ArrayProperty(UPsData* Target, int32 Crc32);
+
+	/** Set int64 array property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetInt64ArrayProperty(UPsData* Target, int32 Crc32, const TArray<int64>& Value);
+
+	/** Get int64 map property */
+	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	static const TMap<FString, int64>& GetInt64MapProperty(UPsData* Target, int32 Crc32);
+
+	/** Set int64 map property */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	static void SetInt64MapProperty(UPsData* Target, int32 Crc32, const TMap<FString, int64>& Value);
+
+	/***********************************
 	 * float
 	 ***********************************/
 

@@ -110,6 +110,57 @@ void UPsDataFunctionLibrary::SetByteMapProperty(UPsData* Target, int32 Hash, con
 }
 
 /***********************************
+ * int64
+ ***********************************/
+
+int64 UPsDataFunctionLibrary::GetInt64Property(UPsData* Target, int32 Hash)
+{
+	int64* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	return 0;
+}
+
+void UPsDataFunctionLibrary::SetInt64Property(UPsData* Target, int32 Hash, int64 Value)
+{
+	FDataReflectionTools::SetByHash<int64>(Target, Hash, Value);
+}
+
+const TArray<int64>& UPsDataFunctionLibrary::GetInt64ArrayProperty(UPsData* Target, int32 Hash)
+{
+	TArray<int64>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TArray<int64> Default = TArray<int64>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetInt64ArrayProperty(UPsData* Target, int32 Hash, const TArray<int64>& Value)
+{
+	FDataReflectionTools::SetByHash<TArray<int64>>(Target, Hash, Value);
+}
+
+const TMap<FString, int64>& UPsDataFunctionLibrary::GetInt64MapProperty(UPsData* Target, int32 Hash)
+{
+	TMap<FString, int64>* Result = nullptr;
+	if (FDataReflectionTools::GetByHash(Target, Hash, Result))
+	{
+		return *Result;
+	}
+	static const TMap<FString, int64> Default = TMap<FString, int64>();
+	return Default;
+}
+
+void UPsDataFunctionLibrary::SetInt64MapProperty(UPsData* Target, int32 Hash, const TMap<FString, int64>& Value)
+{
+	FDataReflectionTools::SetByHash<TMap<FString, int64>>(Target, Hash, Value);
+}
+
+/***********************************
  * float
  ***********************************/
 

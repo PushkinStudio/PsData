@@ -40,6 +40,11 @@ bool FPsDataTableDeserializer::ReadValue(int32& OutValue)
 	return JsonDeserializer.ReadValue(OutValue);
 }
 
+bool FPsDataTableDeserializer::ReadValue(int64& OutValue)
+{
+	return JsonDeserializer.ReadValue(OutValue);
+}
+
 bool FPsDataTableDeserializer::ReadValue(uint8& OutValue)
 {
 	return JsonDeserializer.ReadValue(OutValue);

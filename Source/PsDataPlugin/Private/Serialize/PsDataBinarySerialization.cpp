@@ -41,6 +41,12 @@ void FPsDataBinarySerializer::WriteValue(int32 Value)
 	OutputStream->WriteInt32(Value);
 }
 
+void FPsDataBinarySerializer::WriteValue(int64 Value)
+{
+	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_int64));
+	OutputStream->WriteInt64(Value);
+}
+
 void FPsDataBinarySerializer::WriteValue(uint8 Value)
 {
 	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_uint8));
@@ -170,6 +176,16 @@ bool FPsDataBinaryDeserializer::ReadValue(int32& OutValue)
 	if (ReadToken(EBinaryTokens::Value_int32))
 	{
 		OutValue = InputStream->ReadInt32();
+		return true;
+	}
+	return false;
+}
+
+bool FPsDataBinaryDeserializer::ReadValue(int64& OutValue)
+{
+	if (ReadToken(EBinaryTokens::Value_int64))
+	{
+		OutValue = InputStream->ReadInt64();
 		return true;
 	}
 	return false;

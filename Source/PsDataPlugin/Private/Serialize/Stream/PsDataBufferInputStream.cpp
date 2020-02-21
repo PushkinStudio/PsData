@@ -38,6 +38,35 @@ int32 FPsDataBufferInputStream::ReadInt32()
 	}
 }
 
+uint64 FPsDataBufferInputStream::ReadUint64()
+{
+	CheckRange();
+	PrevIndex = Index;
+	const uint64 b0 = (static_cast<uint64>(Buffer[Index + 0]) << 56);
+	const uint64 b1 = (static_cast<uint64>(Buffer[Index + 1]) << 48);
+	const uint64 b2 = (static_cast<uint64>(Buffer[Index + 2]) << 40);
+	const uint64 b3 = (static_cast<uint64>(Buffer[Index + 3]) << 32);
+	const uint64 b4 = (static_cast<uint64>(Buffer[Index + 4]) << 24);
+	const uint64 b5 = (static_cast<uint64>(Buffer[Index + 5]) << 16);
+	const uint64 b6 = (static_cast<uint64>(Buffer[Index + 6]) << 8);
+	const uint64 b7 = (static_cast<uint64>(Buffer[Index + 7]) << 0);
+	Index += 8;
+	return b0 | b1 | b2 | b3 | b4 | b5 | b6 | b7;
+}
+
+int64 FPsDataBufferInputStream::ReadInt64()
+{
+	const uint64 Value = ReadUint64();
+	if ((Value & 0x8000000000000000) == 0)
+	{
+		return static_cast<int64>(Value);
+	}
+	else
+	{
+		return static_cast<int64>(Value ^ 0x8000000000000000) * -1;
+	}
+}
+
 uint8 FPsDataBufferInputStream::ReadUint8()
 {
 	CheckRange();

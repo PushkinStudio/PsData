@@ -33,6 +33,7 @@ public:
 	virtual void WriteArray() = 0;
 	virtual void WriteObject() = 0;
 	virtual void WriteValue(int32 Value) = 0;
+	virtual void WriteValue(int64 Value) = 0;
 	virtual void WriteValue(uint8 Value) = 0;
 	virtual void WriteValue(float Value) = 0;
 	virtual void WriteValue(bool Value) = 0;
@@ -61,6 +62,7 @@ public:
 	virtual bool ReadArray() = 0;
 	virtual bool ReadObject() = 0;
 	virtual bool ReadValue(int32& OutValue) = 0;
+	virtual bool ReadValue(int64& Value) = 0;
 	virtual bool ReadValue(uint8& OutValue) = 0;
 	virtual bool ReadValue(float& OutValue) = 0;
 	virtual bool ReadValue(bool& OutValue) = 0;

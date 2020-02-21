@@ -57,6 +57,20 @@ void FPsDataMD5OutputStream::WriteInt32(int32 Value)
 	OutputSteram.Reset();
 }
 
+void FPsDataMD5OutputStream::WriteUint64(uint64 Value)
+{
+	OutputSteram.WriteUint64(Value);
+	Write(Md5Gen, OutputSteram.GetBuffer());
+	OutputSteram.Reset();
+}
+
+void FPsDataMD5OutputStream::WriteInt64(int64 Value)
+{
+	OutputSteram.WriteInt64(Value);
+	Write(Md5Gen, OutputSteram.GetBuffer());
+	OutputSteram.Reset();
+}
+
 void FPsDataMD5OutputStream::WriteUint8(uint8 Value)
 {
 	OutputSteram.WriteUint8(Value);

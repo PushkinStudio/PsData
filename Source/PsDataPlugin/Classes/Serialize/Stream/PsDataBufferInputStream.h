@@ -23,6 +23,8 @@ private:
 public:
 	virtual uint32 ReadUint32() override;
 	virtual int32 ReadInt32() override;
+	virtual uint64 ReadUint64() override;
+	virtual int64 ReadInt64() override;
 	virtual uint8 ReadUint8() override;
 	virtual float ReadFloat() override;
 	virtual bool ReadBool() override;

@@ -76,6 +76,11 @@ void FPsDataJsonSerializer::WriteValue(int32 Value)
 	WriteJsonValue(MakeShareable(new FJsonValueNumber(Value)));
 }
 
+void FPsDataJsonSerializer::WriteValue(int64 Value)
+{
+	WriteJsonValue(MakeShareable(new FJsonValueNumber(Value)));
+}
+
 void FPsDataJsonSerializer::WriteValue(uint8 Value)
 {
 	WriteJsonValue(MakeShareable(new FJsonValueNumber(Value)));
@@ -264,6 +269,11 @@ bool FPsDataJsonDeserializer::ReadObject()
 }
 
 bool FPsDataJsonDeserializer::ReadValue(int32& OutValue)
+{
+	return ReadJsonValue()->TryGetNumber(OutValue);
+}
+
+bool FPsDataJsonDeserializer::ReadValue(int64& OutValue)
 {
 	return ReadJsonValue()->TryGetNumber(OutValue);
 }

@@ -24,12 +24,13 @@ enum class EBinaryTokens : uint8
 	ObjectBegin = 4,
 	ObjectEnd = 5,
 	Value_int32 = 6,
-	Value_uint8 = 7,
-	Value_float = 8,
-	Value_bool = 9,
-	Value_FString = 10,
-	Value_FName = 11,
-	Value_null = 12,
+	Value_int64 = 7,
+	Value_uint8 = 8,
+	Value_float = 9,
+	Value_bool = 10,
+	Value_FString = 11,
+	Value_FName = 12,
+	Value_null = 13,
 };
 
 /***********************************
@@ -51,6 +52,7 @@ public:
 	virtual void WriteArray() override;
 	virtual void WriteObject() override;
 	virtual void WriteValue(int32 Value) override;
+	virtual void WriteValue(int64 Value) override;
 	virtual void WriteValue(uint8 Value) override;
 	virtual void WriteValue(float Value) override;
 	virtual void WriteValue(bool Value) override;
@@ -85,6 +87,7 @@ public:
 	virtual bool ReadArray() override;
 	virtual bool ReadObject() override;
 	virtual bool ReadValue(int32& OutValue) override;
+	virtual bool ReadValue(int64& OutValue) override;
 	virtual bool ReadValue(uint8& OutValue) override;
 	virtual bool ReadValue(float& OutValue) override;
 	virtual bool ReadValue(bool& OutValue) override;

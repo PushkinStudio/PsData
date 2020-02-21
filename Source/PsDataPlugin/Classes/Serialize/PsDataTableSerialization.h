@@ -39,6 +39,7 @@ public:
 	virtual bool ReadArray() override;
 	virtual bool ReadObject() override;
 	virtual bool ReadValue(int32& OutValue) override;
+	virtual bool ReadValue(int64& OutValue) override;
 	virtual bool ReadValue(uint8& OutValue) override;
 	virtual bool ReadValue(float& OutValue) override;
 	virtual bool ReadValue(bool& OutValue) override;

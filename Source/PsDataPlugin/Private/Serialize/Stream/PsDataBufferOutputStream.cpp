@@ -40,6 +40,30 @@ void FPsDataBufferOutputStream::WriteInt32(int32 Value)
 	}
 }
 
+void FPsDataBufferOutputStream::WriteUint64(uint64 Value)
+{
+	Buffer.Push(static_cast<uint8>(Value >> 56));
+	Buffer.Push(static_cast<uint8>(Value >> 48));
+	Buffer.Push(static_cast<uint8>(Value >> 40));
+	Buffer.Push(static_cast<uint8>(Value >> 32));
+	Buffer.Push(static_cast<uint8>(Value >> 24));
+	Buffer.Push(static_cast<uint8>(Value >> 16));
+	Buffer.Push(static_cast<uint8>(Value >> 8));
+	Buffer.Push(static_cast<uint8>(Value));
+}
+
+void FPsDataBufferOutputStream::WriteInt64(int64 Value)
+{
+	if (Value < 0)
+	{
+		WriteUint64(static_cast<uint64>(Value * -1) | 0x8000000000000000);
+	}
+	else
+	{
+		WriteUint64(static_cast<uint64>(Value));
+	}
+}
+
 void FPsDataBufferOutputStream::WriteUint8(uint8 Value)
 {
 	Buffer.Push(Value);

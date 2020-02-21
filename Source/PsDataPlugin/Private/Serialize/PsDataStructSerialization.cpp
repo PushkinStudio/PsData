@@ -33,6 +33,11 @@ bool FPsDataStructDeserializer::ReadValue(int32& OutValue)
 	return JsonDeserializer.ReadValue(OutValue);
 }
 
+bool FPsDataStructDeserializer::ReadValue(int64& OutValue)
+{
+	return JsonDeserializer.ReadValue(OutValue);
+}
+
 bool FPsDataStructDeserializer::ReadValue(uint8& OutValue)
 {
 	return JsonDeserializer.ReadValue(OutValue);
