@@ -5,6 +5,7 @@
 #include "PsDataEvent.h"
 #include "PsDataField.h"
 #include "Serialize/PsDataSerialization.h"
+#include "Serialize/Stream/PsDataMD5OutputStream.h"
 
 #include "CoreMinimal.h"
 #include "Delegates/Delegate.h"
@@ -55,6 +56,7 @@ struct PSDATAPLUGIN_API FPsDataFriend
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
 	static bool IsChanged(UPsData* Data);
 	static void SetIsChanged(UPsData* Data, bool NewValue);
+	static void DropHash(UPsData* Data);
 	static void InitProperties(UPsData* Data);
 	static TArray<TUniquePtr<FAbstractDataMemory>>& GetMemory(UPsData* Data);
 };
@@ -219,9 +221,18 @@ private:
 	/** Map of delegat wrappers */
 	mutable TMap<FString, TArray<TSharedRef<FDelegateWrapper>>> Delegates;
 
+	/** Data hash */
+	mutable TOptional<FPsDataMD5Hash> Hash;
+
 private:
 	/** Post init properties */
 	virtual void PostInitProperties() override;
+
+	/** Drop hash */
+	void DropHash();
+
+	/** Calculate hash */
+	void CalculateHash() const;
 
 protected:
 	/** Init properties */
@@ -254,16 +265,16 @@ public:
 
 protected:
 	/** Bind */
-	FPsDataBind Bind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const;
+	FPsDataBind Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const;
 
 	/** Bind */
-	FPsDataBind Bind(int32 Hash, const FPsDataDelegate& Delegate) const;
+	FPsDataBind Bind(int32 FieldHash, const FPsDataDelegate& Delegate) const;
 
 	/** Bind */
-	void Unbind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const;
+	void Unbind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const;
 
 	/** Bind */
-	void Unbind(int32 Hash, const FPsDataDelegate& Delegate) const;
+	void Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const;
 
 protected:
 	/** Blueprint bind */

@@ -81,6 +81,11 @@ void FPsDataFriend::InitProperties(UPsData* Data)
 	Data->PostDeserialize();
 }
 
+void FPsDataFriend::DropHash(UPsData* Data)
+{
+	Data->DropHash();
+}
+
 TArray<TUniquePtr<FAbstractDataMemory>>& FPsDataFriend::GetMemory(UPsData* Data)
 {
 	return Data->Memory;
@@ -178,6 +183,52 @@ void UPsData::PostInitProperties()
 	FDataReflection::Fill(this);
 }
 
+void UPsData::DropHash()
+{
+	Hash.Reset();
+	if (Parent)
+	{
+		Parent->DropHash();
+	}
+}
+
+void UPsData::CalculateHash() const
+{
+	struct HashBinarySerializer : public FPsDataBinarySerializer
+	{
+		HashBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream)
+			: FPsDataBinarySerializer(InOutputStream, true)
+		{
+		}
+
+		void WriteValue(const UPsData* Value) override
+		{
+			if (Value == nullptr)
+			{
+				OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_null));
+			}
+			else
+			{
+				if (!Value->Hash.IsSet())
+				{
+					Value->CalculateHash();
+				}
+
+				const auto& Digest = Value->Hash->GetDigest();
+				for (auto Byte : Digest)
+				{
+					OutputStream->WriteUint8(Byte);
+				}
+			}
+		}
+	};
+
+	auto OutputStream = MakeShared<FPsDataMD5OutputStream>();
+	HashBinarySerializer Serializer(OutputStream);
+	DataSerialize(&Serializer);
+	Hash = OutputStream->GetHash();
+}
+
 void UPsData::InitProperties()
 {
 }
@@ -253,30 +304,30 @@ void UPsData::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 	UnbindInternal(Type, Delegate);
 }
 
-FPsDataBind UPsData::Bind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const
+FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
+	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
-FPsDataBind UPsData::Bind(int32 Hash, const FPsDataDelegate& Delegate) const
+FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
+	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
-void UPsData::Unbind(int32 Hash, const FPsDataDynamicDelegate& Delegate) const
+void UPsData::Unbind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
+	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
 
-void UPsData::Unbind(int32 Hash, const FPsDataDelegate& Delegate) const
+void UPsData::Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), Hash);
+	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
@@ -517,10 +568,12 @@ UPsData* UPsData::GetRoot() const
 
 FString UPsData::GetHash() const
 {
-	auto OutputStream = MakeShared<FPsDataMD5OutputStream>();
-	FPsDataBinarySerializer Serializer(OutputStream, true);
-	DataSerialize(&Serializer);
-	return OutputStream->GetHash();
+	if (!Hash.IsSet())
+	{
+		CalculateHash();
+	}
+
+	return Hash.GetValue().ToString();
 }
 
 FString UPsData::GetPathFromRoot() const

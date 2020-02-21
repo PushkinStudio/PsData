@@ -39,7 +39,7 @@ enum class EBinaryTokens : uint8
 
 struct PSDATAPLUGIN_API FPsDataBinarySerializer : public FPsDataSerializer
 {
-private:
+protected:
 	TSharedRef<FPsDataOutputStream> OutputStream;
 
 public:
@@ -71,7 +71,7 @@ public:
 
 struct PSDATAPLUGIN_API FPsDataBinaryDeserializer : public FPsDataDeserializer
 {
-private:
+protected:
 	TSharedRef<FPsDataInputStream> InputStream;
 
 public:

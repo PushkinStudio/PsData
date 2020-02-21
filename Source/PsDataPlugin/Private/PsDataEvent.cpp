@@ -24,6 +24,8 @@ UPsDataEvent::UPsDataEvent(const class FObjectInitializer& ObjectInitializer)
 
 void UPsDataEvent::DispatchChange(UPsData* Instance, TSharedPtr<const FDataField> Field)
 {
+	FDataReflectionTools::FPsDataFriend::DropHash(Instance);
+
 	if (Field->Meta.bEvent)
 	{
 		if (Instance->IsBound(Field->GetChangedEventName(), Field->Meta.bBubbles))

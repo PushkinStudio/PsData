@@ -9,6 +9,23 @@
 #include "CoreMinimal.h"
 
 /***********************************
+* FPsDataMD5Hash
+***********************************/
+
+struct PSDATAPLUGIN_API FPsDataMD5Hash
+{
+	FPsDataMD5Hash(FMD5 Md5Gen);
+
+	const TArray<uint8>& GetDigest();
+	FString ToString();
+	uint32 ToUint32();
+	uint64 ToUint64();
+
+private:
+	TArray<uint8> Digest;
+};
+
+/***********************************
  * FPsDataMD5OutputStream
  ***********************************/
 
@@ -23,9 +40,7 @@ private:
 	FPsDataBufferOutputStream OutputSteram;
 
 public:
-	FString GetHash();
-	uint32 GetHashAsUint32();
-	uint64 GetHashAsUint64();
+	FPsDataMD5Hash GetHash();
 
 	virtual void WriteUint32(uint32 Value) override;
 	virtual void WriteInt32(int32 Value) override;
