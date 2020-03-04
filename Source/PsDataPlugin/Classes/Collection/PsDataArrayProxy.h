@@ -16,8 +16,23 @@ namespace FDataReflectionTools
 template <typename T>
 struct FArrayChangeBehavior
 {
-	static void AddToArray(UPsData* Instance, int32 Index, const FString& CollectionName, const T& Value) {}
-	static void RemoveFromArray(UPsData* Instance, const T& Value) {}
+	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, int32 Index, const T& Value, TFunction<void()> AddAction)
+	{
+		AddAction();
+		FPsDataFriend::Changed(Instance, Field);
+	}
+
+	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const T& Value, TFunction<void()> RemoveAction)
+	{
+		RemoveAction();
+		FPsDataFriend::Changed(Instance, Field);
+	}
+
+	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const T& OldValue, const T& NewValue, TFunction<void()> ReplaceAction)
+	{
+		ReplaceAction();
+		FPsDataFriend::Changed(Instance, Field);
+	}
 };
 
 template <typename T>
@@ -25,15 +40,28 @@ struct FArrayChangeBehavior<T*>
 {
 	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
-	static void AddToArray(UPsData* Instance, int32 Index, const FString& CollectionName, T* Value)
+	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, int32 Index, T* Value, TFunction<void()> AddAction)
 	{
-		FPsDataFriend::ChangeDataName(Value, FString::FromInt(Index), CollectionName);
+		AddAction();
+		FPsDataFriend::ChangeDataName(Value, FString::FromInt(Index), Field->Name);
 		FPsDataFriend::AddChild(Instance, Value);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 
-	static void RemoveFromArray(UPsData* Instance, T* Value)
+	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T* Value, TFunction<void()> RemoveAction)
 	{
+		RemoveAction();
 		FPsDataFriend::RemoveChild(Instance, Value);
+		FPsDataFriend::Changed(Instance, Field);
+	}
+
+	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, int32 Index, T* OldValue, T* NewValue, TFunction<void()> ReplaceAction)
+	{
+		ReplaceAction();
+		FPsDataFriend::RemoveChild(Instance, OldValue);
+		FPsDataFriend::ChangeDataName(NewValue, FString::FromInt(Index), Field->Name);
+		FPsDataFriend::AddChild(Instance, NewValue);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 };
 } // namespace FDataReflectionTools
@@ -113,9 +141,12 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
-		int32 Index = Get().Add(Element);
-		FDataReflectionTools::FArrayChangeBehavior<T>::AddToArray(Instance.Get(), Index, Field->Name, Element);
-		UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		auto& Array = Get();
+		const int32 Index = Array.Num();
+		FDataReflectionTools::FArrayChangeBehavior<T>::Add(Instance.Get(), Field, Index, Element, [&Array, &Element]() {
+			Array.Add(Element);
+		});
+
 		return Index;
 	}
 
@@ -123,35 +154,37 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
-		Get().Insert(Element, Index);
-		FDataReflectionTools::FArrayChangeBehavior<T>::AddToArray(Instance.Get(), Index, Field->Name, Element);
-		UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		auto& Array = Get();
+		FDataReflectionTools::FArrayChangeBehavior<T>::Add(Instance.Get(), Field, Index, Element, [&Array, &Element, Index]() {
+			Array.Insert(Element, Index);
+		});
 	}
 
 	void RemoveAt(int32 Index, bool bAllowShrinking = false)
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
-		TArray<T>& Array = Get();
-		FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), Array[Index]);
-		Array.RemoveAt(Index, 1, bAllowShrinking);
-		UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		auto& Array = Get();
+		FDataReflectionTools::FArrayChangeBehavior<T>::Remove(Instance.Get(), Field, Array[Index], [&Array, Index, bAllowShrinking]() {
+			Array.RemoveAt(Index, 1, bAllowShrinking);
+		});
 	}
 
 	int32 Remove(typename FDataReflectionTools::TConstRef<T>::Type Element, bool bAllowShrinking = false)
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
-		TArray<T>& Array = Get();
+		auto& Array = Get();
 		const int32 Index = Array.Find(Element);
 		if (Index == INDEX_NONE)
 		{
 			return INDEX_NONE;
 		}
 
-		FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), Element);
-		Array.RemoveAt(Index, 1, bAllowShrinking);
-		UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		FDataReflectionTools::FArrayChangeBehavior<T>::Remove(Instance.Get(), Field, Element, [&Array, Index, bAllowShrinking]() {
+			Array.RemoveAt(Index, 1, bAllowShrinking);
+		});
+
 		return Index;
 	}
 
@@ -161,21 +194,13 @@ public:
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
 		int32 RemovedElements = 0;
-		auto& Array = Get();
-		for (auto It = Array.CreateIterator(); It; ++It)
+		for (auto It = CreateIterator(); It; ++It)
 		{
-			typename FDataReflectionTools::TConstRef<T, true>::Type Element = *It;
-			if (Predicate(Element))
+			if (Predicate(It.GetConstValue()))
 			{
-				RemovedElements += 1;
-				FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), *It);
 				It.RemoveCurrent();
+				++RemovedElements;
 			}
-		}
-
-		if (RemovedElements > 0)
-		{
-			UPsDataEvent::DispatchChange(Instance.Get(), Field);
 		}
 
 		return RemovedElements;
@@ -185,12 +210,12 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
-		TArray<T>& Array = Get();
-		T& OldElement = Array[Index];
-		FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), OldElement);
-		Array[Index] = Element;
-		FDataReflectionTools::FArrayChangeBehavior<T>::AddToArray(Instance.Get(), Index, Field->Name, Element);
-		UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		auto& Array = Get();
+		auto& OldElement = Array[Index];
+		FDataReflectionTools::FArrayChangeBehavior<T>::Replace(Instance.Get(), Field, Index, OldElement, Element, [&Array, &Element, Index]() {
+			Array[Index] = Element;
+		});
+
 		return OldElement;
 	}
 
@@ -199,10 +224,18 @@ public:
 		return Get().Find(Element);
 	}
 
-	template <typename Predicate>
-	typename FDataReflectionTools::TConstRef<T*, bConst>::Type FindByPredicate(Predicate Pred) const
+	template <typename PredicateType>
+	typename FDataReflectionTools::TConstRef<T*, bConst>::Type FindByPredicate(const PredicateType& Predicate) const
 	{
-		return Get().FindByPredicate(Pred);
+		for (auto It = CreateIterator(); It; ++It)
+		{
+			if (Predicate(It.GetConstValue()))
+			{
+				return &(*It.Iterator);
+			}
+		}
+
+		return nullptr;
 	}
 
 	typename FDataReflectionTools::TConstRef<T, bConst>::Type Get(int32 Index) const
@@ -224,18 +257,9 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstArrayProxy, use FPsDataArrayProxy");
 
-		TArray<T>& Array = Get();
-		bool bHasElements = Array.Num() > 0;
-		while (Array.Num() > 0)
+		for (auto It = CreateIterator(); It; ++It)
 		{
-			const int32 Index = Array.Num() - 1;
-			FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Instance.Get(), Array[Index]);
-			Array.RemoveAt(Index, 1, false);
-		}
-
-		if (bHasElements)
-		{
-			UPsDataEvent::DispatchChange(Instance.Get(), Field);
+			It.RemoveCurrent();
 		}
 	}
 
@@ -297,10 +321,13 @@ public:
 	private:
 		friend struct FPsDataBaseArrayProxy;
 
-		typename FDataReflectionTools::TConstRef<FPsDataBaseArrayProxy, bIteratorConst>::Type& Proxy;
-		typename FDataReflectionTools::TSelector<typename TArray<T>::TConstIterator, typename TArray<T>::TIterator, bIteratorConst>::Value Iterator;
+		typedef typename FDataReflectionTools::TConstRef<FPsDataBaseArrayProxy, bIteratorConst>::Type ProxyType;
+		typedef typename FDataReflectionTools::TSelector<typename TArray<T>::TConstIterator, typename TArray<T>::TIterator, bIteratorConst>::Value IteratorType;
 
-		TProxyIterator(typename FDataReflectionTools::TConstRef<FPsDataBaseArrayProxy, bIteratorConst>::Type& InProxy, bool bEnd = false)
+		ProxyType& Proxy;
+		IteratorType Iterator;
+
+		TProxyIterator(ProxyType& InProxy, bool bEnd = false)
 			: Proxy(InProxy)
 			, Iterator(InProxy.Get())
 		{
@@ -318,10 +345,19 @@ public:
 		{
 			static_assert(!bIteratorConst, "Unsupported method for FPsDataConstArrayProxy::TProxyIterator, use FPsDataArrayProxy::TProxyIterator");
 
-			T& Element = *Iterator;
-			FDataReflectionTools::FArrayChangeBehavior<T>::RemoveFromArray(Proxy.Instance.Get(), Element);
-			Iterator.RemoveCurrent();
-			UPsDataEvent::DispatchChange(Proxy.Instance.Get(), Proxy.Field);
+			FDataReflectionTools::FArrayChangeBehavior<T>::Remove(Proxy.Instance.Get(), Proxy.Field, *Iterator, [this]() {
+				Iterator.RemoveCurrent();
+			});
+		}
+
+		typename FDataReflectionTools::TConstRef<T, bIteratorConst>::Type GetValue() const
+		{
+			return *Iterator;
+		}
+
+		typename FDataReflectionTools::TConstRef<T, true>::Type GetConstValue() const
+		{
+			return *Iterator;
 		}
 
 		TProxyIterator& operator++()
@@ -356,12 +392,12 @@ public:
 		}
 	};
 
-	TProxyIterator<bConst> CreateIterator()
+	TProxyIterator<bConst> CreateIterator() const
 	{
 		return TProxyIterator<bConst>(*this);
 	}
 
-	TProxyIterator<true> CreateConstIterator()
+	TProxyIterator<true> CreateConstIterator() const
 	{
 		return TProxyIterator<true>(*this);
 	}

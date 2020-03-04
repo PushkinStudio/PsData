@@ -256,40 +256,14 @@ struct FTypeDeserializer<TArray<T>>
 template <typename T>
 struct FTypeSerializer<TMap<FString, T>>
 {
-	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value, bool bUseSortedKeys = false)
+	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value)
 	{
 		Serializer->WriteObject();
-		if (bUseSortedKeys)
+		for (auto& Pair : Value)
 		{
-			//TODO: Bad problem solving:
-			using FPair = typename TMap<FString, T>::ElementType;
-
-			TArray<const FPair*> Pairs;
-			Pairs.Reserve(Value.Num());
-			for (auto& Pair : Value)
-			{
-				Pairs.Add(&Pair);
-			}
-
-			Pairs.Sort([](const FPair& A, const FPair& B) {
-				return A.Key.Compare(B.Key, ESearchCase::CaseSensitive) > 0;
-			});
-
-			for (auto PairPtr : Pairs)
-			{
-				Serializer->WriteKey(PairPtr->Key);
-				FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, PairPtr->Value);
-				Serializer->PopKey(PairPtr->Key);
-			}
-		}
-		else
-		{
-			for (auto& Pair : Value)
-			{
-				Serializer->WriteKey(Pair.Key);
-				FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Pair.Value);
-				Serializer->PopKey(Pair.Key);
-			}
+			Serializer->WriteKey(Pair.Key);
+			FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Pair.Value);
+			Serializer->PopKey(Pair.Key);
 		}
 		Serializer->PopObject();
 	}
@@ -673,15 +647,16 @@ template <typename T>
 struct FDataMemory : public FAbstractDataMemory
 {
 	T Value;
+
 	FDataMemory()
 		: Value(FDataReflectionTools::FTypeDefault<T>::GetDefaultValue())
 	{
 	}
 	virtual ~FDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
+	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Value);
+		FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
@@ -694,10 +669,20 @@ struct FDataMemory : public FAbstractDataMemory
 		FDataReflectionTools::UnsafeSet<T>(Instance, Field, FDataReflectionTools::FTypeDefault<T>::GetDefaultValue());
 	}
 
-	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T& Value, const T& NewValue)
+	virtual void Changed() override {}
+
+	T& Get()
+	{
+		return Value;
+	}
+
+	bool Set(const T& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
 	{
 		if (FDataReflectionTools::FTypeComparator<T>::Compare(Value, NewValue))
+		{
 			return false;
+		}
+
 		Value = NewValue;
 		return true;
 	}
@@ -711,12 +696,13 @@ template <typename T>
 struct FDataMemory<TArray<T>> : public FAbstractDataMemory
 {
 	TArray<T> Value;
+
 	FDataMemory() {}
 	virtual ~FDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
+	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TArray<T>>::Serialize(Instance, Field, Serializer, Value);
+		FDataReflectionTools::FTypeSerializer<TArray<T>>::Serialize(Instance, Field, Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
@@ -729,10 +715,20 @@ struct FDataMemory<TArray<T>> : public FAbstractDataMemory
 		FDataReflectionTools::UnsafeSet<TArray<T>>(Instance, Field, TArray<T>());
 	}
 
-	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<T>& Value, const TArray<T>& NewValue)
+	virtual void Changed() override {}
+
+	TArray<T>& Get()
+	{
+		return Value;
+	}
+
+	bool Set(const TArray<T>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
 	{
 		if (FDataReflectionTools::FTypeComparator<TArray<T>>::Compare(Value, NewValue))
+		{
 			return false;
+		}
+
 		Value = NewValue;
 		return true;
 	}
@@ -746,16 +742,19 @@ template <typename T>
 struct FDataMemory<TMap<FString, T>> : public FAbstractDataMemory
 {
 	TMap<FString, T> Value;
+	bool bDirty;
+
 	FDataMemory()
-		: Value()
+		: bDirty(true)
 	{
+		Value.Shrink();
 	}
 
 	virtual ~FDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
+	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Instance, Field, Serializer, Value, Serializer->UseSortedKeys());
+		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Instance, Field, Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
@@ -768,10 +767,31 @@ struct FDataMemory<TMap<FString, T>> : public FAbstractDataMemory
 		FDataReflectionTools::UnsafeSet<TMap<FString, T>>(Instance, Field, TMap<FString, T>());
 	}
 
-	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, T>& Value, const TMap<FString, T>& NewValue)
+	virtual void Changed() override
+	{
+		bDirty = true;
+	}
+
+	TMap<FString, T>& Get()
+	{
+		if (bDirty)
+		{
+			bDirty = false;
+			Value.KeyStableSort([](const FString& A, const FString& B) {
+				return A < B;
+			});
+		}
+
+		return Value;
+	}
+
+	bool Set(const TMap<FString, T>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
 	{
 		if (FDataReflectionTools::FTypeComparator<TMap<FString, T>>::Compare(Value, NewValue))
+		{
 			return false;
+		}
+
 		Value = NewValue;
 		return true;
 	}
@@ -795,7 +815,7 @@ struct FDataMemory<T*> : public FAbstractDataMemory
 
 	virtual ~FDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
+	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
 	{
 		Serializer->WriteValue(Value);
 	}
@@ -826,10 +846,20 @@ struct FDataMemory<T*> : public FAbstractDataMemory
 		}
 	}
 
-	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& Value, T*& NewValue)
+	virtual void Changed() override {}
+
+	T*& Get()
+	{
+		return Value;
+	}
+
+	bool Set(T*& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
 	{
 		if (Value == NewValue)
+		{
 			return false;
+		}
+
 		if (Value)
 		{
 			FDataReflectionTools::FPsDataFriend::RemoveChild(Instance, Value);
@@ -842,6 +872,7 @@ struct FDataMemory<T*> : public FAbstractDataMemory
 			FDataReflectionTools::FPsDataFriend::ChangeDataName(NewValue, Field->Name, TEXT(""));
 			FDataReflectionTools::FPsDataFriend::AddChild(Instance, NewValue);
 		}
+
 		return true;
 	}
 };
@@ -861,9 +892,9 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 
 	virtual ~FDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
+	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TArray<T*>>::Serialize(Instance, Field, Serializer, Value);
+		FDataReflectionTools::FTypeSerializer<TArray<T*>>::Serialize(Instance, Field, Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
@@ -903,7 +934,14 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 		FDataReflectionTools::UnsafeSet<TArray<T*>>(Instance, Field, TArray<T*>());
 	}
 
-	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<T*>& Value, const TArray<T*>& NewValue)
+	virtual void Changed() override {}
+
+	TArray<T*>& Get()
+	{
+		return Value;
+	}
+
+	bool Set(const TArray<T*>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
 	{
 		bool bChange = false;
 
@@ -927,7 +965,10 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 		}
 
 		if (!bChange)
+		{
 			return false;
+		}
+
 		Value = NewValue;
 		return true;
 	}
@@ -943,14 +984,19 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
 	TMap<FString, T*> Value;
+	bool bDirty;
 
-	FDataMemory() {}
+	FDataMemory()
+		: bDirty(true)
+	{
+		Value.Shrink();
+	}
 
 	virtual ~FDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const override
+	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T*>>::Serialize(Instance, Field, Serializer, Value, Serializer->UseSortedKeys());
+		FDataReflectionTools::FTypeSerializer<TMap<FString, T*>>::Serialize(Instance, Field, Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
@@ -990,7 +1036,25 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 		FDataReflectionTools::UnsafeSet<TMap<FString, T*>>(Instance, Field, TMap<FString, T*>());
 	}
 
-	static bool Set(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, T*>& Value, const TMap<FString, T*>& NewValue)
+	virtual void Changed() override
+	{
+		bDirty = true;
+	}
+
+	TMap<FString, T*>& Get()
+	{
+		if (bDirty)
+		{
+			bDirty = false;
+			Value.KeyStableSort([](const FString& A, const FString& B) {
+				return A < B;
+			});
+		}
+
+		return Value;
+	}
+
+	bool Set(const TMap<FString, T*>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
 	{
 		bool bChange = false;
 		for (auto& Pair : NewValue)
@@ -1014,8 +1078,12 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 		}
 
 		if (!bChange)
+		{
 			return false;
+		}
+
 		Value = NewValue;
+
 		return true;
 	}
 };
@@ -1031,7 +1099,7 @@ template <typename T>
 bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue)
 {
 	FDataMemory<T>* Memory = static_cast<FDataMemory<T>*>(FPsDataFriend::GetMemory(Instance)[Field->Index].Get());
-	OutValue = &Memory->Value;
+	OutValue = &Memory->Get();
 	return true;
 }
 
@@ -1042,13 +1110,10 @@ bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*&
 template <typename T>
 void UnsafeSet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename TConstRef<T>::Type NewValue)
 {
-	T* OldValue = nullptr;
 	FDataMemory<T>* Memory = static_cast<FDataMemory<T>*>(FPsDataFriend::GetMemory(Instance)[Field->Index].Get());
-	OldValue = &Memory->Value;
-
-	if (FDataMemory<T>::Set(Instance, Field, *OldValue, NewValue))
+	if (Memory->Set(NewValue, Instance, Field))
 	{
-		UPsDataEvent::DispatchChange(Instance, Field);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 }
 } // namespace FDataReflectionTools

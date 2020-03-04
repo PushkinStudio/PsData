@@ -74,13 +74,13 @@ namespace FDataReflectionTools
 template <typename T, bool bConst = false>
 struct TConstRef
 {
-	typedef typename TSelector<T, const T&, std::is_arithmetic<T>::value>::Value Type;
+	typedef const T& Type;
 };
 
 template <typename T>
 struct TConstRef<const T>
 {
-	typedef typename TSelector<const T, const T&, std::is_arithmetic<T>::value>::Value Type;
+	typedef const T& Type;
 };
 
 template <typename T>

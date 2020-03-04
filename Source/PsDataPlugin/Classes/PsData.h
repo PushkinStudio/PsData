@@ -38,9 +38,10 @@ struct PSDATAPLUGIN_API FAbstractDataMemory
 	FAbstractDataMemory() {}
 	virtual ~FAbstractDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) const = 0;
+	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) = 0;
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) = 0;
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) = 0;
+	virtual void Changed() = 0;
 };
 
 /***********************************
@@ -54,9 +55,7 @@ struct PSDATAPLUGIN_API FPsDataFriend
 	static void ChangeDataName(UPsData* Data, const FString& Name, const FString& CollectionName);
 	static void AddChild(UPsData* Parent, UPsData* Data);
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
-	static bool IsChanged(UPsData* Data);
-	static void SetIsChanged(UPsData* Data, bool NewValue);
-	static void DropHash(UPsData* Data);
+	static void Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field);
 	static void InitProperties(UPsData* Data);
 	static TArray<TUniquePtr<FAbstractDataMemory>>& GetMemory(UPsData* Data);
 };

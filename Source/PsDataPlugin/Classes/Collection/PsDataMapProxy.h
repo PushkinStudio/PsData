@@ -16,8 +16,23 @@ namespace FDataReflectionTools
 template <typename T>
 struct FMapChangeBehavior
 {
-	static void AddToMap(UPsData* Instance, const FString& Name, const FString& CollectionName, const T& Value) {}
-	static void RemoveFromMap(UPsData* Instance, const T& Value) {}
+	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> AddAction)
+	{
+		AddAction();
+		FPsDataFriend::Changed(Instance, Field);
+	}
+
+	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> RemoveAction)
+	{
+		RemoveAction();
+		FPsDataFriend::Changed(Instance, Field);
+	}
+
+	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& OldValue, const T& NewValue, TFunction<void()> ReplaceAction)
+	{
+		ReplaceAction();
+		FPsDataFriend::Changed(Instance, Field);
+	}
 };
 
 template <typename T>
@@ -25,15 +40,28 @@ struct FMapChangeBehavior<T*>
 {
 	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
-	static void AddToMap(UPsData* Instance, const FString& Name, const FString& CollectionName, T* Value)
+	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> AddAction)
 	{
-		FPsDataFriend::ChangeDataName(Value, Name, CollectionName);
+		AddAction();
+		FPsDataFriend::ChangeDataName(Value, Name, Field->Name);
 		FPsDataFriend::AddChild(Instance, Value);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 
-	static void RemoveFromMap(UPsData* Instance, T* Value)
+	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> RemoveAction)
 	{
+		RemoveAction();
 		FPsDataFriend::RemoveChild(Instance, Value);
+		FPsDataFriend::Changed(Instance, Field);
+	}
+
+	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* OldValue, T* NewValue, TFunction<void()> ReplaceAction)
+	{
+		ReplaceAction();
+		FPsDataFriend::RemoveChild(Instance, OldValue);
+		FPsDataFriend::ChangeDataName(NewValue, Name, Field->Name);
+		FPsDataFriend::AddChild(Instance, NewValue);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 };
 } // namespace FDataReflectionTools
@@ -52,7 +80,7 @@ private:
 	{
 		check(IsValid());
 		TMap<FString, T>* Output = nullptr;
-		FDataReflectionTools::GetByField(Instance.Get(), Field, Output);
+		FDataReflectionTools::GetByField(*Instance, Field, Output);
 		check(Output);
 		return *Output;
 	}
@@ -113,14 +141,19 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
 
-		TMap<FString, T>& Map = Get();
+		auto& Map = Get();
 		if (auto Find = Map.Find(Key))
 		{
-			FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(*Instance, *Find);
+			FDataReflectionTools::FMapChangeBehavior<T>::Replace(Instance.Get(), Field, Key, *Find, Element, [&Map, &Key, &Element]() {
+				Map.Add(Key, Element);
+			});
 		}
-		Map.Add(Key, Element);
-		FDataReflectionTools::FMapChangeBehavior<T>::AddToMap(*Instance, Key, Field->Name, Element);
-		UPsDataEvent::DispatchChange(Instance.Get(), Field);
+		else
+		{
+			FDataReflectionTools::FMapChangeBehavior<T>::Add(Instance.Get(), Field, Key, Element, [&Map, &Key, &Element]() {
+				Map.Add(Key, Element);
+			});
+		}
 		return true;
 	}
 
@@ -128,16 +161,16 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
 
-		TMap<FString, T>& Map = Get();
-		T* ElementPtr = Map.Find(Key);
-		if (ElementPtr)
+		auto& Map = Get();
+		if (auto Find = Map.Find(Key))
 		{
-			T& Element = *ElementPtr;
-			FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(*Instance, Element);
-			Map.Remove(Key);
-			UPsDataEvent::DispatchChange(Instance.Get(), Field);
+			FDataReflectionTools::FMapChangeBehavior<T>::Remove(Instance.Get(), Field, Key, *Find, [&Map, &Key]() {
+				Map.Remove(Key);
+			});
+
 			return true;
 		}
+
 		return false;
 	}
 
@@ -158,17 +191,24 @@ public:
 
 	TArray<FString> GetKeys() const
 	{
-		TArray<FString> Keys;
-		Get().GetKeys(Keys);
-		return Keys;
+		auto& Map = Get();
+		TArray<FString> Result;
+		Result.Reserve(Map.Num());
+		for (auto& Pair : Map)
+		{
+			Result.Add(Pair.Key);
+		}
+		return Result;
 	}
 
 	TArray<typename FDataReflectionTools::TConstRef<T, bConst>::Type> GetValues() const
 	{
+		auto& Map = Get();
 		TArray<typename FDataReflectionTools::TConstRef<T, bConst>::Type> Result;
-		for (auto It = Get().CreateIterator(); It; ++It)
+		Result.Reserve(Map.Num());
+		for (auto& Pair : Map)
 		{
-			Result.Add((*It).Value);
+			Result.Add(Pair.Value);
 		}
 		return Result;
 	}
@@ -187,18 +227,9 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
 
-		TMap<FString, T>& Map = Get();
-		TArray<FString> Keys;
-		Map.GetKeys(Keys);
-		for (auto& Key : Keys)
+		for (auto It = CreateIterator(); It; ++It)
 		{
-			if (T* ElementPtr = Map.Find(Key))
-			{
-				T& Element = *ElementPtr;
-				FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(*Instance, Element);
-				Map.Remove(Key);
-				UPsDataEvent::DispatchChange(Instance.Get(), Field);
-			}
+			It.RemoveCurrent();
 		}
 	}
 
@@ -257,10 +288,13 @@ public:
 	private:
 		friend struct FPsDataBaseMapProxy;
 
-		typename FDataReflectionTools::TConstRef<FPsDataBaseMapProxy, bIteratorConst>::Type& Proxy;
-		typename FDataReflectionTools::TSelector<typename TMap<FString, T>::TConstIterator, typename TMap<FString, T>::TIterator, bIteratorConst>::Value Iterator;
+		typedef typename FDataReflectionTools::TConstRef<FPsDataBaseMapProxy, bIteratorConst>::Type ProxyType;
+		typedef typename FDataReflectionTools::TSelector<typename TMap<FString, T>::TConstIterator, typename TMap<FString, T>::TIterator, bIteratorConst>::Value IteratorType;
 
-		TProxyIterator(typename FDataReflectionTools::TConstRef<FPsDataBaseMapProxy, bIteratorConst>::Type& InProxy, bool bEnd = false)
+		ProxyType& Proxy;
+		IteratorType Iterator;
+
+		TProxyIterator(ProxyType& InProxy, bool bEnd = false)
 			: Proxy(InProxy)
 			, Iterator(InProxy.Get())
 		{
@@ -278,10 +312,9 @@ public:
 		{
 			static_assert(!bIteratorConst, "Unsupported method for FPsDataConstMapProxy::TProxyIterator, use FPsDataMapProxy::TProxyIterator");
 
-			T& Element = Iterator.Value();
-			FDataReflectionTools::FMapChangeBehavior<T>::RemoveFromMap(Proxy.Instance.Get(), Element);
-			Iterator.RemoveCurrent();
-			UPsDataEvent::DispatchChange(Proxy.Instance.Get(), Proxy.Field);
+			FDataReflectionTools::FMapChangeBehavior<T>::Remove(Proxy.Instance.Get(), Proxy.Field, Iterator.Key(), Iterator.Value(), [this]() {
+				Iterator.RemoveCurrent();
+			});
 		}
 
 		TProxyIterator& operator++()
@@ -326,7 +359,7 @@ public:
 		}
 	};
 
-	TProxyIterator<bConst> CreateIterator()
+	TProxyIterator<bConst> CreateIterator() const
 	{
 		return TProxyIterator<bConst>(*this);
 	}

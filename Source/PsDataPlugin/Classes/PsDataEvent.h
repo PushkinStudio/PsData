@@ -27,9 +27,6 @@ public:
 	/** Name Changed */
 	static const FString NameChanged;
 
-	/** Dispatch property changed */
-	static void DispatchChange(UPsData* Instance, TSharedPtr<const FDataField> Field);
-
 	UFUNCTION(BlueprintPure, Category = "PsData|Event")
 	static UPsDataEvent* ConstructEvent(FString EventType, bool bEventBubbles);
 

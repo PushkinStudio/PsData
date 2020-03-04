@@ -23,11 +23,8 @@ typedef std::function<UPsData*()> FPsDataAllocator;
 
 struct PSDATAPLUGIN_API FPsDataSerializer
 {
-private:
-	bool bUseSortedKeys;
-
 public:
-	FPsDataSerializer(bool InUseSortedKeys);
+	FPsDataSerializer();
 
 	virtual void WriteKey(const FString& Key) = 0;
 	virtual void WriteArray() = 0;
@@ -44,8 +41,6 @@ public:
 	virtual void PopKey(const FString& Key) = 0;
 	virtual void PopArray() = 0;
 	virtual void PopObject() = 0;
-
-	bool UseSortedKeys();
 };
 
 /***********************************

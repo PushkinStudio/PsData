@@ -22,36 +22,6 @@ UPsDataEvent::UPsDataEvent(const class FObjectInitializer& ObjectInitializer)
 {
 }
 
-void UPsDataEvent::DispatchChange(UPsData* Instance, TSharedPtr<const FDataField> Field)
-{
-	FDataReflectionTools::FPsDataFriend::DropHash(Instance);
-
-	if (Field->Meta.bEvent)
-	{
-		if (Instance->IsBound(Field->GetChangedEventName(), Field->Meta.bBubbles))
-		{
-			Instance->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
-		}
-	}
-
-	if (!FDataReflectionTools::FPsDataFriend::IsChanged(Instance))
-	{
-		FDataReflectionTools::FPsDataFriend::SetIsChanged(Instance, true);
-		TWeakObjectPtr<UPsData> InstanceWeakPtr(Instance);
-		AsyncTask(ENamedThreads::GameThread, [InstanceWeakPtr]() {
-			if (InstanceWeakPtr.IsValid())
-			{
-				FDataReflectionTools::FPsDataFriend::SetIsChanged(InstanceWeakPtr.Get(), false);
-
-				if (InstanceWeakPtr->IsBound(UPsDataEvent::Changed, false))
-				{
-					InstanceWeakPtr->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
-				}
-			}
-		});
-	}
-}
-
 UPsDataEvent* UPsDataEvent::ConstructEvent(FString EventType, bool bEventBubbles)
 {
 	UPsDataEvent* Event = NewObject<UPsDataEvent>();

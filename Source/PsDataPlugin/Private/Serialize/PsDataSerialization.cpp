@@ -8,14 +8,8 @@
  * FPsDataSerializer
  ***********************************/
 
-FPsDataSerializer::FPsDataSerializer(bool InUseSortedKeys)
-	: bUseSortedKeys(InUseSortedKeys)
+FPsDataSerializer::FPsDataSerializer()
 {
-}
-
-bool FPsDataSerializer::UseSortedKeys()
-{
-	return bUseSortedKeys;
 }
 
 /***********************************

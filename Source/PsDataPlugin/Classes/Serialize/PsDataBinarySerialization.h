@@ -43,7 +43,7 @@ protected:
 	TSharedRef<FPsDataOutputStream> OutputStream;
 
 public:
-	FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream, bool bUseSortedKeys);
+	FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream);
 	virtual ~FPsDataBinarySerializer(){};
 
 	TSharedRef<FPsDataOutputStream> GetOutputStream() const;

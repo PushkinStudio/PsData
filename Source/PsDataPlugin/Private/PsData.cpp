@@ -65,25 +65,37 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 	Data->Parent = nullptr;
 }
 
-bool FPsDataFriend::IsChanged(UPsData* Data)
+void FPsDataFriend::Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field)
 {
-	return Data->bChanged;
-}
+	Data->Memory[Field->Index]->Changed();
+	Data->DropHash();
 
-void FPsDataFriend::SetIsChanged(UPsData* Data, bool NewValue)
-{
-	Data->bChanged = NewValue;
+	if (Field->Meta.bEvent && Data->IsBound(Field->GetChangedEventName(), Field->Meta.bBubbles))
+	{
+		Data->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
+	}
+
+	if (Data->bChanged)
+	{
+		Data->bChanged = true;
+		TWeakObjectPtr<UPsData> DataWeakPtr(Data);
+		AsyncTask(ENamedThreads::GameThread, [DataWeakPtr]() {
+			if (DataWeakPtr.IsValid())
+			{
+				DataWeakPtr->bChanged = false;
+				if (DataWeakPtr->IsBound(UPsDataEvent::Changed, false))
+				{
+					DataWeakPtr->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
+				}
+			}
+		});
+	}
 }
 
 void FPsDataFriend::InitProperties(UPsData* Data)
 {
 	Data->InitProperties();
 	Data->PostDeserialize();
-}
-
-void FPsDataFriend::DropHash(UPsData* Data)
-{
-	Data->DropHash();
 }
 
 TArray<TUniquePtr<FAbstractDataMemory>>& FPsDataFriend::GetMemory(UPsData* Data)
@@ -197,7 +209,7 @@ void UPsData::CalculateHash() const
 	struct HashBinarySerializer : public FPsDataBinarySerializer
 	{
 		HashBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream)
-			: FPsDataBinarySerializer(InOutputStream, true)
+			: FPsDataBinarySerializer(InOutputStream)
 		{
 		}
 
@@ -628,7 +640,7 @@ void UPsData::Reset()
 UPsData* UPsData::Copy() const
 {
 	auto OutputStream = MakeShared<FPsDataBufferOutputStream>();
-	FPsDataBinarySerializer Serializer(OutputStream, false);
+	FPsDataBinarySerializer Serializer(OutputStream);
 	DataSerialize(&Serializer);
 	UPsData* Copy = NewObject<UPsData>(GetTransientPackage(), GetClass());
 	FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(OutputStream->GetBuffer()));
