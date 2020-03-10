@@ -75,7 +75,7 @@ void FPsDataFriend::Changed(UPsData* Data, const TSharedPtr<const FDataField>& F
 		Data->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
 	}
 
-	if (Data->bChanged)
+	if (!Data->bChanged)
 	{
 		Data->bChanged = true;
 		TWeakObjectPtr<UPsData> DataWeakPtr(Data);
