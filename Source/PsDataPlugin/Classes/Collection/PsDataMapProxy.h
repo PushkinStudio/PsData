@@ -16,22 +16,31 @@ namespace FDataReflectionTools
 template <typename T>
 struct FMapChangeBehavior
 {
-	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> AddAction)
+	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> AddAction, bool bDispacthChanged = true)
 	{
 		AddAction();
-		FPsDataFriend::Changed(Instance, Field);
+		if (bDispacthChanged)
+		{
+			FPsDataFriend::Changed(Instance, Field);
+		}
 	}
 
-	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> RemoveAction)
+	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> RemoveAction, bool bDispacthChanged = true)
 	{
 		RemoveAction();
-		FPsDataFriend::Changed(Instance, Field);
+		if (bDispacthChanged)
+		{
+			FPsDataFriend::Changed(Instance, Field);
+		}
 	}
 
-	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& OldValue, const T& NewValue, TFunction<void()> ReplaceAction)
+	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& OldValue, const T& NewValue, TFunction<void()> ReplaceAction, bool bDispacthChanged = true)
 	{
 		ReplaceAction();
-		FPsDataFriend::Changed(Instance, Field);
+		if (bDispacthChanged)
+		{
+			FPsDataFriend::Changed(Instance, Field);
+		}
 	}
 };
 
@@ -40,28 +49,37 @@ struct FMapChangeBehavior<T*>
 {
 	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
 
-	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> AddAction)
+	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> AddAction, bool bDispacthChanged = true)
 	{
 		AddAction();
 		FPsDataFriend::ChangeDataName(Value, Name, Field->Name);
 		FPsDataFriend::AddChild(Instance, Value);
-		FPsDataFriend::Changed(Instance, Field);
+		if (bDispacthChanged)
+		{
+			FPsDataFriend::Changed(Instance, Field);
+		}
 	}
 
-	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> RemoveAction)
+	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> RemoveAction, bool bDispacthChanged = true)
 	{
 		RemoveAction();
 		FPsDataFriend::RemoveChild(Instance, Value);
-		FPsDataFriend::Changed(Instance, Field);
+		if (bDispacthChanged)
+		{
+			FPsDataFriend::Changed(Instance, Field);
+		}
 	}
 
-	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* OldValue, T* NewValue, TFunction<void()> ReplaceAction)
+	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* OldValue, T* NewValue, TFunction<void()> ReplaceAction, bool bDispacthChanged = true)
 	{
 		ReplaceAction();
 		FPsDataFriend::RemoveChild(Instance, OldValue);
 		FPsDataFriend::ChangeDataName(NewValue, Name, Field->Name);
 		FPsDataFriend::AddChild(Instance, NewValue);
-		FPsDataFriend::Changed(Instance, Field);
+		if (bDispacthChanged)
+		{
+			FPsDataFriend::Changed(Instance, Field);
+		}
 	}
 };
 } // namespace FDataReflectionTools
@@ -227,9 +245,20 @@ public:
 	{
 		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
 
-		for (auto It = CreateIterator(); It; ++It)
+		bool bChanged = false;
+		for (auto It = Get().CreateIterator(); It; ++It)
 		{
-			It.RemoveCurrent();
+			FDataReflectionTools::FMapChangeBehavior<T>::Remove(
+				Instance.Get(), Field, It->Key, It->Value, [&It, &bChanged]() {
+					It.RemoveCurrent();
+					bChanged = true;
+				},
+				false);
+		}
+
+		if (bChanged)
+		{
+			FDataReflectionTools::FPsDataFriend::Changed(Instance.Get(), Field);
 		}
 	}
 
@@ -283,79 +312,94 @@ public:
 	template <bool bIteratorConst>
 	struct TProxyIterator
 	{
-		typedef typename TMap<FString, typename FDataReflectionTools::TConstValue<T, bIteratorConst>::Type>::ElementType PairType;
+		struct TPair
+		{
+			const FString Key;
+			typename FDataReflectionTools::TConstValue<T, bIteratorConst>::Type Value;
+
+			TPair(const TPair&) = delete;
+			TPair& operator=(const TPair&) = delete;
+			TPair(TPair&&) = default;
+		};
 
 	private:
 		friend struct FPsDataBaseMapProxy;
 
-		typedef typename FDataReflectionTools::TConstRef<FPsDataBaseMapProxy, bIteratorConst>::Type ProxyType;
-		typedef typename FDataReflectionTools::TSelector<typename TMap<FString, T>::TConstIterator, typename TMap<FString, T>::TIterator, bIteratorConst>::Value IteratorType;
+		FPsDataBaseMapProxy<T, bIteratorConst> Proxy;
+		TArray<TPair> Pairs;
+		int32 Index;
 
-		ProxyType& Proxy;
-		IteratorType Iterator;
-
-		TProxyIterator(ProxyType& InProxy, bool bEnd = false)
+		TProxyIterator(const FPsDataBaseMapProxy<T, bIteratorConst>& InProxy, bool bEnd = false)
 			: Proxy(InProxy)
-			, Iterator(InProxy.Get())
+			, Index(0)
 		{
+			const auto& Map = Proxy.Get();
 			if (bEnd)
 			{
-				while (Iterator) //TODO: call std::end
+				Index = Map.Num();
+			}
+			else
+			{
+				Pairs.Reserve(Map.Num());
+				for (const auto& Pair : Map)
 				{
-					++Iterator;
+					Pairs.Add({Pair.Key, Pair.Value});
 				}
 			}
 		}
 
 	public:
-		void RemoveCurrent()
+		bool RemoveCurrent()
 		{
 			static_assert(!bIteratorConst, "Unsupported method for FPsDataConstMapProxy::TProxyIterator, use FPsDataMapProxy::TProxyIterator");
 
-			FDataReflectionTools::FMapChangeBehavior<T>::Remove(Proxy.Instance.Get(), Proxy.Field, Iterator.Key(), Iterator.Value(), [this]() {
-				Iterator.RemoveCurrent();
-			});
+			return Proxy.Remove(Key());
 		}
 
 		TProxyIterator& operator++()
 		{
-			++Iterator;
+			++Index;
 			return *this;
 		}
 
 		explicit operator bool() const
 		{
-			return bool(Iterator);
+			return Index < Pairs.Num();
 		}
 
 		bool operator!() const
 		{
-			return !bool(Iterator);
+			return Index >= Pairs.Num();
 		}
 
 		friend bool operator==(const TProxyIterator& Lhs, const TProxyIterator& Rhs)
 		{
-			return Lhs.Iterator == Rhs.Iterator;
+			return Lhs.Index == Rhs.Index;
 		}
 
 		friend bool operator!=(const TProxyIterator& Lhs, const TProxyIterator& Rhs)
 		{
-			return Lhs.Iterator != Rhs.Iterator;
+			return Lhs.Index != Rhs.Index;
 		}
 
 		const FString& Key() const
 		{
-			return Iterator->Key;
+			return Pairs[Index].Key;
 		}
 
 		typename FDataReflectionTools::TConstRef<T, bIteratorConst>::Type Value() const
 		{
-			return Iterator->Value;
+			return Pairs[Index].Value;
 		}
 
-		const PairType& operator*() const
+		const TPair& operator*() const
 		{
-			return *reinterpret_cast<const PairType*>(&(*Iterator));
+			return Pairs[Index];
+		}
+
+		const TPair& operator->() const
+		{
+			return Pairs[Index];
 		}
 	};
 
