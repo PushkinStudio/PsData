@@ -240,7 +240,7 @@ public:
 
 		auto& Array = Get();
 		auto& OldElement = Array[Index];
-		FDataReflectionTools::FArrayChangeBehavior<T>::Replace(Instance.Get(), Field, Index, OldElement, Element, [&Array, &Element, Index]() {
+		FDataReflectionTools::FArrayChangeBehavior<T>::Replace(Instance.Get(), Field, OldElement, Element, [&Array, &Element, Index]() {
 			Array[Index] = Element;
 		});
 
