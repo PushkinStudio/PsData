@@ -18,13 +18,15 @@ class UPsData;
 struct PSDATAPLUGIN_API FPsDataStructDeserializer : public FPsDataDeserializer
 {
 private:
+	TMap<FString, FString> KeyMap;
 	FPsDataJsonDeserializer JsonDeserializer;
 
 public:
 	template <typename T>
 	FPsDataStructDeserializer(const T& Struct)
 		: FPsDataDeserializer()
-		, JsonDeserializer(CreateJsonFromStruct(T::StaticStruct(), &Struct))
+		, KeyMap()
+		, JsonDeserializer(CreateJsonFromStruct(T::StaticStruct(), &Struct, KeyMap))
 	{
 	}
 
@@ -53,12 +55,12 @@ public:
 	 * Struct serialize
 	 ***********************************/
 public:
-	static TSharedPtr<FJsonObject> CreateJsonFromStruct(const UStruct* Struct, const void* Value);
+	static TSharedPtr<FJsonObject> CreateJsonFromStruct(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap);
 
 private:
-	static TSharedPtr<FJsonValue> PropertySerialize(UProperty* Property, const void* Value);
-	static TSharedPtr<FJsonValue> StructPropertySerialize(UStructProperty* StructProperty, const void* Value);
-	static TSharedPtr<FJsonValue> StructSerialize(const UStruct* Struct, const void* Value);
+	static TSharedPtr<FJsonValue> PropertySerialize(UProperty* Property, const void* Value, TMap<FString, FString>& KeyMap);
+	static TSharedPtr<FJsonValue> StructPropertySerialize(UStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap);
+	static TSharedPtr<FJsonValue> StructSerialize(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap);
 
-	static FString GetNormalizedKey(const FString& Key);
+	static const FString& GetNormalizedKey(const FString& Key, TMap<FString, FString>& KeyMap);
 };

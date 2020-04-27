@@ -92,9 +92,9 @@ void FPsDataStructDeserializer::PopObject()
  * Struct serialize
  ***********************************/
 
-TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct(const UStruct* Struct, const void* Value)
+TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap)
 {
-	TSharedPtr<FJsonValue> JsonValue = StructSerialize(Struct, Value);
+	TSharedPtr<FJsonValue> JsonValue = StructSerialize(Struct, Value, KeyMap);
 	check(JsonValue->Type == EJson::Object);
 
 	/*
@@ -107,11 +107,11 @@ TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct(const US
 	return JsonValue->AsObject();
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(UProperty* Property, const void* Value)
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(UProperty* Property, const void* Value, TMap<FString, FString>& KeyMap)
 {
 	if (UStructProperty* StructProperty = Cast<UStructProperty>(Property))
 	{
-		return StructPropertySerialize(StructProperty, Value);
+		return StructPropertySerialize(StructProperty, Value, KeyMap);
 	}
 
 	if (UTextProperty* TextProperty = Cast<UTextProperty>(Property))
@@ -146,20 +146,21 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(UProperty* P
 	return TSharedPtr<FJsonValue>(nullptr);
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructPropertySerialize(UStructProperty* StructProperty, const void* Value)
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructPropertySerialize(UStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap)
 {
 	if (StructProperty->Struct)
 	{
-		return StructSerialize(StructProperty->Struct, Value);
+		return StructSerialize(StructProperty->Struct, Value, KeyMap);
 	}
+
 	return TSharedPtr<FJsonValue>(nullptr);
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct* Struct, const void* Value)
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap)
 {
 	FJsonObjectConverter::CustomExportCallback CustomCallback;
-	CustomCallback.BindLambda([](UProperty* Property, const void* Ptr) {
-		return PropertySerialize(Property, Ptr);
+	CustomCallback.BindLambda([&KeyMap](UProperty* Property, const void* Ptr) {
+		return PropertySerialize(Property, Ptr, KeyMap);
 	});
 
 	TSharedPtr<FJsonObject> RawJsonObject(new FJsonObject());
@@ -168,22 +169,27 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct*
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
 	for (auto& Pair : RawJsonObject->Values)
 	{
-		JsonObject->Values.Add(GetNormalizedKey(Pair.Key), Pair.Value);
+		JsonObject->Values.Add(GetNormalizedKey(Pair.Key, KeyMap), Pair.Value);
 	}
 
 	return TSharedPtr<FJsonValue>(new FJsonValueObject(JsonObject));
 }
 
-FString FPsDataStructDeserializer::GetNormalizedKey(const FString& Key)
+const FString& FPsDataStructDeserializer::GetNormalizedKey(const FString& Key, TMap<FString, FString>& KeyMap)
 {
+	if (auto KeyPtr = KeyMap.Find(Key))
+	{
+		return *KeyPtr;
+	}
+
 	static const FRegexPattern PropertyPattern(TEXT("(.+)_\\d+_[A-Z0-9]+"));
 	FRegexMatcher PropertyMatcher(PropertyPattern, Key);
 	if (PropertyMatcher.FindNext())
 	{
-		return PropertyMatcher.GetCaptureGroup(1);
+		return KeyMap.Add(Key, PropertyMatcher.GetCaptureGroup(1));
 	}
 	else
 	{
-		return Key;
+		return KeyMap.Add(Key, Key);
 	}
 }

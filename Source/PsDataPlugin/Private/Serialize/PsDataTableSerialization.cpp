@@ -102,6 +102,7 @@ void FPsDataTableDeserializer::PopObject()
 TSharedPtr<FJsonObject> FPsDataTableDeserializer::CreateJsonFromTable(UDataTable* DataTable, const FString& PropertyName)
 {
 	TSharedPtr<FJsonObject> RootJsonObject(new FJsonObject());
+	TMap<FString, FString> KeyMap;
 
 	const UScriptStruct* Struct = DataTable->GetRowStruct();
 	check(Struct);
@@ -111,7 +112,7 @@ TSharedPtr<FJsonObject> FPsDataTableDeserializer::CreateJsonFromTable(UDataTable
 		TSharedPtr<FJsonObject> JsonObject(new FJsonObject());
 		for (auto& Pair : RowMap)
 		{
-			JsonObject->SetObjectField(Pair.Key.ToString().ToLower(), FPsDataStructDeserializer::CreateJsonFromStruct(Struct, Pair.Value));
+			JsonObject->SetObjectField(Pair.Key.ToString().ToLower(), FPsDataStructDeserializer::CreateJsonFromStruct(Struct, Pair.Value, KeyMap));
 		}
 		RootJsonObject->SetObjectField(PropertyName, JsonObject);
 	}
