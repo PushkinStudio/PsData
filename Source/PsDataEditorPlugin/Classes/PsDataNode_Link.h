@@ -31,14 +31,14 @@ public:
 	TSharedPtr<const FDataLink> GetLink() const;
 
 	/** Get return type */
-	UClass* GetReturnType(TSharedPtr<const FDataLink> Link);
+	UClass* GetReturnType(TSharedPtr<const FDataLink> Link) const;
 
 	/** Update link path */
 	void UpdateLink();
 
 	/** Update allocated pin */
-	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) override;
+	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const override;
 
-	/** Update function reference */
-	virtual void UpdateFunctionReference();
+	/** Get function to call */
+	virtual UFunction* GetFunction() const override;
 };

@@ -57,7 +57,6 @@ void UPsDataNode_GetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 				UPsDataNode_Variable* Node = CastChecked<UPsDataNode_Variable>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
 				Node->PropertyName = Field.Name;
-				Node->PropertyCppType = Field.Context->GetCppType();
 				Node->UpdateFunctionReference();
 			});
 
@@ -79,7 +78,7 @@ void UPsDataNode_GetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 	}
 }
 
-void UPsDataNode_GetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin)
+void UPsDataNode_GetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	Super::UpdatePin(PinType, Pin);
 	if (PinType == EPsDataVariablePinType::ReturnValue)
@@ -88,13 +87,13 @@ void UPsDataNode_GetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraph
 	}
 }
 
-void UPsDataNode_GetVariable::UpdateFunctionReference()
+UFunction* UPsDataNode_GetVariable::GetFunction() const
 {
 	auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
-		return;
+		return nullptr;
 	}
 
-	SetFromFunction(Field->Context->GetUFunctions()->GetFunction);
+	return Field->Context->GetUFunctions()->GetFunction;
 }

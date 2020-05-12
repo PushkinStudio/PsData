@@ -117,6 +117,78 @@ bool UPsDataNode_Variable::IsDeprecated() const
 	return Super::IsDeprecated();
 }
 
+bool ObjectCompare(UObject* ObjectA, UObject* ObjectB)
+{
+	if (ObjectA != ObjectB)
+	{
+		if (ObjectA && ObjectB)
+		{
+			auto StructA = Cast<UStruct>(ObjectA);
+			auto StructB = Cast<UStruct>(ObjectB);
+
+			if (StructA && StructB)
+			{
+				return StructA->IsChildOf(StructB);
+			}
+			else
+			{
+				UEnum* EnumA = Cast<UEnum>(ObjectA);
+				UEnum* EnumB = Cast<UEnum>(ObjectB);
+
+				if (EnumA && EnumB)
+				{
+					return EnumA == EnumB;
+				}
+				else
+				{
+					return false;
+				}
+			}
+		}
+		else
+		{
+			UEnum* EnumA = Cast<UEnum>(ObjectA);
+			UEnum* EnumB = Cast<UEnum>(ObjectB);
+
+			if ((EnumA != nullptr && EnumB == nullptr) || (EnumA == nullptr && EnumB != nullptr))
+			{
+				return true;
+			}
+
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool PinTypeCompare(const FEdGraphPinType& PinTypeA, const FEdGraphPinType& PinTypeB)
+{
+	if (PinTypeA.PinCategory != PinTypeB.PinCategory ||
+		PinTypeA.PinSubCategory != PinTypeB.PinSubCategory)
+	{
+		return false;
+	}
+
+	if (PinTypeA.PinValueType.TerminalCategory != PinTypeB.PinValueType.TerminalCategory ||
+		PinTypeA.PinValueType.TerminalSubCategory != PinTypeB.PinValueType.TerminalSubCategory)
+	{
+		return false;
+	}
+
+	if (!ObjectCompare(PinTypeA.PinSubCategoryObject.Get(), PinTypeB.PinSubCategoryObject.Get()))
+	{
+		return false;
+	}
+
+	if (!ObjectCompare(PinTypeA.PinValueType.TerminalSubCategoryObject.Get(), PinTypeB.PinValueType.TerminalSubCategoryObject.Get()))
+	{
+		return false;
+	}
+
+	return true;
+}
+
 void UPsDataNode_Variable::ValidateNodeDuringCompilation(class FCompilerResultsLog& MessageLog) const
 {
 	Super::ValidateNodeDuringCompilation(MessageLog);
@@ -125,16 +197,43 @@ void UPsDataNode_Variable::ValidateNodeDuringCompilation(class FCompilerResultsL
 	if (!Field.IsValid())
 	{
 		MessageLog.Error(*LOCTEXT("UPsDataNode_Variable", "Node @@: property has been removed").ToString(), this);
+		return;
+	}
+
+	auto Function = GetFunction();
+	if (Function)
+	{
+		FMemberReference NodeFunctionReference = FunctionReference;
+		FMemberReference PropertyFunctionReference;
+		PropertyFunctionReference.SetFromField<UFunction>(Function, GetBlueprintClassFromNode());
+		if (!NodeFunctionReference.IsSameReference(PropertyFunctionReference))
+		{
+			MessageLog.Error(*LOCTEXT("UPsDataNode_Variable", "Node @@: type of property has changed").ToString(), this);
+		}
 	}
 	else
 	{
-		if (PropertyCppType.IsEmpty())
+		MessageLog.Error(*LOCTEXT("UPsDataNode_Variable", "Node @@: illegal function").ToString(), this);
+	}
+
+	for (auto Pin : Pins)
+	{
+		for (auto Link : Pin->LinkedTo)
 		{
-			MessageLog.Warning(*LOCTEXT("UPsDataNode_Variable", "Node @@ does not contain type information, please recreate the node").ToString(), this);
-		}
-		else if (PropertyCppType != Field->Context->GetCppType())
-		{
-			MessageLog.Error(*LOCTEXT("UPsDataNode_Variable", "Node @@: type of property has changed, please recreate the node").ToString(), this);
+			if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
+			{
+				if (!PinTypeCompare(Link->PinType, Pin->PinType))
+				{
+					MessageLog.Error(*FText::Format(LOCTEXT("UPsDataNode_Variable", "Node @@: illegal connection to pin \"{0}\""), Pin->GetDisplayName()).ToString(), this);
+				}
+			}
+			else
+			{
+				if (!PinTypeCompare(Pin->PinType, Link->PinType))
+				{
+					MessageLog.Error(*FText::Format(LOCTEXT("UPsDataNode_Variable", "Node @@: illegal connection from pin \"{0}\""), Pin->GetDisplayName()).ToString(), this);
+				}
+			}
 		}
 	}
 }
@@ -150,7 +249,7 @@ TSharedPtr<const FDataField> UPsDataNode_Variable::GetProperty() const
 	return TSharedPtr<const FDataField>(nullptr);
 }
 
-void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin)
+void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	auto Field = GetProperty();
 	if (PinType == EPsDataVariablePinType::Target)
@@ -212,8 +311,18 @@ void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin
 	}
 }
 
+UFunction* UPsDataNode_Variable::GetFunction() const
+{
+	return nullptr;
+}
+
 void UPsDataNode_Variable::UpdateFunctionReference()
 {
+	auto Function = GetFunction();
+	if (Function)
+	{
+		SetFromFunction(Function);
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

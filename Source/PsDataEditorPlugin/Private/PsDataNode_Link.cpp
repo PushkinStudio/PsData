@@ -104,7 +104,6 @@ void UPsDataNode_Link::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionR
 				UPsDataNode_Link* Node = CastChecked<UPsDataNode_Link>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
 				Node->PropertyName = Field.Name;
-				Node->PropertyCppType = Field.Context->GetCppType();
 			});
 
 			NodeSpawner->DefaultMenuSignature.Category = FText::FromString(FString::Printf(TEXT("PsData|%s"), *TargetClass->GetName()));
@@ -140,7 +139,7 @@ TSharedPtr<const FDataLink> UPsDataNode_Link::GetLink() const
 	return TSharedPtr<const FDataLink>(nullptr);
 }
 
-UClass* UPsDataNode_Link::GetReturnType(TSharedPtr<const FDataLink> Link)
+UClass* UPsDataNode_Link::GetReturnType(TSharedPtr<const FDataLink> Link) const
 {
 	FString ClassName;
 	if (Link->ReturnType.EndsWith(TEXT("*"), ESearchCase::CaseSensitive))
@@ -174,7 +173,7 @@ UClass* UPsDataNode_Link::GetReturnType(TSharedPtr<const FDataLink> Link)
 	return *Find;
 }
 
-void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin)
+void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	Super::UpdatePin(PinType, Pin);
 	auto Link = GetLink();
@@ -200,21 +199,19 @@ void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pi
 	}
 }
 
-void UPsDataNode_Link::UpdateFunctionReference()
+UFunction* UPsDataNode_Link::GetFunction() const
 {
 	auto Field = GetProperty();
 	auto Link = GetLink();
 	if (!Field.IsValid() || !Link.IsValid())
 	{
-		return;
+		return nullptr;
 	}
 
 	FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
 	UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
-	if (Function)
-	{
-		SetFromFunction(Function);
-	}
+
+	return Function;
 }
 
 #undef LOCTEXT_NAMESPACE

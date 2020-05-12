@@ -65,7 +65,6 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 				UPsDataNode_CollectionProxy* Node = CastChecked<UPsDataNode_CollectionProxy>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
 				Node->PropertyName = Field.Name;
-				Node->PropertyCppType = Field.Context->GetCppType();
 				Node->UpdateFunctionReference();
 			});
 
@@ -90,7 +89,7 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 	}
 }
 
-void UPsDataNode_CollectionProxy::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin)
+void UPsDataNode_CollectionProxy::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	Super::UpdatePin(PinType, Pin);
 	if (PinType == EPsDataVariablePinType::ReturnValue)
@@ -99,21 +98,17 @@ void UPsDataNode_CollectionProxy::UpdatePin(EPsDataVariablePinType PinType, UEdG
 	}
 }
 
-void UPsDataNode_CollectionProxy::UpdateFunctionReference()
+UFunction* UPsDataNode_CollectionProxy::GetFunction() const
 {
 	auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
-		return;
+		return nullptr;
 	}
 
 	FString FunctionName = (Field->Context->IsArray() ? TEXT("GetArrayProxy") : TEXT("GetMapProxy"));
 	UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
-	check(Function);
-	if (Function)
-	{
-		SetFromFunction(Function);
-	}
+	return Function;
 }
 
 #undef LOCTEXT_NAMESPACE

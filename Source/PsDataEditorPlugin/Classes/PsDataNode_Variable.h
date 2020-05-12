@@ -31,9 +31,6 @@ public:
 	UPROPERTY()
 	FString PropertyName;
 
-	UPROPERTY()
-	FString PropertyCppType;
-
 public:
 	// Begin UEdGraphNode interface.
 	virtual void AllocateDefaultPins() override;
@@ -52,8 +49,11 @@ public:
 	TSharedPtr<const FDataField> GetProperty() const;
 
 	/** Update allocated pin */
-	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin);
+	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const;
+
+	/** Get function to call */
+	virtual UFunction* GetFunction() const;
 
 	/** Update function reference */
-	virtual void UpdateFunctionReference();
+	void UpdateFunctionReference();
 };

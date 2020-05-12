@@ -77,7 +77,6 @@ void UPsDataNode_SetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 				UPsDataNode_Variable* Node = CastChecked<UPsDataNode_Variable>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
 				Node->PropertyName = Field.Name;
-				Node->PropertyCppType = Field.Context->GetCppType();
 				Node->UpdateFunctionReference();
 			});
 
@@ -99,7 +98,7 @@ void UPsDataNode_SetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 	}
 }
 
-void UPsDataNode_SetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin)
+void UPsDataNode_SetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	Super::UpdatePin(PinType, Pin);
 	if (PinType == EPsDataVariablePinType::ReturnValue)
@@ -108,15 +107,15 @@ void UPsDataNode_SetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraph
 	}
 }
 
-void UPsDataNode_SetVariable::UpdateFunctionReference()
+UFunction* UPsDataNode_SetVariable::GetFunction() const
 {
 	auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
-		return;
+		return nullptr;
 	}
 
-	SetFromFunction(Field->Context->GetUFunctions()->SetFunction);
+	return Field->Context->GetUFunctions()->SetFunction;
 }
 
 #undef LOCTEXT_NAMESPACE
