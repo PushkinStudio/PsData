@@ -11,6 +11,7 @@
 #include "PsDataHardObjectPtr.h"
 #include "Serialize/PsDataJsonSerialization.h"
 #include "Serialize/PsDataSerialization.h"
+#include "Types/PsDataBigIntegerLibrary.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
