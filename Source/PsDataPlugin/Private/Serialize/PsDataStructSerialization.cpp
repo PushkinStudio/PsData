@@ -107,14 +107,14 @@ TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct(const US
 	return JsonValue->AsObject();
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(UProperty* Property, const void* Value, TMap<FString, FString>& KeyMap)
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(FProperty* Property, const void* Value, TMap<FString, FString>& KeyMap)
 {
-	if (UStructProperty* StructProperty = Cast<UStructProperty>(Property))
+	if (FStructProperty* StructProperty = CastField<FStructProperty>(Property))
 	{
 		return StructPropertySerialize(StructProperty, Value, KeyMap);
 	}
 
-	if (UTextProperty* TextProperty = Cast<UTextProperty>(Property))
+	if (FTextProperty* TextProperty = CastField<FTextProperty>(Property))
 	{
 		const FText& Text = TextProperty->GetPropertyValue(Value);
 		if (Text.IsFromStringTable())
@@ -133,7 +133,7 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(UProperty* P
 		}
 	}
 
-	if (USoftObjectProperty* SoftObjectProperty = Cast<USoftObjectProperty>(Property))
+	if (FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
 	{
 		const FSoftObjectPtr& SoftObjectPtr = SoftObjectProperty->GetPropertyValue(Value);
 		const FSoftObjectPath& SoftObjectPath = SoftObjectPtr.ToSoftObjectPath();
@@ -146,7 +146,7 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(UProperty* P
 	return TSharedPtr<FJsonValue>(nullptr);
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructPropertySerialize(UStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap)
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructPropertySerialize(FStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap)
 {
 	if (StructProperty->Struct)
 	{
@@ -159,7 +159,7 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructPropertySerialize(UStruc
 TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap)
 {
 	FJsonObjectConverter::CustomExportCallback CustomCallback;
-	CustomCallback.BindLambda([&KeyMap](UProperty* Property, const void* Ptr) {
+	CustomCallback.BindLambda([&KeyMap](FProperty* Property, const void* Ptr) {
 		return PropertySerialize(Property, Ptr, KeyMap);
 	});
 

@@ -58,8 +58,8 @@ public:
 	static TSharedPtr<FJsonObject> CreateJsonFromStruct(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap);
 
 private:
-	static TSharedPtr<FJsonValue> PropertySerialize(UProperty* Property, const void* Value, TMap<FString, FString>& KeyMap);
-	static TSharedPtr<FJsonValue> StructPropertySerialize(UStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap);
+	static TSharedPtr<FJsonValue> PropertySerialize(FProperty* Property, const void* Value, TMap<FString, FString>& KeyMap);
+	static TSharedPtr<FJsonValue> StructPropertySerialize(FStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap);
 	static TSharedPtr<FJsonValue> StructSerialize(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap);
 
 	static const FString& GetNormalizedKey(const FString& Key, TMap<FString, FString>& KeyMap);

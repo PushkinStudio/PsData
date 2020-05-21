@@ -69,7 +69,7 @@ FLinearColor UPsDataNode_Variable::GetNodeTitleColor() const
 	}
 
 	UFunction* Function = Field->Context->GetUFunctions()->GetFunction;
-	UProperty* Property = Function->GetReturnProperty();
+	FProperty* Property = Function->GetReturnProperty();
 
 	if (Property)
 	{

@@ -44,8 +44,8 @@ FLinearColor UPsDataNode_Link::GetNodeTitleColor() const
 		FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
 		UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
 
-		UProperty* Property = nullptr;
-		for (TFieldIterator<UProperty> PropIt(Function); PropIt && (PropIt->PropertyFlags & CPF_Parm); ++PropIt)
+		FProperty* Property = nullptr;
+		for (TFieldIterator<FProperty> PropIt(Function); PropIt && (PropIt->PropertyFlags & CPF_Parm); ++PropIt)
 		{
 			if (PropIt->HasAnyPropertyFlags(CPF_ReturnParm))
 			{
