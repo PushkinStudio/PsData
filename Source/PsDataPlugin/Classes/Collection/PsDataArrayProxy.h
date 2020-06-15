@@ -34,7 +34,7 @@ struct FArrayChangeBehavior
 		}
 	}
 
-	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const T& OldValue, const T& NewValue, TFunction<void()> ReplaceAction, bool bDispacthChanged = true)
+	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, int32 Index, const T& OldValue, const T& NewValue, TFunction<void()> ReplaceAction, bool bDispacthChanged = true)
 	{
 		ReplaceAction();
 		if (bDispacthChanged)
@@ -240,7 +240,7 @@ public:
 
 		auto& Array = Get();
 		auto& OldElement = Array[Index];
-		FDataReflectionTools::FArrayChangeBehavior<T>::Replace(Instance.Get(), Field, OldElement, Element, [&Array, &Element, Index]() {
+		FDataReflectionTools::FArrayChangeBehavior<T>::Replace(Instance.Get(), Field, Index, OldElement, Element, [&Array, &Element, Index]() {
 			Array[Index] = Element;
 		});
 
