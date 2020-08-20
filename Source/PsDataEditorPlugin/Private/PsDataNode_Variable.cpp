@@ -7,8 +7,19 @@
 #include "Editor/BlueprintGraph/Classes/EdGraphSchema_K2.h"
 #include "Editor/UnrealEd/Public/Kismet2/CompilerResultsLog.h"
 #include "Styling/SlateIconFinder.h"
+#include "UObject/CoreRedirects.h"
 
 #define LOCTEXT_NAMESPACE "UPsDataNode_Variable"
+
+const FName UPsDataNode_Variable::MD_PsDataTarget = "PsDataTarget";
+const FName UPsDataNode_Variable::MD_PsDataHash = "PsDataHash";
+const FName UPsDataNode_Variable::MD_PsDataOut = "PsDataOut";
+const FName UPsDataNode_Variable::MD_PsDataIn = "PsDataIn";
+
+const FName UPsDataNode_Variable::Default_TargetParam = "Target";
+const FName UPsDataNode_Variable::Default_HashParam = "Crc32";
+const FName UPsDataNode_Variable::Default_OutParam = "Out";
+const FName UPsDataNode_Variable::Default_InParam = "Value";
 
 UPsDataNode_Variable::UPsDataNode_Variable(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -18,41 +29,82 @@ UPsDataNode_Variable::UPsDataNode_Variable(const FObjectInitializer& ObjectIniti
 
 void UPsDataNode_Variable::AllocateDefaultPins()
 {
+	const bool bInvalidFunction = (GetTargetFunction() == nullptr);
+	if (bInvalidFunction)
+	{
+		UpdateFunctionReference();
+		// Modify();
+	}
+
 	Super::AllocateDefaultPins();
 
-	for (UEdGraphPin* Pin : Pins)
+	auto Function = GetTargetFunction();
+	if (Function)
 	{
-		if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
+		const auto TargetParam = Function->HasMetaData(MD_PsDataTarget) ? FName(Function->GetMetaData(MD_PsDataTarget)) : Default_TargetParam;
+		const auto HashParam = Function->HasMetaData(MD_PsDataHash) ? FName(Function->GetMetaData(MD_PsDataHash)) : Default_HashParam;
+		const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
+		const auto InParam = Function->HasMetaData(MD_PsDataIn) ? FName(Function->GetMetaData(MD_PsDataIn)) : Default_InParam;
+
+		for (UEdGraphPin* Pin : Pins)
 		{
-			if (Pin->PinName.ToString() == TEXT("Target"))
+			if (Pin->Direction == EEdGraphPinDirection::EGPD_Input)
 			{
-				UpdatePin(EPsDataVariablePinType::Target, Pin);
+				if (Pin->PinName == TargetParam)
+				{
+					UpdatePin(EPsDataVariablePinType::Target, Pin);
+				}
+				else if (Pin->PinName == HashParam)
+				{
+					UpdatePin(EPsDataVariablePinType::Hash, Pin);
+				}
+				else if (Pin->PinName == InParam)
+				{
+					UpdatePin(EPsDataVariablePinType::PropertyIn, Pin);
+				}
+				else
+				{
+					UpdatePin(EPsDataVariablePinType::Unknown, Pin);
+				}
 			}
-			else if (Pin->PinName.ToString() == TEXT("Crc32"))
+			else if (Pin->Direction == EEdGraphPinDirection::EGPD_Output)
 			{
-				UpdatePin(EPsDataVariablePinType::PropertyHash, Pin);
-			}
-			else if (Pin->PinName.ToString() == TEXT("Value"))
-			{
-				UpdatePin(EPsDataVariablePinType::Value, Pin);
-			}
-			else
-			{
-				UpdatePin(EPsDataVariablePinType::Unknown, Pin);
-			}
-		}
-		else if (Pin->Direction == EEdGraphPinDirection::EGPD_Output)
-		{
-			if (Pin->PinName == UEdGraphSchema_K2::PN_ReturnValue)
-			{
-				UpdatePin(EPsDataVariablePinType::ReturnValue, Pin);
-			}
-			else
-			{
-				UpdatePin(EPsDataVariablePinType::Unknown, Pin);
+				if (Pin->PinName == OutParam)
+				{
+					UpdatePin(EPsDataVariablePinType::PropertyOut, Pin);
+				}
+				else if (Pin->PinName == UEdGraphSchema_K2::PN_ReturnValue)
+				{
+					UpdatePin(EPsDataVariablePinType::OldPropertyOut, Pin);
+				}
+				else
+				{
+					UpdatePin(EPsDataVariablePinType::Unknown, Pin);
+				}
 			}
 		}
 	}
+}
+
+UK2Node::ERedirectType UPsDataNode_Variable::DoPinsMatchForReconstruction(const UEdGraphPin* NewPin, int32 NewPinIndex, const UEdGraphPin* OldPin, int32 OldPinIndex) const
+{
+	ERedirectType RedirectType = Super::DoPinsMatchForReconstruction(NewPin, NewPinIndex, OldPin, OldPinIndex);
+	if (RedirectType == ERedirectType_None && NewPin->Direction == OldPin->Direction)
+	{
+		if (OldPin->PinName == UEdGraphSchema_K2::PN_ReturnValue)
+		{
+			auto Function = GetTargetFunction();
+			if (Function)
+			{
+				const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
+				if (NewPin->PinName == OutParam)
+				{
+					return ERedirectType_Name;
+				}
+			}
+		}
+	}
+	return RedirectType;
 }
 
 FText UPsDataNode_Variable::GetMenuCategory() const
@@ -68,14 +120,20 @@ FLinearColor UPsDataNode_Variable::GetNodeTitleColor() const
 		return FLinearColor::White;
 	}
 
-	UFunction* Function = Field->Context->GetUFunctions()->GetFunction;
-	FProperty* Property = Function->GetReturnProperty();
+	UFunction* Function = Field->Context->GetUFunctions().ResolveGetFunction();
+	FProperty* OutProperty = Function->GetReturnProperty();
 
-	if (Property)
+	if (!OutProperty)
+	{
+		const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
+		OutProperty = Function->FindPropertyByName(OutParam);
+	}
+
+	if (OutProperty)
 	{
 		FEdGraphPinType PinType;
 		const UEdGraphSchema_K2* K2Schema = GetDefault<UEdGraphSchema_K2>();
-		if (K2Schema->ConvertPropertyToPinType(Property, PinType))
+		if (K2Schema->ConvertPropertyToPinType(OutProperty, PinType))
 		{
 			return K2Schema->GetPinTypeColor(PinType);
 		}
@@ -264,7 +322,7 @@ void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin
 			Pin->PinType.PinSubCategoryObject = TargetClass;
 		}
 	}
-	else if (PinType == EPsDataVariablePinType::PropertyHash)
+	else if (PinType == EPsDataVariablePinType::Hash)
 	{
 		Pin->bHidden = true;
 		if (Field.IsValid())
@@ -273,9 +331,9 @@ void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin
 			Pin->bDefaultValueIsReadOnly = true;
 		}
 	}
-	else if (PinType == EPsDataVariablePinType::Value || PinType == EPsDataVariablePinType::ReturnValue)
+	else if (PinType == EPsDataVariablePinType::PropertyIn || PinType == EPsDataVariablePinType::PropertyOut || PinType == EPsDataVariablePinType::OldPropertyOut)
 	{
-		if (PinType == EPsDataVariablePinType::Value)
+		if (PinType == EPsDataVariablePinType::PropertyIn)
 		{
 			Pin->PinFriendlyName = FText::FromString(PropertyName);
 		}
@@ -283,13 +341,12 @@ void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin
 		if (Field.IsValid() && Field->Context->GetUE4Type() != nullptr)
 		{
 			UField* UE4Type = Field->Context->GetUE4Type();
+			UEnum* Enum = Cast<UEnum>(UE4Type);
 
-			if (UEnum* Enum = Cast<UEnum>(UE4Type))
+			if (!IsLink() && Enum)
 			{
-				if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Byte)
-				{
-					Pin->PinType.PinSubCategoryObject = Enum;
-				}
+				Pin->PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+				Pin->PinType.PinSubCategoryObject = Enum;
 			}
 			else
 			{

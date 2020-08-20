@@ -47,8 +47,6 @@ struct FArrayChangeBehavior
 template <typename T>
 struct FArrayChangeBehavior<T*>
 {
-	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
-
 	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, int32 Index, T* Value, TFunction<void()> AddAction, bool bDispacthChanged = true)
 	{
 		AddAction();

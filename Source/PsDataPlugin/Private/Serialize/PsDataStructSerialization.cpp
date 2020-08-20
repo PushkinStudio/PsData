@@ -7,6 +7,7 @@
 
 #include "Internationalization/Regex.h"
 #include "JsonObjectConverter.h"
+#include "UObject/TextProperty.h"
 
 bool FPsDataStructDeserializer::ReadKey(FString& OutKey)
 {

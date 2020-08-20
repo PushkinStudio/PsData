@@ -2,6 +2,9 @@
 
 #include "PsDataCore.h"
 
+#include "Types/PsData_FString.h"
+#include "Types/PsData_UPsData.h"
+
 #include "UObject/UObjectIterator.h"
 
 TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByName;

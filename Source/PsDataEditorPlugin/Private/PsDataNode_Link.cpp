@@ -178,7 +178,7 @@ void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pi
 	Super::UpdatePin(PinType, Pin);
 	auto Link = GetLink();
 
-	if (PinType == EPsDataVariablePinType::ReturnValue)
+	if (PinType == EPsDataVariablePinType::PropertyOut || PinType == EPsDataVariablePinType::OldPropertyOut)
 	{
 		Pin->PinFriendlyName = FText::FromString(FString::Printf(TEXT("Link By %s"), *PropertyName));
 		if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Object)
@@ -189,7 +189,7 @@ void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pi
 			}
 		}
 	}
-	else if (PinType == EPsDataVariablePinType::PropertyHash)
+	else if (PinType == EPsDataVariablePinType::Hash)
 	{
 		if (Link.IsValid())
 		{

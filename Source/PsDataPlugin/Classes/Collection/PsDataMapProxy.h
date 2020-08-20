@@ -8,6 +8,7 @@
 #include "PsDataField.h"
 #include "PsDataHardObjectPtr.h"
 #include "PsDataTraits.h"
+#include "Types/PsData_UPsData.h"
 
 #include "CoreMinimal.h"
 
@@ -47,8 +48,6 @@ struct FMapChangeBehavior
 template <typename T>
 struct FMapChangeBehavior<T*>
 {
-	static_assert(FDataReflectionTools::TIsPsData<T>::Value, "Pointer must be only UPsData");
-
 	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> AddAction, bool bDispacthChanged = true)
 	{
 		AddAction();

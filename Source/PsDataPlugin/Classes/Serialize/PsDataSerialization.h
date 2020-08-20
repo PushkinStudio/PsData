@@ -15,7 +15,16 @@ class UPsData;
  * FPsDataAllocator
  ***********************************/
 
-typedef std::function<UPsData*()> FPsDataAllocator;
+struct PSDATAPLUGIN_API FPsDataAllocator
+{
+	UClass* Class;
+	UPsData* Parent;
+
+	FPsDataAllocator(UClass* Class, UPsData* Parent);
+	FPsDataAllocator(UField* Field, UPsData* Parent);
+	FPsDataAllocator();
+	UPsData* operator()() const;
+};
 
 /***********************************
  * FPsDataSerializer

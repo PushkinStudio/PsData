@@ -101,7 +101,7 @@ void UPsDataNode_SetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 void UPsDataNode_SetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	Super::UpdatePin(PinType, Pin);
-	if (PinType == EPsDataVariablePinType::ReturnValue)
+	if (PinType == EPsDataVariablePinType::PropertyOut || PinType == EPsDataVariablePinType::OldPropertyOut)
 	{
 		Pin->PinFriendlyName = FText::FromString(TEXT(""));
 	}
@@ -115,7 +115,7 @@ UFunction* UPsDataNode_SetVariable::GetFunction() const
 		return nullptr;
 	}
 
-	return Field->Context->GetUFunctions()->SetFunction;
+	return Field->Context->GetUFunctions().ResolveSetFunction();
 }
 
 #undef LOCTEXT_NAMESPACE

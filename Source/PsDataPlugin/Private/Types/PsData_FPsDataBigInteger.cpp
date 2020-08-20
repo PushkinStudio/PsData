@@ -1,6 +1,6 @@
 // Copyright 2015-2020 Mail.Ru Group. All Rights Reserved.
 
-#include "Types/PsDataBigIntegerLibrary.h"
+#include "Types/PsData_FPsDataBigInteger.h"
 
 #define ZERO_DIVIDE_PROTECTION(Dividend, Divisor)                                                                                                                                   \
 	if (Divisor == 0)                                                                                                                                                               \
@@ -379,55 +379,104 @@ FPsDataBigInteger UPsDataBigIntegerLibrary::Or_Int64(FPsDataBigInteger A, int64 
 	return A | B;
 }
 
-//
-// PsData functions
-//
-
-FPsDataBigInteger UPsDataBigIntegerLibrary::GetBigIntegerProperty(UPsData* Target, int32 Crc32)
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetMapProperty)
 {
-	FPsDataBigInteger* Result = nullptr;
-	if (FDataReflectionTools::GetByHash(Target, Crc32, Result))
-	{
-		return *Result;
-	}
-
-	return FPsDataBigInteger::Zero;
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TMAP_REF(FString, FPsDataBigInteger, Value);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FDataReflectionTools::SetByHash<TMap<FString, FPsDataBigInteger>>(Target, Hash, Value);
+	P_NATIVE_END;
 }
 
-void UPsDataBigIntegerLibrary::SetBigIntegerProperty(UPsData* Target, int32 Crc32, FPsDataBigInteger Value)
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetMapProperty)
 {
-	FDataReflectionTools::SetByHash<FPsDataBigInteger>(Target, Crc32, Value);
-}
-
-const TArray<FPsDataBigInteger>& UPsDataBigIntegerLibrary::GetBigIntegerArrayProperty(UPsData* Target, int32 Crc32)
-{
-	TArray<FPsDataBigInteger>* Result = nullptr;
-	if (FDataReflectionTools::GetByHash(Target, Crc32, Result))
-	{
-		return *Result;
-	}
-
-	static const TArray<FPsDataBigInteger> Default = TArray<FPsDataBigInteger>();
-	return Default;
-}
-
-void UPsDataBigIntegerLibrary::SetBigIntegerArrayProperty(UPsData* Target, int32 Crc32, const TArray<FPsDataBigInteger>& Value)
-{
-	FDataReflectionTools::SetByHash<TArray<FPsDataBigInteger>>(Target, Crc32, Value);
-}
-
-const TMap<FString, FPsDataBigInteger>& UPsDataBigIntegerLibrary::GetBigIntegerMapProperty(UPsData* Target, int32 Crc32)
-{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TMAP_REF(FString, FPsDataBigInteger, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
 	TMap<FString, FPsDataBigInteger>* Result = nullptr;
-	if (FDataReflectionTools::GetByHash(Target, Crc32, Result))
-	{
-		return *Result;
-	}
-	static const TMap<FString, FPsDataBigInteger> Default = TMap<FString, FPsDataBigInteger>();
-	return Default;
+	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	Out = *Result;
+	P_NATIVE_END;
 }
 
-void UPsDataBigIntegerLibrary::SetBigIntegerMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FPsDataBigInteger>& Value)
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetArrayProperty)
 {
-	FDataReflectionTools::SetByHash<TMap<FString, FPsDataBigInteger>>(Target, Crc32, Value);
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TARRAY_REF(FPsDataBigInteger, Value);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FDataReflectionTools::SetByHash<TArray<FPsDataBigInteger>>(Target, Hash, Value);
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetArrayProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TARRAY_REF(FPsDataBigInteger, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<FPsDataBigInteger>* Result = nullptr;
+	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_STRUCT_REF(FPsDataBigInteger, Value);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FDataReflectionTools::SetByHash<FPsDataBigInteger>(Target, Hash, Value);
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_STRUCT_REF(FPsDataBigInteger, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FPsDataBigInteger* Result = nullptr;
+	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+void UPsDataBigIntegerLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FPsDataBigInteger& Value)
+{
+	Serializer->WriteValue(Value.ToString());
+}
+
+FPsDataBigInteger UPsDataBigIntegerLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FPsDataBigInteger& Value)
+{
+	FString StringValue;
+	if (Deserializer->ReadValue(StringValue))
+	{
+		auto a = FPsDataBigInteger(StringValue);
+		return a;
+	}
+
+	int64 Int64Value = 0;
+	if (Deserializer->ReadValue(Int64Value))
+	{
+		return Int64Value;
+	}
+
+	int32 Int32Value = 0;
+	if (Deserializer->ReadValue(Int32Value))
+	{
+		return Int32Value;
+	}
+
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FPsDataBigInteger>::Type());
+	return Value;
 }

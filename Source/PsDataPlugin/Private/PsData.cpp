@@ -8,6 +8,7 @@
 #include "Serialize/Stream/PsDataBufferInputStream.h"
 #include "Serialize/Stream/PsDataBufferOutputStream.h"
 #include "Serialize/Stream/PsDataMD5OutputStream.h"
+#include "Types/PsData_UPsData.h"
 
 #include "Async/Async.h"
 
@@ -101,6 +102,16 @@ void FPsDataFriend::InitProperties(UPsData* Data)
 TArray<TUniquePtr<FAbstractDataMemory>>& FPsDataFriend::GetMemory(UPsData* Data)
 {
 	return Data->Memory;
+}
+
+void FPsDataFriend::Serialize(const UPsData* Data, FPsDataSerializer* Serializer)
+{
+	Data->DataSerializeInternal(Serializer);
+}
+
+void FPsDataFriend::Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer)
+{
+	Data->DataDeserializeInternal(Deserializer);
 }
 } // namespace FDataReflectionTools
 
@@ -237,7 +248,7 @@ void UPsData::CalculateHash() const
 
 	auto OutputStream = MakeShared<FPsDataMD5OutputStream>();
 	HashBinarySerializer Serializer(OutputStream);
-	DataSerialize(&Serializer);
+	DataSerializeInternal(&Serializer);
 	Hash = OutputStream->GetHash();
 }
 
@@ -512,12 +523,7 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDelegate& Delegat
 
 void UPsData::DataSerialize(FPsDataSerializer* Serializer) const
 {
-	for (auto& Pair : FDataReflection::GetFields(this->GetClass()))
-	{
-		Serializer->WriteKey(Pair.Key);
-		Memory[Pair.Value->Index]->Serialize(this, Pair.Value, Serializer);
-		Serializer->PopKey(Pair.Key);
-	}
+	Serializer->WriteValue(this);
 }
 
 void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch)
@@ -527,6 +533,23 @@ void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch)
 		Reset();
 	}
 
+	auto This = this;
+	Deserializer->ReadValue(This, {});
+	check(This);
+}
+
+void UPsData::DataSerializeInternal(FPsDataSerializer* Serializer) const
+{
+	for (auto& Pair : FDataReflection::GetFields(this->GetClass()))
+	{
+		Serializer->WriteKey(Pair.Key);
+		Memory[Pair.Value->Index]->Serialize(this, Pair.Value, Serializer);
+		Serializer->PopKey(Pair.Key);
+	}
+}
+
+void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
+{
 	const auto& Fields = FDataReflection::GetFields(this->GetClass());
 	FString Key;
 	while (Deserializer->ReadKey(Key))

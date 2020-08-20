@@ -41,4 +41,7 @@ public:
 
 	/** Get function to call */
 	virtual UFunction* GetFunction() const override;
+
+	/** Node is link */
+	virtual bool IsLink() const override { return true; }
 };

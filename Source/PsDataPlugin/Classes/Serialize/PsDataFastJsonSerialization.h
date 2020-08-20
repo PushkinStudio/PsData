@@ -11,25 +11,26 @@
 class UPsData;
 
 /***********************************
- * FPsDataJsonSerializer
+ * FPsDataFastJsonSerializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataJsonSerializer : public FPsDataSerializer
+struct PSDATAPLUGIN_API FPsDataFastJsonSerializer : public FPsDataSerializer
 {
-private:
-	TSharedPtr<FJsonObject> RootJson;
-	TArray<TSharedPtr<FJsonValue>> Values;
-	TArray<FString> Keys;
-
 public:
-	FPsDataJsonSerializer(TSharedPtr<FJsonObject> InRootJson);
-	FPsDataJsonSerializer();
-	virtual ~FPsDataJsonSerializer(){};
+	FPsDataFastJsonSerializer(bool bPretty = false);
+	virtual ~FPsDataFastJsonSerializer(){};
 
-	TSharedPtr<FJsonObject> GetJson();
+	FString JsonString;
 
 private:
-	void WriteJsonValue(TSharedPtr<FJsonValue> Value);
+	bool bPretty;
+	int32 Depth;
+
+	TSet<int32> CommaHelper;
+
+	void AppendComma();
+	void AppendSpace();
+	void AppendValueSpace();
 
 public:
 	virtual void WriteKey(const FString& Key) override;
@@ -49,36 +50,64 @@ public:
 	virtual void PopObject() override;
 };
 
+UENUM()
+enum class EPsDataFastJsonToken : uint8
+{
+	Key = 1,
+	Value = 2,
+	OpenObject = 3,
+	CloseObject = 4,
+	OpenArray = 5,
+	CloseArray = 6,
+	Comma = 7,
+};
+
 /***********************************
- * FPsDataJsonDeserializer
+ * FPsDataFastJsonLink
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataJsonDeserializer : public FPsDataDeserializer
+struct FPsDataFastJsonPointer
 {
-private:
-	TSharedPtr<FJsonObject> RootJson;
-	TSharedPtr<FJsonValueObject> RootValue;
-	TArray<TSharedPtr<FJsonValue>> Values;
-	TMap<TSharedPtr<FJsonValue>, TMap<FString, TSharedPtr<FJsonValue>>::TIterator> KeysIterator;
-	TMap<TSharedPtr<FJsonValue>, TArray<TSharedPtr<FJsonValue>>::TIterator> IndicesIterator;
-
-#if WITH_EDITORONLY_DATA
-	TSet<TSharedPtr<FJsonValue>> Used;
-#endif
-
 public:
-	FPsDataJsonDeserializer(TSharedPtr<FJsonObject> InJson);
-	virtual ~FPsDataJsonDeserializer(){};
+	FPsDataFastJsonPointer(EPsDataFastJsonToken Token, int32 StartPosition, int32 EndPosition, int32 Depth);
+	const FString& GetString(const TCHAR* Source);
+	void Reset();
 
-	TSharedPtr<FJsonObject>& GetJson();
+	EPsDataFastJsonToken Token;
+	int32 Depth;
 
 private:
-	TSharedPtr<FJsonValue> ReadJsonValue() const;
+	int32 StartPosition;
+	int32 EndPosition;
+
+	FString String;
+	bool bHasString;
+};
+
+/***********************************
+ * FPsDataFastJsonDeserializer
+ ***********************************/
+
+struct PSDATAPLUGIN_API FPsDataFastJsonDeserializer : public FPsDataDeserializer
+{
+public:
+	FPsDataFastJsonDeserializer(const FString& InJsonString);
+	virtual ~FPsDataFastJsonDeserializer(){};
+
+private:
+	const TCHAR* Source;
+	int32 Size;
+	TArray<FPsDataFastJsonPointer> Pointers;
+	int32 PointerIndex;
+	TArray<int32> DepthStack;
+
+	void Parse();
+	void SkipComma();
 
 public:
 	virtual bool ReadKey(FString& OutKey) override;
-	virtual bool ReadIndex() override;
 	virtual bool ReadArray() override;
+	virtual bool ReadIndex() override;
 	virtual bool ReadObject() override;
 	virtual bool ReadValue(int32& OutValue) override;
 	virtual bool ReadValue(int64& OutValue) override;

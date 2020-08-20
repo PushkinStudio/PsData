@@ -8,32 +8,34 @@
  * FJsonDataSerializer
  ***********************************/
 
-FPsDataJsonSerializer::FPsDataJsonSerializer(TSharedPtr<FJsonObject> InJson)
-	: RootJson(InJson)
+FPsDataJsonSerializer::FPsDataJsonSerializer(TSharedPtr<FJsonObject> InRootJson)
+	: RootJson(InRootJson)
 {
-	check(InJson.IsValid());
-	InJson->Values.Empty();
+	RootJson->Values.Empty();
 
 	Values.Reserve(10);
-	Values.Add(MakeShareable(new FJsonValueObject(InJson)));
 	Keys.Reserve(10);
 }
 
 FPsDataJsonSerializer::FPsDataJsonSerializer()
-	: FPsDataJsonSerializer(TSharedPtr<FJsonObject>(new FJsonObject()))
+	: FPsDataJsonSerializer(MakeShared<FJsonObject>())
 {
 }
 
-TSharedPtr<FJsonObject>& FPsDataJsonSerializer::GetJson()
+TSharedPtr<FJsonObject> FPsDataJsonSerializer::GetJson()
 {
-	check(Values.Num() == 1);
-	check(Keys.Num() == 0);
 	return RootJson;
 }
 
 void FPsDataJsonSerializer::WriteJsonValue(TSharedPtr<FJsonValue> Value)
 {
-	check(Values.Num() > 0);
+	if (Values.Num() == 0)
+	{
+		check(Value->Type == EJson::Object);
+		Values.Add(MakeShareable(new FJsonValueObject(RootJson)));
+		return;
+	}
+
 	TSharedPtr<FJsonValue> Parent = Values.Last();
 	if (Parent->Type == EJson::Array)
 	{
@@ -114,7 +116,7 @@ void FPsDataJsonSerializer::WriteValue(const UPsData* Value)
 	else
 	{
 		WriteObject();
-		Value->DataSerialize(this);
+		FDataReflectionTools::FPsDataFriend::Serialize(Value, this);
 		PopObject();
 	}
 }
@@ -145,12 +147,13 @@ void FPsDataJsonSerializer::PopObject()
 FPsDataJsonDeserializer::FPsDataJsonDeserializer(TSharedPtr<FJsonObject> InJson)
 	: FPsDataDeserializer()
 	, RootJson(InJson)
+	, RootValue(MakeShareable(new FJsonValueObject(InJson)))
 {
 	check(InJson.IsValid());
 
 	Values.Reserve(10);
-	Values.Add(MakeShareable(new FJsonValueObject(InJson)));
 	KeysIterator.Reserve(10);
+	IndicesIterator.Reserve(10);
 
 #if WITH_EDITORONLY_DATA
 	Used.Reserve(100);
@@ -163,9 +166,13 @@ TSharedPtr<FJsonObject>& FPsDataJsonDeserializer::GetJson()
 	return RootJson;
 }
 
-TSharedPtr<FJsonValue> FPsDataJsonDeserializer::ReadJsonValue()
+TSharedPtr<FJsonValue> FPsDataJsonDeserializer::ReadJsonValue() const
 {
-	check(Values.Num() > 0);
+	if (Values.Num() == 0)
+	{
+		return RootValue;
+	}
+
 	TSharedPtr<FJsonValue> Parent = Values.Last();
 	TSharedPtr<FJsonValue> Value;
 	if (Parent->Type == EJson::Array)
@@ -178,6 +185,7 @@ TSharedPtr<FJsonValue> FPsDataJsonDeserializer::ReadJsonValue()
 		auto& Iterator = KeysIterator.FindChecked(Parent);
 		Value = Iterator.Value();
 	}
+
 	check(Value.IsValid());
 	return Value;
 }
@@ -264,6 +272,7 @@ bool FPsDataJsonDeserializer::ReadObject()
 		Values.Add(Value);
 		return true;
 	}
+
 	return false;
 }
 
@@ -319,15 +328,17 @@ bool FPsDataJsonDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator All
 		OutValue = nullptr;
 		return true;
 	}
-	if (Value->Type == EJson::Object)
+	else if (ReadObject())
 	{
 		if (OutValue == nullptr)
 		{
 			OutValue = Allocator();
 		}
-		ReadObject();
-		OutValue->DataDeserialize(this);
+
+		FDataReflectionTools::FPsDataFriend::Deserialize(OutValue, this);
+
 		PopObject();
+
 		return true;
 	}
 	return false;

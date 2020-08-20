@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "PsDataEvent.generated.h"
 
@@ -32,6 +33,8 @@ public:
 
 private:
 	friend class UPsData;
+	friend class UPsDataEventFunctionLibrary;
+	friend struct FCustomThunkTemplates_PsDataEvent;
 
 protected:
 	UPROPERTY()
@@ -53,10 +56,10 @@ public:
 	/* Const target for c++ */
 	const UPsData* GetTarget() const;
 
-	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
+	UFUNCTION(BlueprintPure, Category = "PsData|Event")
 	const FString& GetType() const;
 
-	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
+	UFUNCTION(BlueprintPure, Category = "PsData|Event")
 	bool IsBubbles() const;
 
 	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
@@ -64,9 +67,26 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
 	void StopPropagation();
+};
 
-protected:
-	/* Mutable target for blueprint */
-	UFUNCTION(BlueprintCallable, Category = "PsData|Event", meta = (DisplayName = "Get Target"))
-	UPsData* GetTarget_Mutable() const;
+UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsDataEvent"))
+class PSDATAPLUGIN_API UPsDataEventFunctionLibrary : public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+
+public:
+	/***********************************
+	 * Event
+	 ***********************************/
+
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Event", meta = (DisplayName = "Get Target"))
+	static void GetEventTarget(UPsDataEvent* Event, UPsData*& Target);
+
+	DECLARE_FUNCTION(execGetEventTarget);
+};
+
+struct PSDATAPLUGIN_API FCustomThunkTemplates_PsDataEvent
+{
+public:
+	static void GetEventTarget(UPsDataEvent* Event, UPsData*& Target);
 };

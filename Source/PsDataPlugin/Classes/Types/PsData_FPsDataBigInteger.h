@@ -2,15 +2,17 @@
 
 #pragma once
 
-#include "PsDataAPI.h"
+#include "PsDataCore.h"
+
+#include "PsDataCustomThunk.h"
 #include "Types/PsDataBigInteger.h"
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 
-#include "PsDataBigIntegerLibrary.generated.h"
+#include "PsData_FPsDataBigInteger.generated.h"
 
-UCLASS()
+UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsData"))
 class PSDATAPLUGIN_API UPsDataBigIntegerLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
@@ -284,107 +286,64 @@ public:
 	//
 
 	/** Get FPsDataBigInteger property */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static FPsDataBigInteger GetBigIntegerProperty(UPsData* Target, int32 Crc32);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
+	static void GetProperty(UPsData* Target, int32 Crc32, FPsDataBigInteger& Out);
 
 	/** Set FPsDataBigInteger property */
-	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	static void SetBigIntegerProperty(UPsData* Target, int32 Crc32, FPsDataBigInteger Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
+	static void SetProperty(UPsData* Target, int32 Crc32, const FPsDataBigInteger& Value);
 
 	/** Get FPsDataBigInteger array property */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static const TArray<FPsDataBigInteger>& GetBigIntegerArrayProperty(UPsData* Target, int32 Crc32);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
+	static void GetArrayProperty(UPsData* Target, int32 Crc32, TArray<FPsDataBigInteger>& Out);
 
 	/** Set FPsDataBigInteger array property */
-	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	static void SetBigIntegerArrayProperty(UPsData* Target, int32 Crc32, const TArray<FPsDataBigInteger>& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
+	static void SetArrayProperty(UPsData* Target, int32 Crc32, const TArray<FPsDataBigInteger>& Value);
 
 	/** Get FPsDataBigInteger map property */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static const TMap<FString, FPsDataBigInteger>& GetBigIntegerMapProperty(UPsData* Target, int32 Crc32);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
+	static void GetMapProperty(UPsData* Target, int32 Crc32, TMap<FString, FPsDataBigInteger>& Out);
 
 	/** Set FPsDataBigInteger map property */
-	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	static void SetBigIntegerMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FPsDataBigInteger>& Value);
-};
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
+	static void SetMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FPsDataBigInteger>& Value);
 
-//
-// PsData context
-//
+	DECLARE_FUNCTION(execGetProperty);
+	DECLARE_FUNCTION(execSetProperty);
+	DECLARE_FUNCTION(execGetArrayProperty);
+	DECLARE_FUNCTION(execSetArrayProperty);
+	DECLARE_FUNCTION(execGetMapProperty);
+	DECLARE_FUNCTION(execSetMapProperty);
 
-template <>
-struct FDataTypeContext<FPsDataBigInteger> : public FAbstractDataTypeContext
-{
-	_DFUNC(UPsDataBigIntegerLibrary, FPsDataBigInteger, BigInteger);
-};
-
-template <>
-struct FDataTypeContext<TArray<FPsDataBigInteger>> : public FAbstractDataTypeContext
-{
-	virtual bool IsArray() const override
-	{
-		return true;
-	}
-
-	_DFUNC(UPsDataBigIntegerLibrary, TArray<FPsDataBigInteger>, BigIntegerArray);
+	static void TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FPsDataBigInteger& Value);
+	static FPsDataBigInteger TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FPsDataBigInteger& Value);
 };
 
 template <>
-struct FDataTypeContext<TMap<FString, FPsDataBigInteger>> : public FAbstractDataTypeContext
+struct FDataTypeContext<FPsDataBigInteger> : public FDataTypeContextExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
-	virtual bool IsMap() const override
-	{
-		return true;
-	}
-
-	_DFUNC(UPsDataBigIntegerLibrary, TMap<FString COMMA FPsDataBigInteger>, BigIntegerMap);
 };
 
-//
-// PsData Serialize/Deserialize
-//
+template <>
+struct FDataTypeContext<TArray<FPsDataBigInteger>> : public FDataTypeContextExtended<TArray<FPsDataBigInteger>, UPsDataBigIntegerLibrary>
+{
+};
+
+template <>
+struct FDataTypeContext<TMap<FString, FPsDataBigInteger>> : public FDataTypeContextExtended<TMap<FString, FPsDataBigInteger>, UPsDataBigIntegerLibrary>
+{
+};
 
 namespace FDataReflectionTools
 {
 template <>
-struct FTypeSerializer<FPsDataBigInteger>
+struct FTypeSerializer<FPsDataBigInteger> : public FTypeSerializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
-	static void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FPsDataBigInteger& Value)
-	{
-		Serializer->WriteValue(Value.ToString());
-	}
 };
 
 template <>
-struct FTypeDeserializer<FPsDataBigInteger>
+struct FTypeDeserializer<FPsDataBigInteger> : public FTypeDeserializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
-	static FPsDataBigInteger Deserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer)
-	{
-		FString StringValue;
-		int64 Int64Value = 0;
-		int32 Int32Value = 0;
-		if (Deserializer->ReadValue(StringValue))
-		{
-			return FPsDataBigInteger(StringValue);
-		}
-		else if (Deserializer->ReadValue(Int64Value))
-		{
-			return FPsDataBigInteger(Int64Value);
-		}
-		else if (Deserializer->ReadValue(Int32Value))
-		{
-			return FPsDataBigInteger(Int32Value);
-		}
-		else
-		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FPsDataBigInteger>::Type());
-		}
-		return FPsDataBigInteger(0);
-	}
-
-	static FPsDataBigInteger Deserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FPsDataBigInteger& Value)
-	{
-		return Deserialize(Instance, Field, Deserializer);
-	}
 };
 } // namespace FDataReflectionTools

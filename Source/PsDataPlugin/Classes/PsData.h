@@ -38,7 +38,7 @@ struct PSDATAPLUGIN_API FAbstractDataMemory
 	FAbstractDataMemory() {}
 	virtual ~FAbstractDataMemory() {}
 
-	virtual void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) = 0;
+	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) = 0;
 	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) = 0;
 	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) = 0;
 	virtual void Changed() = 0;
@@ -58,6 +58,8 @@ struct PSDATAPLUGIN_API FPsDataFriend
 	static void Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field);
 	static void InitProperties(UPsData* Data);
 	static TArray<TUniquePtr<FAbstractDataMemory>>& GetMemory(UPsData* Data);
+	static void Serialize(const UPsData* Data, FPsDataSerializer* Serializer);
+	static void Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer);
 };
 } // namespace FDataReflectionTools
 
@@ -156,33 +158,6 @@ struct PSDATAPLUGIN_API FPsDataReport
 };
 
 /***********************************
- * PsData check
- ***********************************/
-
-namespace FDataReflectionTools
-{
-template <typename T>
-struct TIsPsData
-{
-private:
-	static constexpr bool IsPsData(UPsData* Object) { return true; }
-
-public:
-	static constexpr bool Value = IsPsData((T*)nullptr);
-};
-
-template <typename T>
-struct TIsPsData<T*>
-{
-private:
-	static constexpr bool IsPsData(UPsData* Object) { return true; }
-
-public:
-	static constexpr bool Value = IsPsData((T*)nullptr);
-};
-} // namespace FDataReflectionTools
-
-/***********************************
 * PSDATA!
 ***********************************/
 
@@ -275,7 +250,7 @@ protected:
 	/** Bind */
 	void Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const;
 
-protected:
+public:
 	/** Blueprint bind */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData|Data"))
 	void BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate);
@@ -318,6 +293,13 @@ public:
 
 	/** Deserialize */
 	void DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch = false);
+
+private:
+	/** Serialize */
+	void DataSerializeInternal(FPsDataSerializer* Serializer) const;
+
+	/** Deserialize */
+	void DataDeserializeInternal(FPsDataDeserializer* Deserializer);
 
 public:
 	/***********************************

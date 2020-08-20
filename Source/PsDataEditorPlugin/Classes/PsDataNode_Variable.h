@@ -13,9 +13,10 @@
 enum class EPsDataVariablePinType : uint8
 {
 	Target,
-	PropertyHash,
-	Value,
-	ReturnValue,
+	Hash,
+	PropertyIn,
+	OldPropertyOut,
+	PropertyOut,
 	Unknown
 };
 
@@ -24,6 +25,17 @@ class PSDATAEDITORPLUGIN_API UPsDataNode_Variable : public UK2Node_CallFunction
 {
 	GENERATED_UCLASS_BODY()
 
+protected:
+	static const FName MD_PsDataTarget;
+	static const FName MD_PsDataHash;
+	static const FName MD_PsDataOut;
+	static const FName MD_PsDataIn;
+
+	static const FName Default_TargetParam;
+	static const FName Default_HashParam;
+	static const FName Default_OutParam;
+	static const FName Default_InParam;
+
 public:
 	UPROPERTY()
 	UClass* TargetClass;
@@ -31,9 +43,9 @@ public:
 	UPROPERTY()
 	FString PropertyName;
 
-public:
 	// Begin UEdGraphNode interface.
 	virtual void AllocateDefaultPins() override;
+	virtual UK2Node::ERedirectType DoPinsMatchForReconstruction(const UEdGraphPin* NewPin, int32 NewPinIndex, const UEdGraphPin* OldPin, int32 OldPinIndex) const override;
 	virtual FText GetMenuCategory() const override;
 	virtual FLinearColor GetNodeTitleColor() const override;
 	virtual FSlateIcon GetIconAndTint(FLinearColor& OutColor) const override;
@@ -56,4 +68,7 @@ public:
 
 	/** Update function reference */
 	void UpdateFunctionReference();
+
+	/** Node is link */
+	virtual bool IsLink() const { return false; }
 };

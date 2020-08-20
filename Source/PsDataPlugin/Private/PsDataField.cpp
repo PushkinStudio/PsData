@@ -45,12 +45,51 @@ FDataLinkMeta::FDataLinkMeta()
  * FDataFieldFunctions
  ***********************************/
 
-FDataFieldFunctions::FDataFieldFunctions(UFunction* InGetFunction, UFunction* InSetFunction)
-	: GetFunction(InGetFunction)
-	, SetFunction(InSetFunction)
+FDataFieldFunctions::FDataFieldFunctions(UClass* InClass, FName InGetFunctionName, FName InSetFunctionName)
+	: Class(InClass)
+	, GetFunctionName(InGetFunctionName)
+	, SetFunctionName(InSetFunctionName)
 {
-	check(InGetFunction);
-	check(InSetFunction);
+}
+
+FDataFieldFunctions::FDataFieldFunctions(UClass* InClass, EDataFieldType FieldType)
+	: Class(InClass)
+{
+	switch (FieldType)
+	{
+	case EDataFieldType::VALUE:
+	{
+		GetFunctionName = "GetProperty";
+		SetFunctionName = "SetProperty";
+	}
+	break;
+	case EDataFieldType::ARRAY:
+	{
+		GetFunctionName = "GetArrayProperty";
+		SetFunctionName = "SetArrayProperty";
+	}
+	break;
+	case EDataFieldType::MAP:
+	{
+		GetFunctionName = "GetMapProperty";
+		SetFunctionName = "SetMapProperty";
+	}
+	break;
+	}
+}
+
+UFunction* FDataFieldFunctions::ResolveGetFunction() const
+{
+	auto Result = Class->FindFunctionByName(GetFunctionName);
+	check(Result);
+	return Result;
+}
+
+UFunction* FDataFieldFunctions::ResolveSetFunction() const
+{
+	auto Result = Class->FindFunctionByName(SetFunctionName);
+	check(Result);
+	return Result;
 }
 
 /***********************************

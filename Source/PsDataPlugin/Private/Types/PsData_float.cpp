@@ -1,0 +1,92 @@
+// Copyright 2015-2020 Mail.Ru Group. All Rights Reserved.
+
+#include "Types/PsData_float.h"
+
+DEFINE_FUNCTION(UPsDataFloatLibrary::execSetMapProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TMAP_REF(FString, float, Value);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FDataReflectionTools::SetByHash<TMap<FString, float>>(Target, Hash, Value);
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFloatLibrary::execGetMapProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TMAP_REF(FString, float, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TMap<FString, float>* Result = nullptr;
+	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFloatLibrary::execSetArrayProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TARRAY_REF(float, Value);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FDataReflectionTools::SetByHash<TArray<float>>(Target, Hash, Value);
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFloatLibrary::execGetArrayProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_TARRAY_REF(float, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<float>* Result = nullptr;
+	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFloatLibrary::execSetProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FFloatProperty, Value);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FDataReflectionTools::SetByHash<float>(Target, Hash, Value);
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFloatLibrary::execGetProperty)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY_REF(FFloatProperty, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	float* Result = nullptr;
+	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+void UPsDataFloatLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const float& Value)
+{
+	Serializer->WriteValue(Value);
+}
+
+float UPsDataFloatLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const float& Value)
+{
+	float Result = Value;
+	if (Deserializer->ReadValue(Result))
+	{
+		return Result;
+	}
+
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<float>::Type());
+	return Value;
+}

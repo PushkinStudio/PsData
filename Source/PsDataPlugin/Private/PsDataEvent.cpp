@@ -58,7 +58,21 @@ void UPsDataEvent::StopPropagation()
 	bStop = true;
 }
 
-UPsData* UPsDataEvent::GetTarget_Mutable() const
+/***********************************
+ * Event
+ ***********************************/
+
+DEFINE_FUNCTION(UPsDataEventFunctionLibrary::execGetEventTarget)
 {
-	return Target;
+	P_GET_OBJECT(UPsDataEvent, Event);
+	P_GET_OBJECT_REF(UPsData, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	Out = Event->Target;
+	P_NATIVE_END;
+}
+
+void FCustomThunkTemplates_PsDataEvent::GetEventTarget(UPsDataEvent* Event, UPsData*& Target)
+{
+	Target = Event->Target;
 }

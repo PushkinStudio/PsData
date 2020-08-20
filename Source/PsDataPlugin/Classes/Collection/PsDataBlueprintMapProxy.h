@@ -4,6 +4,7 @@
 
 #include "PsData.h"
 #include "PsDataMapProxy.h"
+#include "Types/PsData_UPsData.h"
 
 #include "CoreMinimal.h"
 
@@ -40,7 +41,6 @@ public:
 	/** Get const proxy */
 	FPsDataConstMapProxy<UPsData*> GetProxy();
 
-protected:
 	/** Blueprint bind */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData|Collection"))
 	void BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate);
@@ -49,6 +49,7 @@ protected:
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Unbind", Category = "PsData|Collection"))
 	void BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate& Delegate);
 
+protected:
 	/** Blueprint get ref */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Map", Category = "PsData|Collection"))
 	const TMap<FString, UPsData*>& GetRef();

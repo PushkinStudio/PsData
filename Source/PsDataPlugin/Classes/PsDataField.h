@@ -56,11 +56,24 @@ struct FDataLinkMeta
  * FDataFieldFunctions
  ***********************************/
 
+enum class EDataFieldType : uint8
+{
+	VALUE = 0,
+	ARRAY = 1,
+	MAP = 2
+};
+
 struct PSDATAPLUGIN_API FDataFieldFunctions
 {
-	UFunction* GetFunction;
-	UFunction* SetFunction;
-	FDataFieldFunctions(UFunction* InGetFunction, UFunction* InSetFunction);
+	UClass* Class;
+	FName GetFunctionName;
+	FName SetFunctionName;
+
+	FDataFieldFunctions(UClass* Class, FName GetFunctionName, FName SetFunctionName);
+	FDataFieldFunctions(UClass* Class, EDataFieldType FieldType);
+
+	UFunction* ResolveGetFunction() const;
+	UFunction* ResolveSetFunction() const;
 };
 
 /***********************************
@@ -72,7 +85,7 @@ struct PSDATAPLUGIN_API FAbstractDataTypeContext
 	virtual const FString& GetCppType() const = 0;
 	virtual const FString& GetCppContentType() const = 0;
 	virtual uint32 GetHash() const = 0;
-	virtual TSharedPtr<const FDataFieldFunctions> GetUFunctions() const = 0;
+	virtual FDataFieldFunctions GetUFunctions() const = 0;
 	virtual FAbstractDataMemory* AllocateMemory() const = 0;
 	virtual UField* GetUE4Type() const;
 

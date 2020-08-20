@@ -81,7 +81,7 @@ void UPsDataNode_GetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 void UPsDataNode_GetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	Super::UpdatePin(PinType, Pin);
-	if (PinType == EPsDataVariablePinType::ReturnValue)
+	if (PinType == EPsDataVariablePinType::PropertyOut || PinType == EPsDataVariablePinType::OldPropertyOut)
 	{
 		Pin->PinFriendlyName = FText::FromString(PropertyName);
 	}
@@ -95,5 +95,5 @@ UFunction* UPsDataNode_GetVariable::GetFunction() const
 		return nullptr;
 	}
 
-	return Field->Context->GetUFunctions()->GetFunction;
+	return Field->Context->GetUFunctions().ResolveGetFunction();
 }
