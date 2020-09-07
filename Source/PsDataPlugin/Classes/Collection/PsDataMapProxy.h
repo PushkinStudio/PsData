@@ -97,7 +97,7 @@ private:
 	{
 		check(IsValid());
 		TMap<FString, T>* Output = nullptr;
-		FDataReflectionTools::GetByField(*Instance, Field, Output);
+		FDataReflectionTools::GetByField(Instance.Get(), Field, Output);
 		check(Output);
 		return *Output;
 	}

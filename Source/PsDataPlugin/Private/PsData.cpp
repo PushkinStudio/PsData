@@ -35,7 +35,7 @@ void FPsDataFriend::ChangeDataName(UPsData* Data, const FString& Name, const FSt
 
 void FPsDataFriend::AddChild(UPsData* Parent, UPsData* Data)
 {
-	if (Data->Parent != nullptr)
+	if (Data->Parent.IsValid())
 	{
 		UE_LOG(LogData, Fatal, TEXT("Child already added"));
 		return;
@@ -63,7 +63,7 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 	}
 
 	Parent->Children.Remove(Data);
-	Data->Parent = nullptr;
+	Data->Parent.Reset();
 }
 
 void FPsDataFriend::Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field)
@@ -202,6 +202,7 @@ UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 void UPsData::PostInitProperties()
 {
 	Super::PostInitProperties();
+
 	FDataReflection::RemoveFromQueue(this);
 	FDataReflection::Fill(this);
 }
@@ -209,7 +210,7 @@ void UPsData::PostInitProperties()
 void UPsData::DropHash()
 {
 	Hash.Reset();
-	if (Parent)
+	if (Parent.IsValid())
 	{
 		Parent->DropHash();
 	}
@@ -278,7 +279,7 @@ bool UPsData::IsBound(const FString& Type, bool bBubbles) const
 		}
 	}
 
-	if (bBubbles && Parent)
+	if (bBubbles && Parent.IsValid())
 	{
 		return Parent->IsBound(Type, bBubbles);
 	}
@@ -439,7 +440,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 		}
 	}
 
-	if (!Event->bStop && Event->bBubbles && Parent)
+	if (!Event->bStop && Event->bBubbles && Parent.IsValid())
 	{
 		Parent->BroadcastInternal(Event, this);
 	}
@@ -588,15 +589,15 @@ const FString& UPsData::GetCollectionKey() const
 
 UPsData* UPsData::GetParent() const
 {
-	return Parent;
+	return Parent.Get();
 }
 
 UPsData* UPsData::GetRoot() const
 {
 	UPsData* Root = const_cast<UPsData*>(this);
-	while (Root->Parent != nullptr)
+	while (Root->Parent.IsValid())
 	{
-		Root = Root->Parent;
+		Root = Root->Parent.Get();
 	}
 	return Root;
 }

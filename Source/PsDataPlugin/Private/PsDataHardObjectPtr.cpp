@@ -38,21 +38,18 @@ void UPsDataHardObjectPtrSingleton::RetainObject(const UObject* Object)
 {
 	if (Object != nullptr)
 	{
+		check(!Object->IsPendingKill() && !Object->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed));
 		auto& ObjectCounters = Get()->ObjectCounters;
-		if (!ObjectCounters.Contains(Object))
-		{
-			ObjectCounters.Add(Object, 0);
-		}
+		auto& Count = ObjectCounters.FindOrAdd(Object, 0);
 
-		auto& Count = ObjectCounters.FindChecked(Object);
 		check(Count >= 0);
-		Count++;
+		++Count;
 	}
 }
 
 void UPsDataHardObjectPtrSingleton::ReleaseObject(const UObject* Object)
 {
-	if (GExitPurge || IsIncrementalPurgePending())
+	if (GExitPurge)
 	{
 		return;
 	}
@@ -60,12 +57,28 @@ void UPsDataHardObjectPtrSingleton::ReleaseObject(const UObject* Object)
 	if (Object != nullptr)
 	{
 		auto& ObjectCounters = Get()->ObjectCounters;
-		auto& Count = ObjectCounters.FindChecked(Object);
-		check(Count > 0);
-		--Count;
-		if (Count == 0)
+
+		if (Object->IsPendingKill() || Object->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
 		{
-			ObjectCounters.Remove(Object);
+			for (auto It = ObjectCounters.CreateIterator(); It; ++It)
+			{
+				if (It->Key == nullptr)
+				{
+					It.RemoveCurrent();
+				}
+			}
+		}
+		else
+		{
+			auto& Count = ObjectCounters.FindChecked(Object);
+
+			check(Count > 0);
+			--Count;
+
+			if (Count == 0)
+			{
+				ObjectCounters.Remove(Object);
+			}
 		}
 	}
 }

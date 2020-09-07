@@ -11,7 +11,7 @@
 
 #include "PsData_UPsData.generated.h"
 
-UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsData"))
+UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsDataPtr"))
 class PSDATAPLUGIN_API UPsDataUPsDataLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()

@@ -180,7 +180,7 @@ private:
 
 	/** Parent */
 	UPROPERTY()
-	UPsData* Parent;
+	TWeakObjectPtr<UPsData> Parent;
 
 	/** Children */
 	UPROPERTY()
