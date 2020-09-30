@@ -3,7 +3,8 @@
 #include "PsData.h"
 
 #include "PsDataCore.h"
-#include "PsDataMemory.h"
+#include "PsDataProperty.h"
+#include "PsDataRoot.h"
 #include "Serialize/PsDataBinarySerialization.h"
 #include "Serialize/Stream/PsDataBufferInputStream.h"
 #include "Serialize/Stream/PsDataBufferOutputStream.h"
@@ -43,6 +44,7 @@ void FPsDataFriend::AddChild(UPsData* Parent, UPsData* Data)
 
 	Data->Parent = Parent;
 	Parent->Children.Add(Data);
+
 	if (Data->IsBound(UPsDataEvent::Added, true))
 	{
 		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
@@ -68,7 +70,6 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 
 void FPsDataFriend::Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field)
 {
-	Data->Memory[Field->Index]->Changed();
 	Data->DropHash();
 
 	if (Field->Meta.bEvent && Data->IsBound(Field->GetChangedEventName(), Field->Meta.bBubbles))
@@ -99,9 +100,9 @@ void FPsDataFriend::InitProperties(UPsData* Data)
 	Data->PostDeserialize();
 }
 
-TArray<TUniquePtr<FAbstractDataMemory>>& FPsDataFriend::GetMemory(UPsData* Data)
+TArray<FAbstractDataProperty*>& FPsDataFriend::GetProperties(UPsData* Data)
 {
-	return Data->Memory;
+	return Data->Properties;
 }
 
 void FPsDataFriend::Serialize(const UPsData* Data, FPsDataSerializer* Serializer)
@@ -196,14 +197,14 @@ UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 	, BroadcastInProgress(0)
 	, bChanged(false)
 {
-	FDataReflection::AddToQueue(this);
+	FDataReflection::PreConstruct(this);
 }
 
 void UPsData::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	FDataReflection::RemoveFromQueue(this);
+	FDataReflection::PostConstruct(this);
 	FDataReflection::Fill(this);
 }
 
@@ -298,13 +299,13 @@ void UPsData::Broadcast(UPsDataEvent* Event) const
 			Event->RemoveFromRoot();
 			if (WeakPtr.IsValid())
 			{
-				WeakPtr->BroadcastInternal(Event);
+				WeakPtr->BroadcastInternal(Event, nullptr);
 			}
 		});
 	}
 	else
 	{
-		BroadcastInternal(Event);
+		BroadcastInternal(Event, nullptr);
 	}
 }
 
@@ -440,9 +441,12 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 		}
 	}
 
-	if (!Event->bStop && Event->bBubbles && Parent.IsValid())
+	if (!Event->bStop && Event->bBubbles)
 	{
-		Parent->BroadcastInternal(Event, this);
+		if (Parent.IsValid())
+		{
+			Parent->BroadcastInternal(Event, this);
+		}
 	}
 
 	--BroadcastInProgress;
@@ -541,24 +545,24 @@ void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch)
 
 void UPsData::DataSerializeInternal(FPsDataSerializer* Serializer) const
 {
-	for (auto& Pair : FDataReflection::GetFields(this->GetClass()))
+	for (auto& Pair : FDataReflection::GetAliasFields(this->GetClass()))
 	{
 		Serializer->WriteKey(Pair.Key);
-		Memory[Pair.Value->Index]->Serialize(this, Pair.Value, Serializer);
+		Properties[Pair.Value->Index]->Serialize(this, Serializer);
 		Serializer->PopKey(Pair.Key);
 	}
 }
 
 void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
 {
-	const auto& Fields = FDataReflection::GetFields(this->GetClass());
+	const auto& Fields = FDataReflection::GetAliasFields(this->GetClass());
 	FString Key;
 	while (Deserializer->ReadKey(Key))
 	{
 		if (auto Find = Fields.Find(Key))
 		{
 			auto& Field = *Find;
-			Memory[Field->Index]->Deserialize(this, Field, Deserializer);
+			Properties[Field->Index]->Deserialize(this, Deserializer);
 		}
 		else
 		{
@@ -592,14 +596,25 @@ UPsData* UPsData::GetParent() const
 	return Parent.Get();
 }
 
-UPsData* UPsData::GetRoot() const
+UPsDataRoot* UPsData::GetRoot() const
 {
 	UPsData* Root = const_cast<UPsData*>(this);
-	while (Root->Parent.IsValid())
+	while (Root)
 	{
+		if (Root->IsA(UPsDataRoot::StaticClass()))
+		{
+			return static_cast<UPsDataRoot*>(Root);
+		}
+
 		Root = Root->Parent.Get();
 	}
-	return Root;
+
+	return nullptr;
+}
+
+bool UPsData::HasRoot() const
+{
+	return GetRoot() != nullptr;
 }
 
 FString UPsData::GetHash() const
@@ -654,7 +669,7 @@ void UPsData::Reset()
 	for (const auto& Pair : FDataReflection::GetFields(GetClass()))
 	{
 		const auto& Field = Pair.Value;
-		Memory[Field->Index]->Reset(this, Field);
+		Properties[Field->Index]->Reset(this);
 	}
 
 	InitProperties();

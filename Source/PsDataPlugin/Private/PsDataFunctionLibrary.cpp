@@ -6,6 +6,7 @@
 #include "Collection/PsDataBlueprintMapProxy.h"
 #include "PsData.h"
 #include "PsDataCore.h"
+#include "PsDataRoot.h"
 #include "Types/PsData_FName.h"
 #include "Types/PsData_FString.h"
 #include "Types/PsData_UPsData.h"
@@ -145,9 +146,12 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 	TArray<FString> Keys;
 	GetLinkKeys(ConstTarget, Link, Keys);
 
+	auto RootData = Target->GetRoot();
+	check(RootData);
+
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(Target->GetRoot(), LinkPath, MapPtr))
+	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(RootData, LinkPath, MapPtr))
 	{
 		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *LinkPath, *Target->GetClass()->GetName())
 	}
@@ -177,9 +181,12 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 	TArray<FString> Keys;
 	GetLinkKeys(ConstTarget, Link, Keys);
 
+	auto RootData = Target->GetRoot();
+	check(RootData);
+
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(Target->GetRoot(), LinkPath, MapPtr))
+	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(RootData, LinkPath, MapPtr))
 	{
 		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *LinkPath, *Target->GetClass()->GetName())
 	}

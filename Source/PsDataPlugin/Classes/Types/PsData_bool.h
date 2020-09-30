@@ -70,6 +70,12 @@ struct FDataTypeContext<TMap<FString, bool>> : public FDataTypeContextExtended<T
 namespace FDataReflectionTools
 {
 template <>
+struct FTypeDefault<bool>
+{
+	static const bool GetDefaultValue() { return false; }
+};
+
+template <>
 struct FTypeSerializer<bool> : public FTypeSerializerExtended<bool, UPsDataBoolLibrary>
 {
 };
@@ -78,5 +84,4 @@ template <>
 struct FTypeDeserializer<bool> : public FTypeDeserializerExtended<bool, UPsDataBoolLibrary>
 {
 };
-
 } // namespace FDataReflectionTools

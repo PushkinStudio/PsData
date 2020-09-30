@@ -108,36 +108,6 @@ struct FTypeDefault
 {
 	static const T GetDefaultValue() { return T(); }
 };
-
-template <>
-struct FTypeDefault<int32>
-{
-	static const int32 GetDefaultValue() { return 0; }
-};
-
-template <>
-struct FTypeDefault<uint8>
-{
-	static const uint8 GetDefaultValue() { return 0; }
-};
-
-template <>
-struct FTypeDefault<int64>
-{
-	static const int64 GetDefaultValue() { return 0; }
-};
-
-template <>
-struct FTypeDefault<float>
-{
-	static const float GetDefaultValue() { return 0.f; }
-};
-
-template <>
-struct FTypeDefault<bool>
-{
-	static const bool GetDefaultValue() { return false; }
-};
 } // namespace FDataReflectionTools
 
 /***********************************
@@ -219,6 +189,7 @@ struct FTypeDeserializer<TArray<T>>
 		{
 			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TArray<T>>::Type())
 		}
+
 		return NewValue;
 	}
 };
@@ -272,216 +243,226 @@ struct FTypeDeserializer<TMap<FString, T>>
 } // namespace FDataReflectionTools
 
 /***********************************
-* Memory
+* Property
 ***********************************/
 
 template <typename T>
-struct FDataMemory : public FAbstractDataMemory
+struct FDataProperty : public FAbstractDataProperty
 {
 	T Value;
 
-	FDataMemory()
+	FDataProperty()
 		: Value(FDataReflectionTools::FTypeDefault<T>::GetDefaultValue())
 	{
 	}
-	virtual ~FDataMemory() {}
+	virtual ~FDataProperty() {}
 
-	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
+	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Get());
+		FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
-	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
+	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<T>(Instance, Field, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value));
+		Set(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
-	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
+	virtual void Reset(UPsData* Instance) override
 	{
-		FDataReflectionTools::UnsafeSet<T>(Instance, Field, FDataReflectionTools::FTypeDefault<T>::GetDefaultValue());
+		Set(FDataReflectionTools::FTypeDefault<T>::GetDefaultValue(), Instance);
 	}
 
-	virtual void Changed() override {}
+	const T& Get() const
+	{
+		return Value;
+	}
 
 	T& Get()
 	{
 		return Value;
 	}
 
-	bool Set(const T& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	void Set(const T& NewValue, UPsData* Instance)
 	{
 		if (FDataReflectionTools::FTypeComparator<T>::Compare(Value, NewValue))
 		{
-			return false;
+			return;
 		}
 
 		Value = NewValue;
-		return true;
+
+		FDataReflectionTools::FPsDataFriend::Changed(Instance, GetField());
 	}
 };
 
 /***********************************
-* Memory for array
+* Property for array
 ***********************************/
 
 template <typename T>
-struct FDataMemory<TArray<T>> : public FAbstractDataMemory
+struct FDataProperty<TArray<T>> : public FAbstractDataProperty
 {
 	TArray<T> Value;
 
-	FDataMemory() {}
-	virtual ~FDataMemory() {}
-
-	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
+	FDataProperty()
 	{
-		FDataReflectionTools::FTypeSerializer<TArray<T>>::Serialize(Instance, Field, Serializer, Get());
+		Value.Shrink();
 	}
 
-	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
+	virtual ~FDataProperty() {}
+
+	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TArray<T>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TArray<T>>::Deserialize(Instance, Field, Deserializer, Value));
+		FDataReflectionTools::FTypeSerializer<TArray<T>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
-	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
+	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TArray<T>>(Instance, Field, TArray<T>());
+		Set(FDataReflectionTools::FTypeDeserializer<TArray<T>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
-	virtual void Changed() override {}
+	virtual void Reset(UPsData* Instance) override
+	{
+		Set({}, Instance);
+	}
 
 	TArray<T>& Get()
 	{
 		return Value;
 	}
 
-	bool Set(const TArray<T>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	void Set(const TArray<T>& NewValue, UPsData* Instance)
 	{
 		if (FDataReflectionTools::FTypeComparator<TArray<T>>::Compare(Value, NewValue))
 		{
-			return false;
+			return;
 		}
 
 		Value = NewValue;
-		return true;
+
+		FDataReflectionTools::FPsDataFriend::Changed(Instance, GetField());
 	}
 };
 
 /***********************************
-* Memory for basic type in map
+* Property for basic type in map
 ***********************************/
 
 template <typename T>
-struct FDataMemory<TMap<FString, T>> : public FAbstractDataMemory
+struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 {
 	TMap<FString, T> Value;
-	bool bDirty;
 
-	FDataMemory()
-		: bDirty(true)
+	FDataProperty()
 	{
 		Value.Shrink();
 	}
 
-	virtual ~FDataMemory() {}
+	virtual ~FDataProperty() {}
 
-	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
+	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Instance, Field, Serializer, Get());
+		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
-	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
+	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TMap<FString, T>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TMap<FString, T>>::Deserialize(Instance, Field, Deserializer, Value));
+		Set(FDataReflectionTools::FTypeDeserializer<TMap<FString, T>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
-	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
+	virtual void Reset(UPsData* Instance) override
 	{
-		FDataReflectionTools::UnsafeSet<TMap<FString, T>>(Instance, Field, TMap<FString, T>());
-	}
-
-	virtual void Changed() override
-	{
-		bDirty = true;
+		Set({}, Instance);
 	}
 
 	TMap<FString, T>& Get()
 	{
-		if (bDirty)
-		{
-			bDirty = false;
-			Value.KeyStableSort([](const FString& A, const FString& B) {
-				return A < B;
-			});
-		}
-
 		return Value;
 	}
 
-	bool Set(const TMap<FString, T>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	void Set(const TMap<FString, T>& NewValue, UPsData* Instance)
 	{
 		if (FDataReflectionTools::FTypeComparator<TMap<FString, T>>::Compare(Value, NewValue))
 		{
-			return false;
+			return;
 		}
 
 		Value = NewValue;
-		return true;
+		Value.KeyStableSort([](const FString& A, const FString& B) {
+			return A < B;
+		});
+
+		FDataReflectionTools::FPsDataFriend::Changed(Instance, GetField());
 	}
 };
 
 /***********************************
-* Memory for UPsData*
+* Property for UPsData*
 ***********************************/
 
 template <typename T>
-struct FDataMemory<T*> : public FAbstractDataMemory
+struct FDataProperty<T*> : public FAbstractDataProperty
 {
 	T* Value;
 
-	FDataMemory()
+	FDataProperty()
 		: Value(nullptr)
 	{
 	}
 
-	virtual ~FDataMemory() {}
+	virtual ~FDataProperty() {}
 
-	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
+	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<T*>::Serialize(Instance, Field, Serializer, Get());
+		FDataReflectionTools::FTypeSerializer<T*>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
-	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
+	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<T*>(Instance, Field, FDataReflectionTools::FTypeDeserializer<T*>::Deserialize(Instance, Field, Deserializer, Value));
+		Set(FDataReflectionTools::FTypeDeserializer<T*>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
-	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
+	virtual void Reset(UPsData* Instance) override
 	{
-		FDataReflectionTools::UnsafeSet<T*>(Instance, Field, nullptr);
+		if (GetField()->Meta.bStrict)
+		{
+			Allocate(Instance);
+		}
+		else
+		{
+			Set(nullptr, Instance);
+		}
 	}
 
-	virtual void Changed() override {}
+	virtual void Allocate(UPsData* Instance) override
+	{
+		FPsDataAllocator Allocator(GetField()->Context->GetUE4Type(), Instance);
+		Set(static_cast<T*>(static_cast<void*>(Allocator())), Instance);
+	}
+
+	const T* Get() const
+	{
+		return Value;
+	}
 
 	T*& Get()
 	{
 		return Value;
 	}
 
-	bool Set(T*& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	void Set(T* NewValue, UPsData* Instance)
 	{
+		auto Field = GetField();
+		check(!Field->Meta.bStrict || NewValue != nullptr);
+
 		if (Value == NewValue)
 		{
-			return false;
+			return;
 		}
 
 		if (Value)
 		{
 			FDataReflectionTools::FPsDataFriend::RemoveChild(Instance, static_cast<UPsData*>(static_cast<void*>(Value)));
-		}
-
-		if (Field->Meta.bStrict && NewValue == nullptr)
-		{
-			NewValue = static_cast<T*>(static_cast<void*>(NewObject<UPsData>(Instance, CastChecked<UClass>(Field->Context->GetUE4Type()))));
 		}
 
 		Value = NewValue;
@@ -492,48 +473,50 @@ struct FDataMemory<T*> : public FAbstractDataMemory
 			FDataReflectionTools::FPsDataFriend::AddChild(Instance, static_cast<UPsData*>(static_cast<void*>(NewValue)));
 		}
 
-		return true;
+		FDataReflectionTools::FPsDataFriend::Changed(Instance, Field);
 	}
 };
 
 /***********************************
-* Memory for TArray<UPsData*>
+* Property for TArray<UPsData*>
 ***********************************/
 
 template <typename T>
-struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
+struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 {
 	TArray<T*> Value;
 
-	FDataMemory() {}
-
-	virtual ~FDataMemory() {}
-
-	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
+	FDataProperty()
 	{
-		FDataReflectionTools::FTypeSerializer<TArray<T*>>::Serialize(Instance, Field, Serializer, Get());
+		Value.Shrink();
 	}
 
-	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
+	virtual ~FDataProperty() {}
+
+	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TArray<T*>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TArray<T*>>::Deserialize(Instance, Field, Deserializer, Value));
+		FDataReflectionTools::FTypeSerializer<TArray<T*>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
-	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
+	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TArray<T*>>(Instance, Field, TArray<T*>());
+		Set(FDataReflectionTools::FTypeDeserializer<TArray<T*>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
-	virtual void Changed() override {}
+	virtual void Reset(UPsData* Instance) override
+	{
+		Set({}, Instance);
+	}
 
 	TArray<T*>& Get()
 	{
 		return Value;
 	}
 
-	bool Set(const TArray<T*>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	void Set(const TArray<T*>& NewValue, UPsData* Instance)
 	{
 		bool bChange = false;
+		auto Field = GetField();
 
 		for (int32 i = 0; i < NewValue.Num(); ++i)
 		{
@@ -556,68 +539,56 @@ struct FDataMemory<TArray<T*>> : public FAbstractDataMemory
 
 		if (!bChange)
 		{
-			return false;
+			return;
 		}
 
 		Value = NewValue;
-		return true;
+
+		FDataReflectionTools::FPsDataFriend::Changed(Instance, Field);
 	}
 };
 
 /***********************************
-* Memory for TMap<FString, UPsData*>
+* Property for TMap<FString, UPsData*>
 ***********************************/
 
 template <typename T>
-struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
+struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 {
 	TMap<FString, T*> Value;
-	bool bDirty;
 
-	FDataMemory()
-		: bDirty(true)
+	FDataProperty()
 	{
 		Value.Shrink();
 	}
 
-	virtual ~FDataMemory() {}
+	virtual ~FDataProperty() {}
 
-	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) override
+	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T*>>::Serialize(Instance, Field, Serializer, Get());
+		FDataReflectionTools::FTypeSerializer<TMap<FString, T*>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
-	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) override
+	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		FDataReflectionTools::UnsafeSet<TMap<FString, T*>>(Instance, Field, FDataReflectionTools::FTypeDeserializer<TMap<FString, T*>>::Deserialize(Instance, Field, Deserializer, Value));
+		Set(FDataReflectionTools::FTypeDeserializer<TMap<FString, T*>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
-	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) override
+	virtual void Reset(UPsData* Instance) override
 	{
-		FDataReflectionTools::UnsafeSet<TMap<FString, T*>>(Instance, Field, TMap<FString, T*>());
-	}
-
-	virtual void Changed() override
-	{
-		bDirty = true;
+		Set({}, Instance);
 	}
 
 	TMap<FString, T*>& Get()
 	{
-		if (bDirty)
-		{
-			bDirty = false;
-			Value.KeyStableSort([](const FString& A, const FString& B) {
-				return A < B;
-			});
-		}
-
 		return Value;
 	}
 
-	bool Set(const TMap<FString, T*>& NewValue, UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	void Set(const TMap<FString, T*>& NewValue, UPsData* Instance)
 	{
 		bool bChange = false;
+		auto Field = GetField();
+
 		for (auto& Pair : NewValue)
 		{
 			if (Pair.Value->GetParent() != Instance)
@@ -640,12 +611,15 @@ struct FDataMemory<TMap<FString, T*>> : public FAbstractDataMemory
 
 		if (!bChange)
 		{
-			return false;
+			return;
 		}
 
 		Value = NewValue;
+		Value.KeyStableSort([](const FString& A, const FString& B) {
+			return A < B;
+		});
 
-		return true;
+		FDataReflectionTools::FPsDataFriend::Changed(Instance, Field);
 	}
 };
 
@@ -659,8 +633,8 @@ namespace FDataReflectionTools
 template <typename T>
 bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue)
 {
-	FDataMemory<T>* Memory = static_cast<FDataMemory<T>*>(FPsDataFriend::GetMemory(Instance)[Field->Index].Get());
-	OutValue = &Memory->Get();
+	FDataProperty<T>* Property = static_cast<FDataProperty<T>*>(FPsDataFriend::GetProperties(Instance)[Field->Index]);
+	OutValue = &Property->Get();
 	return true;
 }
 
@@ -671,10 +645,7 @@ bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*&
 template <typename T>
 void UnsafeSet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename TConstRef<T>::Type NewValue)
 {
-	FDataMemory<T>* Memory = static_cast<FDataMemory<T>*>(FPsDataFriend::GetMemory(Instance)[Field->Index].Get());
-	if (Memory->Set(NewValue, Instance, Field))
-	{
-		FPsDataFriend::Changed(Instance, Field);
-	}
+	FDataProperty<T>* Property = static_cast<FDataProperty<T>*>(FPsDataFriend::GetProperties(Instance)[Field->Index]);
+	Property->Set(NewValue, Instance);
 }
 } // namespace FDataReflectionTools

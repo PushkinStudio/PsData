@@ -12,77 +12,6 @@
 
 #include "CoreMinimal.h"
 
-namespace FDataReflectionTools
-{
-template <typename T>
-struct FMapChangeBehavior
-{
-	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> AddAction, bool bDispacthChanged = true)
-	{
-		AddAction();
-		if (bDispacthChanged)
-		{
-			FPsDataFriend::Changed(Instance, Field);
-		}
-	}
-
-	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& Value, TFunction<void()> RemoveAction, bool bDispacthChanged = true)
-	{
-		RemoveAction();
-		if (bDispacthChanged)
-		{
-			FPsDataFriend::Changed(Instance, Field);
-		}
-	}
-
-	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, const T& OldValue, const T& NewValue, TFunction<void()> ReplaceAction, bool bDispacthChanged = true)
-	{
-		ReplaceAction();
-		if (bDispacthChanged)
-		{
-			FPsDataFriend::Changed(Instance, Field);
-		}
-	}
-};
-
-template <typename T>
-struct FMapChangeBehavior<T*>
-{
-	static void Add(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> AddAction, bool bDispacthChanged = true)
-	{
-		AddAction();
-		FPsDataFriend::ChangeDataName(Value, Name, Field->Name);
-		FPsDataFriend::AddChild(Instance, Value);
-		if (bDispacthChanged)
-		{
-			FPsDataFriend::Changed(Instance, Field);
-		}
-	}
-
-	static void Remove(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* Value, TFunction<void()> RemoveAction, bool bDispacthChanged = true)
-	{
-		RemoveAction();
-		FPsDataFriend::RemoveChild(Instance, Value);
-		if (bDispacthChanged)
-		{
-			FPsDataFriend::Changed(Instance, Field);
-		}
-	}
-
-	static void Replace(UPsData* Instance, const TSharedPtr<const FDataField>& Field, const FString& Name, T* OldValue, T* NewValue, TFunction<void()> ReplaceAction, bool bDispacthChanged = true)
-	{
-		ReplaceAction();
-		FPsDataFriend::RemoveChild(Instance, OldValue);
-		FPsDataFriend::ChangeDataName(NewValue, Name, Field->Name);
-		FPsDataFriend::AddChild(Instance, NewValue);
-		if (bDispacthChanged)
-		{
-			FPsDataFriend::Changed(Instance, Field);
-		}
-	}
-};
-} // namespace FDataReflectionTools
-
 template <typename T, bool bConst>
 struct FPsDataBaseMapProxy
 {
@@ -91,15 +20,15 @@ private:
 	friend struct FPsDataBaseMapProxy<T, false>;
 
 	THardObjectPtr<UPsData> Instance;
-	TSharedPtr<const FDataField> Field;
+	FDataProperty<TMap<FString, T>>* Property;
 
-	TMap<FString, T>& Get() const
+	static FDataProperty<TMap<FString, T>>* GetProperty(UPsData* Instance, const TSharedPtr<const FDataField>& Field)
 	{
-		check(IsValid());
 		TMap<FString, T>* Output = nullptr;
-		FDataReflectionTools::GetByField(Instance.Get(), Field, Output);
+		FDataReflectionTools::GetByField(Instance, Field, Output);
 		check(Output);
-		return *Output;
+
+		return static_cast<FDataProperty<TMap<FString, T>>*>(FDataReflectionTools::FPsDataFriend::GetProperties(Instance)[Field->Index]);
 	}
 
 protected:
@@ -110,105 +39,124 @@ protected:
 	}
 
 public:
-	FPsDataBaseMapProxy(UPsData* InInstance, TSharedPtr<const FDataField> InField)
+	FPsDataBaseMapProxy(UPsData* InInstance, const TSharedPtr<const FDataField>& InField)
 		: Instance(InInstance)
-		, Field(InField)
+		, Property(GetProperty(InInstance, InField))
 	{
 		check(IsValid());
 	}
 
 	FPsDataBaseMapProxy(UPsData* InInstance, int32 Hash)
 		: Instance(InInstance)
-		, Field(FDataReflection::GetFieldByHash(InInstance->GetClass(), Hash))
+		, Property(GetProperty(InInstance, FDataReflection::GetFieldByHash(InInstance->GetClass(), Hash)))
 	{
 		check(IsValid());
 	}
 
-	template <bool bOtherConst>
+	FPsDataBaseMapProxy(UPsData* InInstance, const FDataProperty<TMap<FString, T>>* InProperty)
+		: Instance(InInstance)
+		, Property(const_cast<FDataProperty<TMap<FString, T>>*>(InProperty)) // TODO: const_cast
+	{
+		check(IsValid());
+	}
+
+	template <bool bOtherConst,
+		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
 	FPsDataBaseMapProxy(const FPsDataBaseMapProxy<T, bOtherConst>& MapProxy)
 		: Instance(MapProxy.Instance)
-		, Field(MapProxy.Field)
+		, Property(MapProxy.Property)
 	{
-		static_assert(bConst == bOtherConst || (bConst && !bOtherConst), "Can't create FPsDataMapProxy from FPsDataConstMapProxy");
-		check(IsValid());
 	}
 
-	template <bool bOtherConst>
+	template <bool bOtherConst,
+		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
 	FPsDataBaseMapProxy(FPsDataBaseMapProxy<T, bOtherConst>&& MapProxy)
 		: Instance(std::move(MapProxy.Instance))
-		, Field(std::move(MapProxy.Field))
+		, Property(MapProxy.Property)
 	{
-		static_assert(bConst == bOtherConst || (bConst && !bOtherConst), "Can't create FPsDataMapProxy from FPsDataConstMapProxy");
-		check(IsValid());
 		MapProxy.Instance = nullptr;
-		MapProxy.Field = nullptr;
+		MapProxy.Property = nullptr;
+	}
+
+	template <bool bOtherConst,
+		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
+	void operator=(const FPsDataBaseMapProxy<T, bOtherConst>& MapProxy)
+	{
+		Instance = MapProxy.Instance;
+		Property = MapProxy.Property;
 	}
 
 	TSharedPtr<const FDataField> GetField() const
 	{
-		return Field;
+		return Property->GetField();
 	}
 
 	bool IsValid() const
 	{
-		return Instance.IsValid() && Field.IsValid();
+		return Instance.IsValid() && Property;
 	}
 
-	bool Add(const FString& Key, typename FDataReflectionTools::TConstRef<T>::Type Element)
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
+	void Set(const TMap<FString, T>& NewMap)
 	{
-		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
-
-		auto& Map = Get();
-		if (auto Find = Map.Find(Key))
-		{
-			FDataReflectionTools::FMapChangeBehavior<T>::Replace(Instance.Get(), Field, Key, *Find, Element, [&Map, &Key, &Element]() {
-				Map.Add(Key, Element);
-			});
-		}
-		else
-		{
-			FDataReflectionTools::FMapChangeBehavior<T>::Add(Instance.Get(), Field, Key, Element, [&Map, &Key, &Element]() {
-				Map.Add(Key, Element);
-			});
-		}
-		return true;
+		Property->Set(NewMap, Instance.Get());
 	}
 
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
+	void Add(const FString& Key, typename FDataReflectionTools::TConstRef<T, false>::Type Element)
+	{
+		auto NewMap = Property->Get();
+		NewMap.Add(Key, Element);
+		Property->Set(NewMap, Instance.Get());
+	}
+
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
 	bool Remove(const FString& Key)
 	{
-		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
-
-		auto& Map = Get();
-		if (auto Find = Map.Find(Key))
+		auto& Map = Property->Get();
+		if (Map.Find(Key))
 		{
-			FDataReflectionTools::FMapChangeBehavior<T>::Remove(Instance.Get(), Field, Key, *Find, [&Map, &Key]() {
-				Map.Remove(Key);
-			});
-
+			auto NewMap = Map;
+			NewMap.Remove(Key);
+			Property->Set(NewMap, Instance.Get());
 			return true;
 		}
 
 		return false;
 	}
 
-	bool Contains(const FString& Key) const
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
+	void Empty()
 	{
-		return Get().Contains(Key);
+		Property->Set({}, Instance.Get());
 	}
 
-	typename FDataReflectionTools::TConstRef<T*, bConst>::Type Find(const FString& Key) const
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
+	void Reserve(int32 Number)
 	{
-		return Get().Find(Key);
+		Property->Get().Reserve(Number);
 	}
 
-	typename FDataReflectionTools::TConstRef<T, bConst>::Type FindChecked(const FString& Key) const
+	typename FDataReflectionTools::TConstValue<TMap<FString, T>, bConst>::Type Get() const
 	{
-		return Get().FindChecked(Key);
+		auto& Map = Property->Get();
+		typename FDataReflectionTools::TConstValue<TMap<FString, T>, bConst>::Type Result;
+		Result.Reserve(Map.Num());
+		for (auto& Pair : Map)
+		{
+			Result.Add(Pair.Key, Pair.Value);
+		}
+		return Result;
 	}
 
 	TArray<FString> GetKeys() const
 	{
-		auto& Map = Get();
+		auto& Map = Property->Get();
 		TArray<FString> Result;
 		Result.Reserve(Map.Num());
 		for (auto& Pair : Map)
@@ -218,10 +166,10 @@ public:
 		return Result;
 	}
 
-	TArray<typename FDataReflectionTools::TConstRef<T, bConst>::Type> GetValues() const
+	typename FDataReflectionTools::TConstValue<TArray<T>, bConst>::Type GetValues() const
 	{
-		auto& Map = Get();
-		TArray<typename FDataReflectionTools::TConstRef<T, bConst>::Type> Result;
+		auto& Map = Property->Get();
+		typename FDataReflectionTools::TConstValue<TArray<T>, bConst>::Type Result;
 		Result.Reserve(Map.Num());
 		for (auto& Pair : Map)
 		{
@@ -230,35 +178,24 @@ public:
 		return Result;
 	}
 
+	bool Contains(const FString& Key) const
+	{
+		return Property->Get().Contains(Key);
+	}
+
+	typename FDataReflectionTools::TConstRef<T*, bConst>::Type Find(const FString& Key) const
+	{
+		return Property->Get().Find(Key);
+	}
+
+	typename FDataReflectionTools::TConstRef<T, bConst>::Type FindChecked(const FString& Key) const
+	{
+		return Property->Get().FindChecked(Key);
+	}
+
 	int32 Num() const
 	{
-		return Get().Num();
-	}
-
-	void Reserve(int32 Number)
-	{
-		Get().Reserve(Number);
-	}
-
-	void Empty()
-	{
-		static_assert(!bConst, "Unsupported method for FPsDataConstMapProxy, use FPsDataMapProxy");
-
-		bool bChanged = false;
-		for (auto It = Get().CreateIterator(); It; ++It)
-		{
-			FDataReflectionTools::FMapChangeBehavior<T>::Remove(
-				Instance.Get(), Field, It->Key, It->Value, [&It, &bChanged]() {
-					It.RemoveCurrent();
-					bChanged = true;
-				},
-				false);
-		}
-
-		if (bChanged)
-		{
-			FDataReflectionTools::FPsDataFriend::Changed(Instance.Get(), Field);
-		}
+		return Property->Get().Num();
 	}
 
 	bool IsEmpty() const
@@ -268,39 +205,27 @@ public:
 
 	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 	{
-		return Instance->BindInternal(Type, Delegate, Field);
+		return Instance->BindInternal(Type, Delegate, Property->GetField());
 	}
 
 	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate) const
 	{
-		return Instance->BindInternal(Type, Delegate, Field);
+		return Instance->BindInternal(Type, Delegate, Property->GetField());
 	}
 
 	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 	{
-		Instance->UnbindInternal(Type, Delegate, Field);
+		Instance->UnbindInternal(Type, Delegate, Property->GetField());
 	}
 
 	void Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 	{
-		Instance->UnbindInternal(Type, Delegate, Field);
-	}
-
-	const TMap<FString, typename FDataReflectionTools::TConstRef<T, bConst>::Type>& GetRef()
-	{
-		return Get();
+		Instance->UnbindInternal(Type, Delegate, Property->GetField());
 	}
 
 	typename FDataReflectionTools::TConstRef<T, bConst>::Type operator[](const FString& Key) const
 	{
-		return Get().FindChecked(Key);
-	}
-
-	void operator=(const FPsDataBaseMapProxy& Proxy)
-	{
-		Instance = Proxy.Instance;
-		Field = Proxy.Field;
-		check(IsValid());
+		return Property->Get().FindChecked(Key);
 	}
 
 	/***********************************
@@ -332,7 +257,7 @@ public:
 			: Proxy(InProxy)
 			, Index(0)
 		{
-			const auto& Map = Proxy.Get();
+			auto& Map = Proxy.Property->Get();
 			if (bEnd)
 			{
 				Index = Map.Num();
@@ -348,10 +273,10 @@ public:
 		}
 
 	public:
+		template <bool bOtherConst = bIteratorConst,
+			typename = typename TEnableIf<!bOtherConst>::Type>
 		bool RemoveCurrent()
 		{
-			static_assert(!bIteratorConst, "Unsupported method for FPsDataConstMapProxy::TProxyIterator, use FPsDataMapProxy::TProxyIterator");
-
 			return Proxy.Remove(Key());
 		}
 

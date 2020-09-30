@@ -18,6 +18,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FPsDataDynamicDelegate, UPsDataEvent*, Event);
 DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsDataEvent*);                       // TBaseDelegate
 
 class UPsData;
+class UPsDataRoot;
 
 class PSDATAPLUGIN_API FDataDelegates
 {
@@ -30,18 +31,19 @@ private:
 };
 
 /***********************************
-* Abstract memory
+* Abstract property
 ***********************************/
 
-struct PSDATAPLUGIN_API FAbstractDataMemory
+struct PSDATAPLUGIN_API FAbstractDataProperty
 {
-	FAbstractDataMemory() {}
-	virtual ~FAbstractDataMemory() {}
+	FAbstractDataProperty() {}
+	virtual ~FAbstractDataProperty() {}
 
-	virtual void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer) = 0;
-	virtual void Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer) = 0;
-	virtual void Reset(UPsData* Instance, const TSharedPtr<const FDataField>& Field) = 0;
-	virtual void Changed() = 0;
+	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) = 0;
+	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) = 0;
+	virtual void Reset(UPsData* Instance) = 0;
+	virtual void Allocate(UPsData* Instance){};
+	virtual TSharedPtr<const FDataField> GetField() const = 0;
 };
 
 /***********************************
@@ -57,7 +59,7 @@ struct PSDATAPLUGIN_API FPsDataFriend
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
 	static void Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field);
 	static void InitProperties(UPsData* Data);
-	static TArray<TUniquePtr<FAbstractDataMemory>>& GetMemory(UPsData* Data);
+	static TArray<FAbstractDataProperty*>& GetProperties(UPsData* Data);
 	static void Serialize(const UPsData* Data, FPsDataSerializer* Serializer);
 	static void Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer);
 };
@@ -169,8 +171,8 @@ class PSDATAPLUGIN_API UPsData : public UObject
 private:
 	friend struct FDataReflectionTools::FPsDataFriend;
 
-	/** Memory */
-	TArray<TUniquePtr<FAbstractDataMemory>> Memory;
+	/** Properties */
+	TArray<FAbstractDataProperty*> Properties;
 
 	/** Data name */
 	FString DataKey;
@@ -320,7 +322,11 @@ public:
 
 	/** Get root */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	UPsData* GetRoot() const;
+	UPsDataRoot* GetRoot() const;
+
+	/** Has root */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	bool HasRoot() const;
 
 	/** Get data hash. For example, the method can be used with the transaction system */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")

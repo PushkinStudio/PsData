@@ -197,12 +197,12 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 	struct FDLink<__Type__, ReturnType, Hash> : public FDLinkBase<__Type__, ReturnType, Hash>                                                                    \
 	{                                                                                                                                                            \
 	public:                                                                                                                                                      \
-		FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)                                \
+		FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)                                      \
 			: FDLinkBase<__Type__, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                                                          \
 		{                                                                                                                                                        \
 		}                                                                                                                                                        \
                                                                                                                                                                  \
-		FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)                                                                          \
+		FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)                                                                                \
 			: FDLinkBase<__Type__, ReturnType, Hash>(Name, CharReturnType, InInstance)                                                                           \
 		{                                                                                                                                                        \
 		}                                                                                                                                                        \
@@ -222,12 +222,12 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 	struct FDLink<TArray<__Type__>, ReturnType, Hash> : public FDLinkBase<TArray<__Type__>, ReturnType, Hash>                                                    \
 	{                                                                                                                                                            \
 	public:                                                                                                                                                      \
-		FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)                                \
+		FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)                                      \
 			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                                                  \
 		{                                                                                                                                                        \
 		}                                                                                                                                                        \
                                                                                                                                                                  \
-		FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)                                                                          \
+		FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)                                                                                \
 			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, CharReturnType, InInstance)                                                                   \
 		{                                                                                                                                                        \
 		}                                                                                                                                                        \

@@ -52,5 +52,5 @@ public:
 protected:
 	/** Blueprint get ref */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Map", Category = "PsData|Collection"))
-	const TMap<FString, UPsData*>& GetRef();
+	TMap<FString, UPsData*> Get();
 };

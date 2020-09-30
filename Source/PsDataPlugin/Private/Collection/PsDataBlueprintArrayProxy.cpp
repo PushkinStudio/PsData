@@ -57,7 +57,7 @@ void UPsDataBlueprintArrayProxy::BlueprintUnbind(const FString& Type, const FPsD
 	Proxy.Unbind(Type, Delegate);
 }
 
-const TArray<UPsData*>& UPsDataBlueprintArrayProxy::GetRef()
+TArray<UPsData*> UPsDataBlueprintArrayProxy::Get()
 {
-	return Proxy.GetRef();
+	return Proxy.Get();
 }

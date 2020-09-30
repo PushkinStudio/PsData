@@ -57,7 +57,7 @@ void UPsDataBlueprintMapProxy::BlueprintUnbind(const FString& Type, const FPsDat
 	Proxy.Unbind(Type, Delegate);
 }
 
-const TMap<FString, UPsData*>& UPsDataBlueprintMapProxy::GetRef()
+TMap<FString, UPsData*> UPsDataBlueprintMapProxy::Get()
 {
-	return Proxy.GetRef();
+	return Proxy.Get();
 }

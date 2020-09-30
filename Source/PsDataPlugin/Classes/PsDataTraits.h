@@ -17,14 +17,10 @@ struct TAlwaysFalse : std::false_type
 {
 };
 
-} // namespace FDataReflectionTools
-
 /***********************************
  * TRemovePointer trait
  ***********************************/
 
-namespace FDataReflectionTools
-{
 template <typename T>
 struct TRemovePointer
 {
@@ -39,14 +35,10 @@ struct TRemovePointer<T*>
 	static T& Get(T*& Value) { return *Value; }
 };
 
-} // namespace FDataReflectionTools
-
 /***********************************
  * TSelector trait
  ***********************************/
 
-namespace FDataReflectionTools
-{
 template <typename True, typename False, bool bValue>
 struct TSelector
 {
@@ -63,14 +55,11 @@ struct TSelector<True, False, false>
 {
 	typedef False Value;
 };
-} // namespace FDataReflectionTools
 
 /***********************************
  * TConstRef trait
  ***********************************/
 
-namespace FDataReflectionTools
-{
 template <typename T, bool bConst = false>
 struct TConstRef
 {
@@ -119,14 +108,10 @@ struct TConstRef<T**, true>
 	typedef const T* const* Type;
 };
 
-} // namespace FDataReflectionTools
-
 /***********************************
  * TConstValue trait
  ***********************************/
 
-namespace FDataReflectionTools
-{
 template <typename T, bool bConst>
 struct TConstValue
 {
@@ -138,14 +123,35 @@ struct TConstValue<T*, bConst>
 {
 	typedef typename TSelector<const T* const, T*, bConst>::Value Type;
 };
-} // namespace FDataReflectionTools
+
+template <typename T, bool bConst>
+struct TConstValue<TArray<T>, bConst>
+{
+	typedef TArray<T> Type;
+};
+
+template <typename T, bool bConst>
+struct TConstValue<TArray<T*>, bConst>
+{
+	typedef typename TSelector<TArray<T const*>, TArray<T*>, bConst>::Value Type;
+};
+
+template <typename T, bool bConst, typename F>
+struct TConstValue<TMap<F, T>, bConst>
+{
+	typedef TMap<F, T> Type;
+};
+
+template <typename T, bool bConst, typename F>
+struct TConstValue<TMap<F, T*>, bConst>
+{
+	typedef typename TSelector<TMap<F, T const*>, TMap<F, T*>, bConst>::Value Type;
+};
 
 /***********************************
 * Is collection trait
 ***********************************/
 
-namespace FDataReflectionTools
-{
 template <typename T>
 struct TIsContainer
 {
@@ -169,5 +175,15 @@ struct TIsContainer<TMap<K, T>>
 	static constexpr bool Array = false;
 	static constexpr bool Map = true;
 };
+
+/***********************************
+* Const cast
+***********************************/
+
+template <typename T>
+T* MutableThis(const T* This)
+{
+	return const_cast<T*>(This);
+}
 
 } // namespace FDataReflectionTools

@@ -70,6 +70,12 @@ struct FDataTypeContext<TMap<FString, float>> : public FDataTypeContextExtended<
 namespace FDataReflectionTools
 {
 template <>
+struct FTypeDefault<float>
+{
+	static const float GetDefaultValue() { return 0.f; }
+};
+
+template <>
 struct FTypeSerializer<float> : public FTypeSerializerExtended<float, UPsDataFloatLibrary>
 {
 };

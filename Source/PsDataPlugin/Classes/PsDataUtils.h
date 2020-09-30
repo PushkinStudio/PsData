@@ -66,6 +66,15 @@ constexpr bool Equal(const char* s, const int s_size, const char* c, const int c
 {
 	return (s_size > 0 && c_size > 0) ? ((s[0] == c[0]) ? Equal(&s[1], s_size - 1, &c[1], c_size - 1) : false) : true;
 }
+
+constexpr bool Equal(const char* lhs, const char* rhs)
+{
+	while (*lhs || *rhs)
+		if (*lhs++ != *rhs++)
+			return false;
+	return true;
+}
+
 constexpr int Find(const char* s, const int s_size, const char* c, const int c_size, const int index)
 {
 	const int new_s_size = s_size - index;

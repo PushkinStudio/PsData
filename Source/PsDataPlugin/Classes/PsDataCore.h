@@ -6,7 +6,7 @@
 #include "PsDataEvent.h"
 #include "PsDataField.h"
 #include "PsDataFunctionLibrary.h"
-#include "PsDataMemory.h"
+#include "PsDataProperty.h"
 #include "PsDataTraits.h"
 #include "PsDataUtils.h"
 
@@ -19,52 +19,53 @@
 
 namespace FDataReflectionTools
 {
-template <typename Type, int32 Hash>
-struct FDProp;
 struct FDMeta;
 template <typename Type, class ReturnType, int32 Hash>
 struct FDLinkBase;
 } // namespace FDataReflectionTools
 
+struct PSDATAPLUGIN_API FDataClassFields
+{
+	TMap<FString, const TSharedPtr<const FDataField>> FieldsByName;
+	TMap<FString, const TSharedPtr<const FDataField>> FieldsByAlias;
+	TMap<int32, const TSharedPtr<const FDataField>> FieldsByHash;
+
+	TMap<FString, const TSharedPtr<const FDataLink>> LinksByName;
+	TMap<int32, const TSharedPtr<const FDataLink>> LinksByHash;
+};
+
 struct PSDATAPLUGIN_API FDataReflection
 {
 private:
-	static TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FieldsByName;
-	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FieldsByHash;
-	static TMap<UClass*, TMap<FString, const TSharedPtr<const FDataLink>>> LinksByName;
-	static TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> LinksByHash;
+	static TMap<UClass*, FDataClassFields> FieldsByClass;
 	static TMap<FString, const TArray<FString>> SplittedPath;
-
-	static TArray<UClass*> ClassQueue;
 	static TArray<const char*> MetaCollection;
 
 	static bool bCompiled;
 
-protected:
-	template <typename Type, int32 Hash>
-	friend struct FDataReflectionTools::FDProp;
-	friend struct FDataReflectionTools::FDMeta;
-	template <typename Type, class ReturnType, int32 Hash>
-	friend struct FDataReflectionTools::FDLinkBase;
-	friend class UPsData;
+public:
+	static void InitField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context, TSharedPtr<FDataField>& Field, UPsData* Instance, FAbstractDataProperty* Property);
+	static void InitLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection, UPsData* Instance);
+	static void InitMeta(const char* Meta);
 
-	static void AddField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context);
-	static void AddLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection);
-	static void AddToQueue(UPsData* Instance);
-	static void RemoveFromQueue(UPsData* Instance);
-	static bool InQueue();
-	static UClass* GetLastClassInQueue();
-	static void PushMeta(const char* Meta);
-	static void ClearMeta();
+	static void PreConstruct(UPsData* Instance);
+	static void PostConstruct(UPsData* Instance);
+
 	static void Fill(UPsData* Instance);
 
 public:
 	static const TSharedPtr<const FDataField>& GetFieldByName(UClass* OwnerClass, const FString& Name);
+	static const TSharedPtr<const FDataField>& GetFieldByAlias(UClass* OwnerClass, const FString& Alias);
 	static const TSharedPtr<const FDataField>& GetFieldByHash(UClass* OwnerClass, int32 Hash);
+
 	static const TMap<FString, const TSharedPtr<const FDataField>>& GetFields(const UClass* OwnerClass);
-	static TSharedPtr<const FDataLink> GetLinkByName(UClass* OwnerClass, const FString& Name);
-	static TSharedPtr<const FDataLink> GetLinkByHash(UClass* OwnerClass, int32 Hash);
+	static const TMap<FString, const TSharedPtr<const FDataField>>& GetAliasFields(const UClass* OwnerClass);
+
+	static const TSharedPtr<const FDataLink>& GetLinkByName(UClass* OwnerClass, const FString& Name);
+	static const TSharedPtr<const FDataLink>& GetLinkByHash(UClass* OwnerClass, int32 Hash);
+
 	static const TMap<FString, const TSharedPtr<const FDataLink>>& GetLinks(UClass* OwnerClass);
+
 	static bool HasClass(const UClass* OwnerClass);
 
 	static void Compile();
@@ -99,11 +100,6 @@ struct FDataTypeContextExtended : public FAbstractDataTypeContext
 	{
 		constexpr auto Type = FDataReflectionTools::TIsContainer<T>::Value ? EDataFieldType::VALUE : (FDataReflectionTools::TIsContainer<T>::Array ? EDataFieldType::ARRAY : EDataFieldType::MAP);
 		return {L::StaticClass(), Type};
-	}
-
-	virtual FAbstractDataMemory* AllocateMemory() const override
-	{
-		return new FDataMemory<T>();
 	}
 
 	virtual const FString& GetCppType() const override
@@ -483,12 +479,6 @@ bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
 template <typename T>
 void SetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename FDataReflectionTools::TConstRef<T>::Type NewValue)
 {
-	if (Field->Meta.bStrict && !Instance->HasAnyFlags(EObjectFlags::RF_NeedInitialization))
-	{
-		check(false && "Can't set strict property");
-		return;
-	}
-
 	if (CheckType<T>(Field->Context, &GetContext<T>()))
 	{
 		UnsafeSet<T>(Instance, Field, NewValue);
@@ -571,40 +561,12 @@ struct FPsDataCastHelper
 };
 } // namespace FDataReflectionTools
 
-/***********************************
- * FDProp
- ***********************************/
-
 namespace FDataReflectionTools
 {
-template <typename Type, int32 Hash>
-struct FDProp
-{
-	typedef Type PropType;
-	static constexpr int32 PropHash = Hash;
-
-	FDProp(const char* Name)
-	{
-		if (FDataReflection::InQueue())
-		{
-			FDataReflection::AddField(Name, Hash, &FDataReflectionTools::GetContext<Type>());
-			FDataReflection::ClearMeta();
-		}
-	}
-
-	FDProp(const FDProp&) = delete;
-	FDProp(FDProp&&) = delete;
-	FDProp& operator=(const FDProp&) = delete;
-	FDProp& operator=(FDProp&&) = delete;
-};
-} // namespace FDataReflectionTools
-
 /***********************************
  * FDMeta
  ***********************************/
 
-namespace FDataReflectionTools
-{
 struct FDMeta
 {
 	FDMeta()
@@ -613,10 +575,7 @@ struct FDMeta
 
 	FDMeta(const char* Meta)
 	{
-		if (FDataReflection::InQueue())
-		{
-			FDataReflection::PushMeta(Meta);
-		}
+		FDataReflection::InitMeta(Meta);
 	}
 
 	FDMeta(const FDMeta&) = delete;
@@ -624,14 +583,11 @@ struct FDMeta
 	FDMeta& operator=(const FDMeta&) = delete;
 	FDMeta& operator=(FDMeta&&) = delete;
 };
-} // namespace FDataReflectionTools
 
 /***********************************
  * FDLink
  ***********************************/
 
-namespace FDataReflectionTools
-{
 template <class ReturnType, int32 Hash>
 struct FDLinkHelper
 {
@@ -666,18 +622,15 @@ protected:
 	const UPsData* Instance;
 
 public:
-	FDLinkBase(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract)
+	FDLinkBase(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract)
 		: Instance(InInstance)
 	{
 		static_assert(FDataReflectionTools::TIsContainer<ReturnType>::Value, "ReturnType must be non-container type");
-		if (FDataReflection::InQueue())
-		{
-			FDataReflection::AddLink(Name, Path, CharReturnType, Hash, bAbstract, !FDataReflectionTools::TIsContainer<Type>::Value);
-			FDataReflection::ClearMeta();
-		}
+
+		FDataReflection::InitLink(Name, Path, CharReturnType, Hash, bAbstract, !FDataReflectionTools::TIsContainer<Type>::Value, InInstance);
 	}
 
-	FDLinkBase(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+	FDLinkBase(const char* Name, const char* CharReturnType, UPsData* InInstance)
 		: FDLinkBase(Name, "<ABSTRACT>", CharReturnType, InInstance, true)
 	{
 	}
@@ -692,13 +645,13 @@ template <typename Type, class ReturnType, int32 Hash>
 struct FDLink : public FDLinkBase<Type, ReturnType, Hash>
 {
 public:
-	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)
 		: FDLinkBase<Type, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
 	{
 		static_assert(FDataReflectionTools::TAlwaysFalse<Type>::value, "Unsupported link type");
 	}
 
-	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+	FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)
 		: FDLinkBase<Type, ReturnType, Hash>(Name, CharReturnType, InInstance)
 	{
 		static_assert(FDataReflectionTools::TAlwaysFalse<Type>::value, "Unsupported link type");
@@ -714,12 +667,12 @@ template <class ReturnType, int32 Hash>
 struct FDLink<FString, ReturnType, Hash> : public FDLinkBase<FString, ReturnType, Hash>
 {
 public:
-	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)
 		: FDLinkBase<FString, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
 	{
 	}
 
-	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+	FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)
 		: FDLinkBase<FString, ReturnType, Hash>(Name, CharReturnType, InInstance)
 	{
 	}
@@ -744,12 +697,12 @@ template <class ReturnType, int32 Hash>
 struct FDLink<TArray<FString>, ReturnType, Hash> : public FDLinkBase<TArray<FString>, ReturnType, Hash>
 {
 public:
-	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)
 		: FDLinkBase<TArray<FString>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
 	{
 	}
 
-	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+	FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)
 		: FDLinkBase<TArray<FString>, ReturnType, Hash>(Name, CharReturnType, InInstance)
 	{
 	}
@@ -774,12 +727,12 @@ template <class ReturnType, int32 Hash>
 struct FDLink<FName, ReturnType, Hash> : public FDLinkBase<FName, ReturnType, Hash>
 {
 public:
-	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)
 		: FDLinkBase<FName, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
 	{
 	}
 
-	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+	FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)
 		: FDLinkBase<FName, ReturnType, Hash>(Name, CharReturnType, InInstance)
 	{
 	}
@@ -804,12 +757,12 @@ template <class ReturnType, int32 Hash>
 struct FDLink<TArray<FName>, ReturnType, Hash> : public FDLinkBase<TArray<FName>, ReturnType, Hash>
 {
 public:
-	FDLink(const char* Name, const char* Path, const char* CharReturnType, const UPsData* InInstance, bool bAbstract = false)
+	FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)
 		: FDLinkBase<TArray<FName>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)
 	{
 	}
 
-	FDLink(const char* Name, const char* CharReturnType, const UPsData* InInstance)
+	FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)
 		: FDLinkBase<TArray<FName>, ReturnType, Hash>(Name, CharReturnType, InInstance)
 	{
 	}

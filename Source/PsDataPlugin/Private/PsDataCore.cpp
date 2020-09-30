@@ -7,157 +7,162 @@
 
 #include "UObject/UObjectIterator.h"
 
-TMap<UClass*, TMap<FString, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByName;
-TMap<UClass*, TMap<int32, const TSharedPtr<const FDataField>>> FDataReflection::FieldsByHash;
-TMap<UClass*, TMap<FString, const TSharedPtr<const FDataLink>>> FDataReflection::LinksByName;
-TMap<UClass*, TMap<int32, const TSharedPtr<const FDataLink>>> FDataReflection::LinksByHash;
+TMap<UClass*, FDataClassFields> FDataReflection::FieldsByClass;
 TMap<FString, const TArray<FString>> FDataReflection::SplittedPath;
-TArray<UClass*> FDataReflection::ClassQueue;
 TArray<const char*> FDataReflection::MetaCollection;
-
 bool FDataReflection::bCompiled = false;
 
-void FDataReflection::AddField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context)
+void FDataReflection::InitField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context, TSharedPtr<FDataField>& Field, UPsData* Instance, FAbstractDataProperty* Property)
 {
-	check(!bCompiled);
-	const FString Name(CharName);
-
-	if (!InQueue())
+	if (!bCompiled)
 	{
-		UE_LOG(LogData, Fatal, TEXT("Can't describe property \"%s\" because queue is empty"), *Name);
-	}
+		const FString FieldName(CharName);
 
-	UClass* OwnerClass = GetLastClassInQueue();
+		UClass* OwnerClass = Instance->GetClass();
+		auto& Fields = FieldsByClass.FindOrAdd(OwnerClass);
 
-	TMap<FString, const TSharedPtr<const FDataField>>& MapByName = FieldsByName.FindOrAdd(OwnerClass);
-	TMap<int32, const TSharedPtr<const FDataField>>& MapByHash = FieldsByHash.FindOrAdd(OwnerClass);
-
-	const int32 Index = MapByName.Num();
-
-	TSharedPtr<const FDataField> Field(new FDataField(Name, Index, Hash, Context, MetaCollection));
-	MetaCollection.Reset();
-
-	if (MapByHash.Contains(Hash))
-	{
-		UE_LOG(LogData, Fatal, TEXT("Can't generate unique hash for %s::%s %d"), *OwnerClass->GetName(), *Name, Hash);
-	}
-
-	MapByName.Add(Name, Field);
-	MapByHash.Add(Hash, Field);
-
-	UE_LOG(LogData, VeryVerbose, TEXT(" %02d %s %s::%s (%d)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *Name, Hash);
-}
-
-void FDataReflection::AddLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection)
-{
-	check(!bCompiled);
-	const FString Name(CharName);
-	const FString Path(CharPath);
-	const FString ReturnType(CharReturnType);
-
-	if (!InQueue())
-	{
-		UE_LOG(LogData, Fatal, TEXT("Can't describe link \"%s\" because queue is empty"), *Name);
-	}
-
-	UClass* OwnerClass = GetLastClassInQueue();
-
-	bool bPathProperty = false;
-	if (!bAbstract)
-	{
-		auto& PathField = GetFieldByName(OwnerClass, Path);
-		if (PathField.IsValid())
+#if !UE_BUILD_SHIPPING
+		if (Fields.FieldsByHash.Contains(Hash))
 		{
-			if (PathField->Context->IsA(&FDataReflectionTools::GetContext<FString>()))
-			{
-				bPathProperty = true;
-			}
-			else
-			{
-				UE_LOG(LogData, Fatal, TEXT("Can't describe link \"%s\" because path property \"%s\" has unsupported type \"%s\""), *Name, *Path, *PathField->Context->GetCppType());
-			}
+			UE_LOG(LogData, Fatal, TEXT("Can't generate unique hash for property %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
 		}
-	}
-
-	TMap<FString, const TSharedPtr<const FDataLink>>& MapByName = LinksByName.FindOrAdd(OwnerClass);
-	TMap<int32, const TSharedPtr<const FDataLink>>& MapByHash = LinksByHash.FindOrAdd(OwnerClass);
-
-	if (auto Find = MapByHash.Find(Hash))
-	{
-		auto Link = *Find;
-		if (!Link->bAbstract)
+		else if (Fields.FieldsByName.Contains(CharName))
 		{
-			UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s %d"), *OwnerClass->GetName(), *Link->Name, Hash);
+			UE_LOG(LogData, Fatal, TEXT("Duplicate name for property %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
 		}
-	}
+#endif
 
-	TSharedPtr<const FDataLink> Link(new FDataLink(Name, Path, bPathProperty, ReturnType, Hash, bAbstract, bCollection, MetaCollection));
-	MetaCollection.Reset();
+		const int32 Index = Fields.FieldsByName.Num();
 
-	MapByName.Add(Name, Link);
-	MapByHash.Add(Hash, Link);
-}
-
-void FDataReflection::AddToQueue(UPsData* Instance)
-{
-	if (bCompiled)
-	{
-		return;
-	}
-
-	UClass* Class = Instance->GetClass();
-	if (UPsData::StaticClass() == Class)
-	{
-		return;
-	}
-
-	if (FieldsByName.Contains(Class))
-	{
-		return;
-	}
-
-	if ((Class->GetClassFlags() & CLASS_Constructed) == 0)
-	{
-		return;
-	}
-
-	ClassQueue.Add(Class);
-	UE_LOG(LogData, VeryVerbose, TEXT("Describe %s:"), *Class->GetName())
-}
-
-void FDataReflection::RemoveFromQueue(UPsData* Instance)
-{
-	if (bCompiled)
-	{
-		return;
-	}
-
-	if (ClassQueue.Num() > 0 && ClassQueue.Last() == Instance->GetClass())
-	{
-		if (ClassQueue.Num() == 1)
+		if (Field.IsValid())
 		{
-			ClassQueue.SetNum(0, true);
+			check(FieldsByClass.FindChecked(OwnerClass->GetSuperClass()).FieldsByHash.FindChecked(Hash) == Field);
 		}
 		else
 		{
-			ClassQueue.SetNum(ClassQueue.Num() - 1, false);
+			Field = MakeShared<FDataField>(FieldName, Index, Hash, Context, MetaCollection);
 		}
 
-		UClass* Class = Instance->GetClass();
+		const FString& AliasName = Field->Meta.bAlias ? Field->Meta.Alias : FieldName;
 
+#if !UE_BUILD_SHIPPING
+		if (Fields.FieldsByAlias.Contains(AliasName) || Fields.FieldsByName.Contains(AliasName))
+		{
+			UE_LOG(LogData, Fatal, TEXT("Duplicate alias for property %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
+		}
+#endif
+
+		MetaCollection.Reset();
+
+		Fields.FieldsByName.Add(FieldName, Field);
+		Fields.FieldsByAlias.Add(AliasName, Field);
+		Fields.FieldsByHash.Add(Hash, Field);
+
+		UE_LOG(LogData, VeryVerbose, TEXT(" %02d %s %s::%s (%d)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *FieldName, Hash);
+	}
+
+	FDataReflectionTools::FPsDataFriend::GetProperties(Instance).Add(Property);
+}
+
+void FDataReflection::InitLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection, UPsData* Instance)
+{
+	if (!bCompiled)
+	{
+		const FString Name(CharName);
+		const FString Path(CharPath);
+		const FString ReturnType(CharReturnType);
+
+		UClass* OwnerClass = Instance->GetClass();
+
+		bool bPathProperty = false;
+		if (!bAbstract)
+		{
+			auto& PathField = GetFieldByName(OwnerClass, Path);
+			if (PathField.IsValid())
+			{
+				if (PathField->Context->IsA(&FDataReflectionTools::GetContext<FString>()))
+				{
+					bPathProperty = true;
+				}
+				else
+				{
+					UE_LOG(LogData, Fatal, TEXT("Can't describe link \"%s\" because path property \"%s\" has unsupported type \"%s\""), *Name, *Path, *PathField->Context->GetCppType());
+				}
+			}
+		}
+
+		auto& Fields = FieldsByClass.FindOrAdd(OwnerClass);
+
+		if (auto Find = Fields.LinksByHash.Find(Hash))
+		{
+			auto Link = *Find;
+			if (!Link->bAbstract)
+			{
+				UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s %d"), *OwnerClass->GetName(), *Link->Name, Hash);
+			}
+		}
+
+		TSharedPtr<const FDataLink> Link = MakeShared<FDataLink>(Name, Path, bPathProperty, ReturnType, Hash, bAbstract, bCollection, MetaCollection);
+		MetaCollection.Reset();
+
+		Fields.LinksByName.Add(Name, Link);
+		Fields.LinksByHash.Add(Hash, Link);
+	}
+}
+
+void FDataReflection::InitMeta(const char* Meta)
+{
+	if (!bCompiled)
+	{
+		MetaCollection.Add(Meta);
+	}
+}
+
+void FDataReflection::PreConstruct(UPsData* Instance)
+{
+	if (!bCompiled)
+	{
+		UClass* Class = Instance->GetClass();
+		if (UPsData::StaticClass() == Class)
+		{
+			return;
+		}
+
+		if (FieldsByClass.Contains(Class))
+		{
+			return;
+		}
+
+		if ((Class->GetClassFlags() & CLASS_Constructed) == 0)
+		{
+			return;
+		}
+
+		UE_LOG(LogData, VeryVerbose, TEXT("Describe %s:"), *Class->GetName())
+	}
+}
+
+void FDataReflection::PostConstruct(UPsData* Instance)
+{
+	if (!bCompiled)
+	{
+		UClass* Class = Instance->GetClass();
 		if (MetaCollection.Num() > 0)
 		{
-			UE_LOG(LogData, Error, TEXT(" %s has unused meta"), *Class->GetName())
+			UE_LOG(LogData, Error, TEXT(" %s has unused meta"), *Class->GetName());
 			MetaCollection.Reset();
 		}
 
-		// Sort by Hash
-		FieldsByHash.FindOrAdd(Class).KeySort([](const int32& a, const int32& b) -> bool {
+		auto& Fields = FieldsByClass.FindOrAdd(Class);
+		Fields.FieldsByHash.KeySort([](const int32& a, const int32& b) -> bool {
 			return a < b;
 		});
 
-		//Sort by String
-		FieldsByName.FindOrAdd(Class).KeySort([](const FString& a, const FString& b) -> bool {
+		Fields.FieldsByName.KeySort([](const FString& a, const FString& b) -> bool {
+			return a < b;
+		});
+
+		Fields.FieldsByAlias.KeySort([](const FString& a, const FString& b) -> bool {
 			return a < b;
 		});
 
@@ -165,64 +170,25 @@ void FDataReflection::RemoveFromQueue(UPsData* Instance)
 	}
 }
 
-bool FDataReflection::InQueue()
-{
-	return !bCompiled && ClassQueue.Num() > 0;
-}
-
-UClass* FDataReflection::GetLastClassInQueue()
-{
-	if (!bCompiled && ClassQueue.Num() > 0)
-	{
-		return ClassQueue.Last();
-	}
-	return nullptr;
-}
-void FDataReflection::PushMeta(const char* Meta)
-{
-	check(!bCompiled);
-	MetaCollection.Add(Meta);
-}
-
-void FDataReflection::ClearMeta()
-{
-	check(!bCompiled);
-	MetaCollection.Reset();
-}
-
 void FDataReflection::Fill(UPsData* Instance)
 {
 	const bool bDefaultObject = Instance->HasAnyFlags(EObjectFlags::RF_ClassDefaultObject | EObjectFlags::RF_DefaultSubObject);
+	if (bDefaultObject)
+	{
+		return;
+	}
 
-	const TMap<FString, const TSharedPtr<const FDataField>>& FieldMap = FDataReflection::GetFields(Instance->GetClass());
-
-	auto& Memory = FDataReflectionTools::FPsDataFriend::GetMemory(Instance);
-	Memory.AddDefaulted(FieldMap.Num());
-
-	for (const auto& Pair : FieldMap)
+	auto& Properties = FDataReflectionTools::FPsDataFriend::GetProperties(Instance);
+	for (const auto& Pair : FDataReflection::GetFields(Instance->GetClass()))
 	{
 		const auto& Field = Pair.Value;
-		Memory[Field->Index].Reset(Field->Context->AllocateMemory());
-
-		if (Field->Context->IsData() && !Field->Context->IsContainer())
+		if (Field->Meta.bStrict)
 		{
-			UPsData** Data = nullptr;
-			FDataReflectionTools::GetByField<UPsData*>(Instance, Field, Data);
-			*Data = nullptr;
-
-			if (bDefaultObject)
-			{
-				continue;
-			}
-
-			UClass* DataType = Cast<UClass>(Field->Context->GetUE4Type());
-			if (Field->Meta.bStrict && DataType != nullptr)
-			{
-				UPsData* NewObject = ::NewObject<UPsData>(Instance, Cast<UClass>(DataType));
-				FDataReflectionTools::SetByField<UPsData*>(Instance, Field, NewObject);
-			}
+			Properties[Field->Index]->Allocate(Instance);
 		}
 	}
+
+	Properties.Shrink();
 
 	if (!bDefaultObject)
 	{
@@ -244,72 +210,104 @@ const TArray<FString>& FDataReflection::SplitPath(const FString& Path)
 
 const TSharedPtr<const FDataField>& FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
 {
-	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
-	if (auto MapPtr = FieldsByName.Find(OwnerClass))
+	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->Find(Name))
+		if (auto FieldPtr = MapPtr->FieldsByName.Find(Name))
 		{
 			return *FieldPtr;
 		}
 	}
+
+	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
+	return EmptySharedPtr;
+}
+
+const TSharedPtr<const FDataField>& FDataReflection::GetFieldByAlias(UClass* OwnerClass, const FString& Alias)
+{
+	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
+	{
+		if (auto FieldPtr = MapPtr->FieldsByAlias.Find(Alias))
+		{
+			return *FieldPtr;
+		}
+	}
+
+	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
 	return EmptySharedPtr;
 }
 
 const TSharedPtr<const FDataField>& FDataReflection::GetFieldByHash(UClass* OwnerClass, int32 Hash)
 {
-	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
-	if (auto MapPtr = FieldsByHash.Find(OwnerClass))
+	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->Find(Hash))
+		if (auto FieldPtr = MapPtr->FieldsByHash.Find(Hash))
 		{
 			return *FieldPtr;
 		}
 	}
+
+	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
 	return EmptySharedPtr;
 }
 
 const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* OwnerClass)
 {
-	auto Find = FieldsByName.Find(OwnerClass);
+	auto Find = FieldsByClass.Find(OwnerClass);
 	if (Find)
 	{
-		return *Find;
+		return Find->FieldsByName;
 	}
 
 	static TMap<FString, const TSharedPtr<const FDataField>> Empty;
 	return Empty;
 }
 
-TSharedPtr<const FDataLink> FDataReflection::GetLinkByName(UClass* OwnerClass, const FString& Name)
+const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetAliasFields(const UClass* OwnerClass)
 {
-	if (auto MapPtr = LinksByName.Find(OwnerClass))
+	auto Find = FieldsByClass.Find(OwnerClass);
+	if (Find)
 	{
-		if (auto FieldPtr = MapPtr->Find(Name))
-		{
-			return *FieldPtr;
-		}
+		return Find->FieldsByAlias;
 	}
-	return nullptr;
+
+	static TMap<FString, const TSharedPtr<const FDataField>> Empty;
+	return Empty;
 }
 
-TSharedPtr<const FDataLink> FDataReflection::GetLinkByHash(UClass* OwnerClass, int32 Hash)
+const TSharedPtr<const FDataLink>& FDataReflection::GetLinkByName(UClass* OwnerClass, const FString& Name)
 {
-	if (auto MapPtr = LinksByHash.Find(OwnerClass))
+	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->Find(Hash))
+		if (auto FieldPtr = MapPtr->LinksByName.Find(Name))
 		{
 			return *FieldPtr;
 		}
 	}
-	return nullptr;
+
+	static const TSharedPtr<const FDataLink> EmptySharedPtr(nullptr);
+	return EmptySharedPtr;
+}
+
+const TSharedPtr<const FDataLink>& FDataReflection::GetLinkByHash(UClass* OwnerClass, int32 Hash)
+{
+	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
+	{
+		if (auto FieldPtr = MapPtr->LinksByHash.Find(Hash))
+		{
+			return *FieldPtr;
+		}
+	}
+
+	static const TSharedPtr<const FDataLink> EmptySharedPtr(nullptr);
+	return EmptySharedPtr;
 }
 
 const TMap<FString, const TSharedPtr<const FDataLink>>& FDataReflection::GetLinks(UClass* OwnerClass)
 {
-	auto Find = LinksByName.Find(OwnerClass);
+	auto Find = FieldsByClass.Find(OwnerClass);
 	if (Find)
 	{
-		return *Find;
+		return Find->LinksByName;
 	}
 
 	static TMap<FString, const TSharedPtr<const FDataLink>> Empty;
@@ -318,7 +316,7 @@ const TMap<FString, const TSharedPtr<const FDataLink>>& FDataReflection::GetLink
 
 bool FDataReflection::HasClass(const UClass* OwnerClass)
 {
-	return FieldsByName.Contains(OwnerClass);
+	return FieldsByClass.Contains(OwnerClass);
 }
 
 void FDataReflection::Compile()
@@ -326,13 +324,12 @@ void FDataReflection::Compile()
 	check(!bCompiled);
 	bCompiled = true;
 
-	ClassQueue.Shrink();
 	MetaCollection.Shrink();
 
 	TArray<UField*> ReadOnlyFields;
-	for (auto& MapPair : FieldsByHash)
+	for (auto& MapPair : FieldsByClass)
 	{
-		for (auto& Pair : MapPair.Value)
+		for (auto& Pair : MapPair.Value.FieldsByHash)
 		{
 			if (Pair.Value->Meta.bReadOnly)
 			{
@@ -344,13 +341,11 @@ void FDataReflection::Compile()
 	while (ReadOnlyFields.Num() > 0)
 	{
 		UField* UEField = ReadOnlyFields.Pop();
-		if (UClass* UEClass = Cast<UClass>(UEField))
+		if (UClass* Class = Cast<UClass>(UEField))
 		{
-			auto Find = FieldsByHash.Find(UEClass);
-			if (Find)
+			if (auto Find = FieldsByClass.Find(Class))
 			{
-				auto& Map = *Find;
-				for (auto& Pair : Map)
+				for (auto& Pair : Find->FieldsByHash)
 				{
 					if (!Pair.Value->Meta.bReadOnly)
 					{

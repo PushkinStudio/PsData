@@ -70,6 +70,12 @@ struct FDataTypeContext<TMap<FString, int32>> : public FDataTypeContextExtended<
 namespace FDataReflectionTools
 {
 template <>
+struct FTypeDefault<int32>
+{
+	static const int32 GetDefaultValue() { return 0; }
+};
+
+template <>
 struct FTypeSerializer<int32> : public FTypeSerializerExtended<int32, UPsDataInt32Library>
 {
 };

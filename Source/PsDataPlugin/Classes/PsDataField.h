@@ -7,7 +7,7 @@
 #include "CoreMinimal.h"
 #include "UObject/UnrealType.h"
 
-struct FAbstractDataMemory;
+struct FAbstractDataProperty;
 
 /***********************************
  * EDataMetaType
@@ -35,6 +35,7 @@ struct FDataFieldMeta
 	bool bBubbles;
 	bool bDeprecated;
 	bool bReadOnly;
+	bool bAlias;
 	FString Alias;
 	FString EventType;
 
@@ -86,7 +87,6 @@ struct PSDATAPLUGIN_API FAbstractDataTypeContext
 	virtual const FString& GetCppContentType() const = 0;
 	virtual uint32 GetHash() const = 0;
 	virtual FDataFieldFunctions GetUFunctions() const = 0;
-	virtual FAbstractDataMemory* AllocateMemory() const = 0;
 	virtual UField* GetUE4Type() const;
 
 	virtual bool IsArray() const;

@@ -96,12 +96,7 @@ public:
 	template <class OtherType>
 	friend class THardObjectPtr;
 
-public:
-	void Reset()
-	{
-		ResetImpl(Value);
-	}
-
+private:
 	void ResetUnsafe()
 	{
 		// Implementation of the Set method guarantees that this cast is safety
@@ -113,6 +108,12 @@ public:
 	{
 		UPsDataHardObjectPtrSingleton::ReleaseObject(Object);
 		Value = nullptr;
+	}
+
+public:
+	void Reset()
+	{
+		ResetImpl(Value);
 	}
 
 	void Set(T* NewValue)

@@ -27,6 +27,7 @@ FDataFieldMeta::FDataFieldMeta()
 	, bBubbles(false)
 	, bDeprecated(false)
 	, bReadOnly(false)
+	, bAlias(false)
 	, Alias()
 	, EventType()
 {
@@ -287,6 +288,7 @@ void ParseMetaPair(FDataField* Field, const char* Key, int32 KeySize, const char
 	{
 		checkf(Value != nullptr, TEXT("Value needed!"));
 		Field->Meta.Alias = Value ? FString(ValueSize, Value) : TEXT("");
+		Field->Meta.bAlias = true;
 	}
 	else if (Equal(Key, EDataMetaType::Deprecated))
 	{
@@ -309,7 +311,7 @@ void ParseMetaPair(FDataField* Field, const char* Key, int32 KeySize, const char
 	}
 	else
 	{
-		UE_LOG(LogData, Verbose, TEXT("    + meta: \"%s%s%s\""), *FString(KeySize, Key), Value ? TEXT(" = ") : TEXT(""), Value ? *FString(ValueSize, Value) : TEXT(""));
+		UE_LOG(LogData, VeryVerbose, TEXT("    + meta: \"%s%s%s\""), *FString(KeySize, Key), Value ? TEXT(" = ") : TEXT(""), Value ? *FString(ValueSize, Value) : TEXT(""));
 	}
 
 	if (Field->Meta.bStrict && Field->Meta.bEvent)
@@ -381,11 +383,13 @@ void ParseMeta(T* Meta, const TArray<const char*>& Collection)
 
 			++i;
 		}
+
 		if (i > 0)
 		{
 			AddToken(Tokens, Str, i);
-			Tokens.Add(FMetaToken(','));
 		}
+
+		Tokens.Add(FMetaToken(','));
 	}
 
 	int32 TokenOffset = 0;

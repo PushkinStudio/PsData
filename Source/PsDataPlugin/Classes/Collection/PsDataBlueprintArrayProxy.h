@@ -52,5 +52,5 @@ public:
 protected:
 	/** Blueprint get ref */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Map", Category = "PsData|Collection"))
-	const TArray<UPsData*>& GetRef();
+	TArray<UPsData*> Get();
 };
