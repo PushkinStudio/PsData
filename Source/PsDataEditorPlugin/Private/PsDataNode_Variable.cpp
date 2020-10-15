@@ -2,6 +2,8 @@
 
 #include "PsDataNode_Variable.h"
 
+#include "PsDataCallFunctionHandler.h"
+
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
 #include "Editor/BlueprintGraph/Classes/EdGraphSchema_K2.h"
@@ -294,6 +296,11 @@ void UPsDataNode_Variable::ValidateNodeDuringCompilation(class FCompilerResultsL
 			}
 		}
 	}
+}
+
+FNodeHandlingFunctor* UPsDataNode_Variable::CreateNodeHandler(class FKismetCompilerContext& CompilerContext) const
+{
+	return new FPsDataHandler_CallFunction(CompilerContext);
 }
 
 TSharedPtr<const FDataField> UPsDataNode_Variable::GetProperty() const

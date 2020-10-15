@@ -20,6 +20,8 @@ enum class EPsDataVariablePinType : uint8
 	Unknown
 };
 
+class FNodeHandlingFunctor;
+
 UCLASS()
 class PSDATAEDITORPLUGIN_API UPsDataNode_Variable : public UK2Node_CallFunction
 {
@@ -55,6 +57,7 @@ public:
 	// Begin UK2Node interface
 	virtual bool DrawNodeAsVariable() const override { return true; }
 	virtual void ValidateNodeDuringCompilation(class FCompilerResultsLog& MessageLog) const override;
+	virtual FNodeHandlingFunctor* CreateNodeHandler(class FKismetCompilerContext& CompilerContext) const override;
 	// End UK2Node interface.
 
 	/** Get property */
