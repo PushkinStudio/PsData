@@ -9,7 +9,7 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, FText, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, FText>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, FText>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -21,7 +21,7 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, FText>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -33,7 +33,7 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(FText, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<FText>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<FText>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -45,7 +45,7 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<FText>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -57,7 +57,7 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execSetProperty)
 	P_GET_PROPERTY_REF(FTextProperty, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<FText>(Target, Hash, Value);
+	PsDataTools::SetByHash<FText>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -69,7 +69,7 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	FText* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -127,7 +127,7 @@ FText UPsDataFTextLibrary::TypeDeserialize(const UPsData* const Instance, const 
 
 		if (TableIdValue == NAME_None || KeyValue.IsEmpty())
 		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\" (Object must have fields: \"%s\" and \"%s\")"), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FText>::Type(), *TableIdParam, *KeyParam)
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\" (Object must have fields: \"%s\" and \"%s\")"), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FText>::Type(), *TableIdParam, *KeyParam)
 		}
 
 		return FText::FromStringTable(TableIdValue, KeyValue);
@@ -137,7 +137,7 @@ FText UPsDataFTextLibrary::TypeDeserialize(const UPsData* const Instance, const 
 		FString String;
 		if (!Deserializer->ReadValue(String))
 		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FText>::Type())
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FText>::Type())
 		}
 
 		return FText::FromString(String);

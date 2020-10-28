@@ -65,7 +65,7 @@ void UPsDataNode_SetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 				return nullptr;
 			}
 
-			if (FDataReflection::GetFieldByName(TargetClass->GetSuperClass(), Field.Name).IsValid())
+			if (PsDataTools::FDataReflection::GetFieldByName(TargetClass->GetSuperClass(), Field.Name).IsValid())
 			{
 				return nullptr;
 			}
@@ -88,7 +88,7 @@ void UPsDataNode_SetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 	UClass* NodeClass = GetClass();
 	for (UClass* Class : TObjectRange<UClass>())
 	{
-		for (auto& Pair : FDataReflection::GetFields(Class))
+		for (auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
 		{
 			if (UBlueprintNodeSpawner* NodeSpawner = GetMenuActions_Utils::MakeAction(GetClass(), Class, *Pair.Value.Get()))
 			{

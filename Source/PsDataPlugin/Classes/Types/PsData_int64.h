@@ -52,6 +52,9 @@ public:
 	static int64 TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const int64& Value);
 };
 
+namespace PsDataTools
+{
+
 template <>
 struct FDataTypeContext<int64> : public FDataTypeContextExtended<int64, UPsDataInt64Library>
 {
@@ -67,8 +70,6 @@ struct FDataTypeContext<TMap<FString, int64>> : public FDataTypeContextExtended<
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeDefault<int64>
 {
@@ -85,4 +86,4 @@ struct FTypeDeserializer<int64> : public FTypeDeserializerExtended<int64, UPsDat
 {
 };
 
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

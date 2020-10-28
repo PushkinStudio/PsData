@@ -56,6 +56,8 @@ public:
 /***********************************
  * Enum context
  ***********************************/
+namespace PsDataTools
+{
 
 template <typename T>
 struct FEnumDataTypeContext : public FDataTypeContextExtended<T, UPsDataEnumLibrary>
@@ -64,7 +66,7 @@ struct FEnumDataTypeContext : public FDataTypeContextExtended<T, UPsDataEnumLibr
 
 	virtual UField* GetUE4Type() const override
 	{
-		return FindObject<UEnum>(ANY_PACKAGE, *FDataReflectionTools::FType<T>::ContentType());
+		return FindObject<UEnum>(ANY_PACKAGE, *FType<T>::ContentType());
 	}
 
 	bool HasExtendedTypeCheck() const override
@@ -79,8 +81,8 @@ struct FEnumDataTypeContext : public FDataTypeContextExtended<T, UPsDataEnumLibr
 
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
-		static constexpr const uint32 Hash0 = FDataReflectionTools::FType<uint8>::Hash();
-		static constexpr const uint32 Hash1 = FDataReflectionTools::FType<T>::Hash();
+		static constexpr const uint32 Hash0 = FType<uint8>::Hash();
+		static constexpr const uint32 Hash1 = FType<T>::Hash();
 		const uint32 RContextHash = RightContext->GetHash();
 		return Hash0 == RContextHash || Hash1 == RContextHash;
 	}
@@ -93,7 +95,7 @@ struct FEnumDataTypeContext<TArray<T>> : public FDataTypeContextExtended<TArray<
 
 	virtual UField* GetUE4Type() const override
 	{
-		return FindObject<UEnum>(ANY_PACKAGE, *FDataReflectionTools::FType<T>::ContentType());
+		return FindObject<UEnum>(ANY_PACKAGE, *FType<T>::ContentType());
 	}
 
 	bool HasExtendedTypeCheck() const override
@@ -108,8 +110,8 @@ struct FEnumDataTypeContext<TArray<T>> : public FDataTypeContextExtended<TArray<
 
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
-		static constexpr const uint32 Hash0 = FDataReflectionTools::FType<TArray<uint8>>::Hash();
-		static constexpr const uint32 Hash1 = FDataReflectionTools::FType<TArray<T>>::Hash();
+		static constexpr const uint32 Hash0 = FType<TArray<uint8>>::Hash();
+		static constexpr const uint32 Hash1 = FType<TArray<T>>::Hash();
 		const uint32 RContextHash = RightContext->GetHash();
 		return Hash0 == RContextHash || Hash1 == RContextHash;
 	}
@@ -122,7 +124,7 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 
 	virtual UField* GetUE4Type() const override
 	{
-		return FindObject<UEnum>(ANY_PACKAGE, *FDataReflectionTools::FType<T>::ContentType());
+		return FindObject<UEnum>(ANY_PACKAGE, *FType<T>::ContentType());
 	}
 
 	bool HasExtendedTypeCheck() const override
@@ -137,18 +139,23 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
 	{
-		static constexpr const uint32 Hash0 = FDataReflectionTools::FType<TMap<FString, uint8>>::Hash();
-		static constexpr const uint32 Hash1 = FDataReflectionTools::FType<TMap<FString, T>>::Hash();
+		static constexpr const uint32 Hash0 = FType<TMap<FString, uint8>>::Hash();
+		static constexpr const uint32 Hash1 = FType<TMap<FString, T>>::Hash();
 		const uint32 RContextHash = RightContext->GetHash();
 		return Hash0 == RContextHash || Hash1 == RContextHash;
 	}
 };
+
+} // namespace PsDataTools
 
 /***********************************
  * Macro DESCRIBE_ENUM
  ***********************************/
 
 #define DESCRIBE_ENUM(__Type__)                                                                                                                                  \
+	namespace PsDataTools                                                                                                                                        \
+	{                                                                                                                                                            \
+                                                                                                                                                                 \
 	template <>                                                                                                                                                  \
 	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                                                    \
 	{                                                                                                                                                            \
@@ -167,8 +174,6 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 		virtual ~FDataTypeContext() {}                                                                                                                           \
 	};                                                                                                                                                           \
                                                                                                                                                                  \
-	namespace FDataReflectionTools                                                                                                                               \
-	{                                                                                                                                                            \
 	template <>                                                                                                                                                  \
 	struct FTypeDefault<__Type__>                                                                                                                                \
 	{                                                                                                                                                            \
@@ -192,54 +197,4 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 			return static_cast<__Type__>(UPsDataEnumLibrary::TypeDeserialize(Instance, Field, Deserializer, static_cast<uint8>(Value)));                         \
 		}                                                                                                                                                        \
 	};                                                                                                                                                           \
-                                                                                                                                                                 \
-	template <class ReturnType, int32 Hash>                                                                                                                      \
-	struct FDLink<__Type__, ReturnType, Hash> : public FDLinkBase<__Type__, ReturnType, Hash>                                                                    \
-	{                                                                                                                                                            \
-	public:                                                                                                                                                      \
-		FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)                                      \
-			: FDLinkBase<__Type__, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                                                          \
-		{                                                                                                                                                        \
-		}                                                                                                                                                        \
-                                                                                                                                                                 \
-		FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)                                                                                \
-			: FDLinkBase<__Type__, ReturnType, Hash>(Name, CharReturnType, InInstance)                                                                           \
-		{                                                                                                                                                        \
-		}                                                                                                                                                        \
-                                                                                                                                                                 \
-		typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const                                                                                  \
-		{                                                                                                                                                        \
-			return FDLinkHelper<ReturnType, Hash>::Get(this->Instance);                                                                                          \
-		}                                                                                                                                                        \
-                                                                                                                                                                 \
-		FDLink(const FDLink&) = delete;                                                                                                                          \
-		FDLink(FDLink&&) = delete;                                                                                                                               \
-		FDLink& operator=(const FDLink&) = delete;                                                                                                               \
-		FDLink& operator=(FDLink&&) = delete;                                                                                                                    \
-	};                                                                                                                                                           \
-                                                                                                                                                                 \
-	template <class ReturnType, int32 Hash>                                                                                                                      \
-	struct FDLink<TArray<__Type__>, ReturnType, Hash> : public FDLinkBase<TArray<__Type__>, ReturnType, Hash>                                                    \
-	{                                                                                                                                                            \
-	public:                                                                                                                                                      \
-		FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance, bool bAbstract = false)                                      \
-			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, Path, CharReturnType, InInstance, bAbstract)                                                  \
-		{                                                                                                                                                        \
-		}                                                                                                                                                        \
-                                                                                                                                                                 \
-		FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)                                                                                \
-			: FDLinkBase<TArray<__Type__>, ReturnType, Hash>(Name, CharReturnType, InInstance)                                                                   \
-		{                                                                                                                                                        \
-		}                                                                                                                                                        \
-                                                                                                                                                                 \
-		typename FDLinkHelper<ReturnType, Hash>::CompleteReturnType Get() const                                                                                  \
-		{                                                                                                                                                        \
-			return FDLinkHelper<ReturnType, Hash>::GetAsArray(this->Instance);                                                                                   \
-		}                                                                                                                                                        \
-                                                                                                                                                                 \
-		FDLink(const FDLink&) = delete;                                                                                                                          \
-		FDLink(FDLink&&) = delete;                                                                                                                               \
-		FDLink& operator=(const FDLink&) = delete;                                                                                                               \
-		FDLink& operator=(FDLink&&) = delete;                                                                                                                    \
-	};                                                                                                                                                           \
-	}
+	} // namespace PsDataTools

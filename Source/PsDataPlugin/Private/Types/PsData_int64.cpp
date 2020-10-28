@@ -9,7 +9,7 @@ DEFINE_FUNCTION(UPsDataInt64Library::execSetMapProperty)
 	P_GET_TMAP_REF(FString, int64, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, int64>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, int64>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -21,7 +21,7 @@ DEFINE_FUNCTION(UPsDataInt64Library::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, int64>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -33,7 +33,7 @@ DEFINE_FUNCTION(UPsDataInt64Library::execSetArrayProperty)
 	P_GET_TARRAY_REF(int64, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<int64>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<int64>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -45,7 +45,7 @@ DEFINE_FUNCTION(UPsDataInt64Library::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<int64>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -57,7 +57,7 @@ DEFINE_FUNCTION(UPsDataInt64Library::execSetProperty)
 	P_GET_PROPERTY(FInt64Property, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<int64>(Target, Hash, Value);
+	PsDataTools::SetByHash<int64>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -69,7 +69,7 @@ DEFINE_FUNCTION(UPsDataInt64Library::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	int64* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -87,6 +87,6 @@ int64 UPsDataInt64Library::TypeDeserialize(const UPsData* const Instance, const 
 		return Result;
 	}
 
-	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<int64>::Type());
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<int64>::Type());
 	return Value;
 }

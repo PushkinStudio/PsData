@@ -320,6 +320,9 @@ public:
 	static FPsDataBigInteger TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FPsDataBigInteger& Value);
 };
 
+namespace PsDataTools
+{
+
 template <>
 struct FDataTypeContext<FPsDataBigInteger> : public FDataTypeContextExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
@@ -335,8 +338,6 @@ struct FDataTypeContext<TMap<FString, FPsDataBigInteger>> : public FDataTypeCont
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeSerializer<FPsDataBigInteger> : public FTypeSerializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
@@ -346,4 +347,4 @@ template <>
 struct FTypeDeserializer<FPsDataBigInteger> : public FTypeDeserializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
 };
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

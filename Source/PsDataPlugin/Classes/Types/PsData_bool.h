@@ -52,6 +52,9 @@ public:
 	static bool TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const bool& Value);
 };
 
+namespace PsDataTools
+{
+
 template <>
 struct FDataTypeContext<bool> : public FDataTypeContextExtended<bool, UPsDataBoolLibrary>
 {
@@ -67,8 +70,6 @@ struct FDataTypeContext<TMap<FString, bool>> : public FDataTypeContextExtended<T
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeDefault<bool>
 {
@@ -84,4 +85,5 @@ template <>
 struct FTypeDeserializer<bool> : public FTypeDeserializerExtended<bool, UPsDataBoolLibrary>
 {
 };
-} // namespace FDataReflectionTools
+
+} // namespace PsDataTools

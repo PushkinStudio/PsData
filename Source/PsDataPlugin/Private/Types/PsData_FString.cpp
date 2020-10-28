@@ -9,7 +9,7 @@ DEFINE_FUNCTION(UPsDataFStringLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, FString, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, FString>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, FString>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -21,7 +21,7 @@ DEFINE_FUNCTION(UPsDataFStringLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, FString>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -33,7 +33,7 @@ DEFINE_FUNCTION(UPsDataFStringLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(FString, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<FString>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<FString>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -45,7 +45,7 @@ DEFINE_FUNCTION(UPsDataFStringLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<FString>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -57,7 +57,7 @@ DEFINE_FUNCTION(UPsDataFStringLibrary::execSetProperty)
 	P_GET_PROPERTY_REF(FStrProperty, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<FString>(Target, Hash, Value);
+	PsDataTools::SetByHash<FString>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -69,7 +69,7 @@ DEFINE_FUNCTION(UPsDataFStringLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	FString* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -87,6 +87,6 @@ FString UPsDataFStringLibrary::TypeDeserialize(const UPsData* const Instance, co
 		return Result;
 	}
 
-	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FString>::Type());
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FString>::Type());
 	return Value;
 }

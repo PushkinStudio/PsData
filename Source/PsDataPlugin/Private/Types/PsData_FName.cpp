@@ -9,7 +9,7 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, FName, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, FName>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, FName>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -21,7 +21,7 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, FName>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -33,7 +33,7 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(FName, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<FName>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<FName>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -45,7 +45,7 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<FName>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -57,7 +57,7 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execSetProperty)
 	P_GET_PROPERTY(FNameProperty, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<FName>(Target, Hash, Value);
+	PsDataTools::SetByHash<FName>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -69,7 +69,7 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	FName* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -84,7 +84,7 @@ FName UPsDataFNameLibrary::TypeDeserialize(const UPsData* const Instance, const 
 	FString String;
 	if (!Deserializer->ReadValue(String))
 	{
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FName>::Type())
+		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FName>::Type())
 	}
 	FString LowercaseString = String.ToLower();
 	if (LowercaseString == TEXT("none"))

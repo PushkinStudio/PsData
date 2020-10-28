@@ -43,10 +43,10 @@ void UPsDataNode_Variable::AllocateDefaultPins()
 	auto Function = GetTargetFunction();
 	if (Function)
 	{
-		const auto TargetParam = Function->HasMetaData(MD_PsDataTarget) ? FName(Function->GetMetaData(MD_PsDataTarget)) : Default_TargetParam;
-		const auto HashParam = Function->HasMetaData(MD_PsDataHash) ? FName(Function->GetMetaData(MD_PsDataHash)) : Default_HashParam;
-		const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
-		const auto InParam = Function->HasMetaData(MD_PsDataIn) ? FName(Function->GetMetaData(MD_PsDataIn)) : Default_InParam;
+		const auto TargetParam = Function->HasMetaData(MD_PsDataTarget) ? FName(*Function->GetMetaData(MD_PsDataTarget)) : Default_TargetParam;
+		const auto HashParam = Function->HasMetaData(MD_PsDataHash) ? FName(*Function->GetMetaData(MD_PsDataHash)) : Default_HashParam;
+		const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(*Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
+		const auto InParam = Function->HasMetaData(MD_PsDataIn) ? FName(*Function->GetMetaData(MD_PsDataIn)) : Default_InParam;
 
 		for (UEdGraphPin* Pin : Pins)
 		{
@@ -98,7 +98,7 @@ UK2Node::ERedirectType UPsDataNode_Variable::DoPinsMatchForReconstruction(const 
 			auto Function = GetTargetFunction();
 			if (Function)
 			{
-				const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
+				const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(*Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
 				if (NewPin->PinName == OutParam)
 				{
 					return ERedirectType_Name;
@@ -127,7 +127,7 @@ FLinearColor UPsDataNode_Variable::GetNodeTitleColor() const
 
 	if (!OutProperty)
 	{
-		const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
+		const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(*Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
 		OutProperty = Function->FindPropertyByName(OutParam);
 	}
 
@@ -305,7 +305,7 @@ FNodeHandlingFunctor* UPsDataNode_Variable::CreateNodeHandler(class FKismetCompi
 
 TSharedPtr<const FDataField> UPsDataNode_Variable::GetProperty() const
 {
-	auto Find = FDataReflection::GetFields(TargetClass).Find(PropertyName);
+	auto Find = PsDataTools::FDataReflection::GetFields(TargetClass).Find(PropertyName);
 	if (Find)
 	{
 		return *Find;

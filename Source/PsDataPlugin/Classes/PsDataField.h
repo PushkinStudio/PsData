@@ -83,8 +83,8 @@ struct PSDATAPLUGIN_API FDataFieldFunctions
 
 struct PSDATAPLUGIN_API FAbstractDataTypeContext
 {
-	virtual const FString& GetCppType() const = 0;
-	virtual const FString& GetCppContentType() const = 0;
+	virtual FString GetCppType() const = 0;
+	virtual FString GetCppContentType() const = 0;
 	virtual uint32 GetHash() const = 0;
 	virtual FDataFieldFunctions GetUFunctions() const = 0;
 	virtual UField* GetUE4Type() const;

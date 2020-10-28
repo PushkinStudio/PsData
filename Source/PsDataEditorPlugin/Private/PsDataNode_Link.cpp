@@ -115,9 +115,9 @@ void UPsDataNode_Link::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionR
 	UClass* NodeClass = GetClass();
 	for (UClass* Class : TObjectRange<UClass>())
 	{
-		for (auto& Pair : FDataReflection::GetFields(Class))
+		for (auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
 		{
-			TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Class, Pair.Value->Hash);
+			TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Class, Pair.Value->Hash);
 			if (Link.IsValid())
 			{
 				if (UBlueprintNodeSpawner* NodeSpawner = GetMenuActions_Utils::MakeAction(GetClass(), Class, *Pair.Value, *Link))
@@ -134,7 +134,7 @@ TSharedPtr<const FDataLink> UPsDataNode_Link::GetLink() const
 	auto Field = GetProperty();
 	if (Field.IsValid())
 	{
-		return FDataReflection::GetLinkByHash(TargetClass, Field->Hash);
+		return PsDataTools::FDataReflection::GetLinkByHash(TargetClass, Field->Hash);
 	}
 	return TSharedPtr<const FDataLink>(nullptr);
 }

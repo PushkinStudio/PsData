@@ -52,12 +52,15 @@ public:
 	static FSoftObjectPath TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& Value);
 };
 
+namespace PsDataTools
+{
+
 template <typename T>
 struct FDataTypeContext<TSoftObjectPtr<T>> : public FDataTypeContextExtended<TSoftObjectPtr<T>, UPsDataTSoftObjectPtrLibrary>
 {
 	virtual UField* GetUE4Type() const override
 	{
-		return FDataReflectionTools::GetClass<T>();
+		return GetClass<T>();
 	}
 
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
@@ -71,7 +74,7 @@ struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FDataTypeContextExte
 {
 	virtual UField* GetUE4Type() const override
 	{
-		return FDataReflectionTools::GetClass<T>();
+		return GetClass<T>();
 	}
 
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
@@ -85,7 +88,7 @@ struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FDataTypeCont
 {
 	virtual UField* GetUE4Type() const override
 	{
-		return FDataReflectionTools::GetClass<T>();
+		return GetClass<T>();
 	}
 
 	virtual bool IsA(const FAbstractDataTypeContext* RightContext) const override
@@ -94,8 +97,6 @@ struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FDataTypeCont
 	}
 };
 
-namespace FDataReflectionTools
-{
 template <typename T>
 struct FTypeSerializer<TSoftObjectPtr<T>>
 {
@@ -114,4 +115,4 @@ struct FTypeDeserializer<TSoftObjectPtr<T>>
 	}
 };
 
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

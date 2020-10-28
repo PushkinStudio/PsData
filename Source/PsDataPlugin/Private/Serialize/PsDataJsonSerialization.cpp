@@ -116,7 +116,7 @@ void FPsDataJsonSerializer::WriteValue(const UPsData* Value)
 	else
 	{
 		WriteObject();
-		FDataReflectionTools::FPsDataFriend::Serialize(Value, this);
+		PsDataTools::FPsDataFriend::Serialize(Value, this);
 		PopObject();
 	}
 }
@@ -335,7 +335,7 @@ bool FPsDataJsonDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator All
 			OutValue = Allocator();
 		}
 
-		FDataReflectionTools::FPsDataFriend::Deserialize(OutValue, this);
+		PsDataTools::FPsDataFriend::Deserialize(OutValue, this);
 
 		PopObject();
 

@@ -53,12 +53,15 @@ public:
 	static bool IsA(const FAbstractDataTypeContext* LeftContext, const FAbstractDataTypeContext* RightContext);
 };
 
+namespace PsDataTools
+{
+
 template <typename T>
 struct FDataTypeContext<T*> : public FDataTypeContextExtended<T*, UPsDataUPsDataLibrary>
 {
 	virtual UField* GetUE4Type() const override
 	{
-		return FDataReflectionTools::GetClass<T>();
+		return GetClass<T>();
 	}
 
 	virtual bool IsData() const override
@@ -83,7 +86,7 @@ struct FDataTypeContext<TArray<T*>> : public FDataTypeContextExtended<TArray<T*>
 {
 	virtual UField* GetUE4Type() const override
 	{
-		return FDataReflectionTools::GetClass<T>();
+		return GetClass<T>();
 	}
 
 	virtual bool IsData() const override
@@ -108,7 +111,7 @@ struct FDataTypeContext<TMap<FString, T*>> : public FDataTypeContextExtended<TMa
 {
 	virtual UField* GetUE4Type() const override
 	{
-		return FDataReflectionTools::GetClass<T>();
+		return GetClass<T>();
 	}
 
 	virtual bool IsData() const override
@@ -128,8 +131,6 @@ struct FDataTypeContext<TMap<FString, T*>> : public FDataTypeContextExtended<TMa
 	}
 };
 
-namespace FDataReflectionTools
-{
 template <typename T>
 struct FTypeSerializer<T*>
 {
@@ -147,4 +148,4 @@ struct FTypeDeserializer<T*>
 		return static_cast<T*>(UPsDataUPsDataLibrary::TypeDeserialize(Instance, Field, Deserializer, Value));
 	}
 };
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

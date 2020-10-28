@@ -52,6 +52,9 @@ public:
 	static FString TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FString& Value);
 };
 
+namespace PsDataTools
+{
+
 template <>
 struct FDataTypeContext<FString> : public FDataTypeContextExtended<FString, UPsDataFStringLibrary>
 {
@@ -67,8 +70,6 @@ struct FDataTypeContext<TMap<FString, FString>> : public FDataTypeContextExtende
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeSerializer<FString> : public FTypeSerializerExtended<FString, UPsDataFStringLibrary>
 {
@@ -79,4 +80,4 @@ struct FTypeDeserializer<FString> : public FTypeDeserializerExtended<FString, UP
 {
 };
 
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

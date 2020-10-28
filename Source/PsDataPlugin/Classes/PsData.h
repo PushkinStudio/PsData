@@ -50,7 +50,7 @@ struct PSDATAPLUGIN_API FAbstractDataProperty
 * PsData friend
 ***********************************/
 
-namespace FDataReflectionTools
+namespace PsDataTools
 {
 struct PSDATAPLUGIN_API FPsDataFriend
 {
@@ -63,7 +63,7 @@ struct PSDATAPLUGIN_API FPsDataFriend
 	static void Serialize(const UPsData* Data, FPsDataSerializer* Serializer);
 	static void Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer);
 };
-} // namespace FDataReflectionTools
+} // namespace PsDataTools
 
 /***********************************
  * FDelegateWrapper
@@ -169,7 +169,7 @@ class PSDATAPLUGIN_API UPsData : public UObject
 	GENERATED_UCLASS_BODY()
 
 private:
-	friend struct FDataReflectionTools::FPsDataFriend;
+	friend struct PsDataTools::FPsDataFriend;
 
 	/** Properties */
 	TArray<FAbstractDataProperty*> Properties;

@@ -5,10 +5,48 @@
 #include "PsData.h"
 #include "PsDataField.h"
 
-#include "Async/Async.h"
+int32 FPsDataEventScopeGuard::Index = 0;
+TArray<FPsDataEventScopeGuardCallback> FPsDataEventScopeGuard::Callbacks;
+
+FPsDataEventScopeGuard::FPsDataEventScopeGuard()
+{
+	++Index;
+}
+
+FPsDataEventScopeGuard::~FPsDataEventScopeGuard()
+{
+	--Index;
+	check(Index >= 0);
+
+	while (Index == 0 && Callbacks.Num() > 0)
+	{
+		Invoke();
+	}
+}
+
+void FPsDataEventScopeGuard::Invoke()
+{
+	auto CallbacksCopy = Callbacks;
+	Callbacks.Reset();
+
+	for (int32 i = 0; i < CallbacksCopy.Num(); ++i)
+	{
+		CallbacksCopy[i]();
+	}
+}
+
+void FPsDataEventScopeGuard::AddCallback(FPsDataEventScopeGuardCallback Function)
+{
+	Callbacks.Add(Function);
+}
+
+bool FPsDataEventScopeGuard::IsGuarded()
+{
+	return Index > 0;
+}
 
 const FString UPsDataEvent::Added(TEXT("Added"));
-const FString UPsDataEvent::Removing(TEXT("Removing"));
+const FString UPsDataEvent::Removed(TEXT("Removed"));
 const FString UPsDataEvent::Changed(TEXT("Changed"));
 const FString UPsDataEvent::NameChanged(TEXT("NameChanged"));
 
@@ -57,10 +95,6 @@ void UPsDataEvent::StopPropagation()
 {
 	bStop = true;
 }
-
-/***********************************
- * Event
- ***********************************/
 
 DEFINE_FUNCTION(UPsDataEventFunctionLibrary::execGetEventTarget)
 {

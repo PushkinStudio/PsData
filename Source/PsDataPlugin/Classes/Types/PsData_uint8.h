@@ -52,6 +52,9 @@ public:
 	static uint8 TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const uint8& Value);
 };
 
+namespace PsDataTools
+{
+
 template <>
 struct FDataTypeContext<uint8> : public FDataTypeContextExtended<uint8, UPsDataUint8Library>
 {
@@ -67,8 +70,6 @@ struct FDataTypeContext<TMap<FString, uint8>> : public FDataTypeContextExtended<
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeDefault<uint8>
 {
@@ -85,4 +86,4 @@ struct FTypeDeserializer<uint8> : public FTypeDeserializerExtended<uint8, UPsDat
 {
 };
 
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

@@ -6,31 +6,15 @@
 #include "PsDataEvent.h"
 #include "PsDataField.h"
 #include "PsDataTraits.h"
-#include "PsDataUtils.h"
 #include "Serialize/PsDataSerialization.h"
 
-#include "CoreMinimal.h"
-#include "Dom/JsonObject.h"
-#include "Dom/JsonValue.h"
-
-/***********************************
- * 
- ***********************************/
-
-namespace FDataReflectionTools
+namespace PsDataTools
 {
-template <typename T>
-bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue);
-template <typename T>
-void UnsafeSet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename TConstRef<T>::Type NewValue);
-} // namespace FDataReflectionTools
 
 /***********************************
 * Comparison
 ***********************************/
 
-namespace FDataReflectionTools
-{
 template <typename T>
 struct FTypeComparator
 {
@@ -95,27 +79,20 @@ struct FTypeComparator<TMap<FString, T>>
 		return true;
 	}
 };
-} // namespace FDataReflectionTools
 
 /***********************************
  * Serizlize/Deserialize
  ***********************************/
 
-namespace FDataReflectionTools
-{
 template <typename T>
 struct FTypeDefault
 {
 	static const T GetDefaultValue() { return T(); }
 };
-} // namespace FDataReflectionTools
 
 /***********************************
  * Serizlize/Deserialize
  ***********************************/
-
-namespace FDataReflectionTools
-{
 
 template <typename T>
 struct FTypeSerializer
@@ -155,7 +132,7 @@ struct FTypeSerializer<TArray<T>>
 		Serializer->WriteArray();
 		for (const T& Element : Value)
 		{
-			FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Element);
+			FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Element);
 		}
 		Serializer->PopArray();
 	}
@@ -174,11 +151,11 @@ struct FTypeDeserializer<TArray<T>>
 			{
 				if (Value.IsValidIndex(i))
 				{
-					NewValue.Add(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value[i]));
+					NewValue.Add(FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value[i]));
 				}
 				else
 				{
-					NewValue.Add(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, FDataReflectionTools::FTypeDefault<T>::GetDefaultValue()));
+					NewValue.Add(FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, FTypeDefault<T>::GetDefaultValue()));
 				}
 				i++;
 				Deserializer->PopIndex();
@@ -187,7 +164,7 @@ struct FTypeDeserializer<TArray<T>>
 		}
 		else
 		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TArray<T>>::Type())
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FType<TArray<T>>::Type())
 		}
 
 		return NewValue;
@@ -203,7 +180,7 @@ struct FTypeSerializer<TMap<FString, T>>
 		for (auto& Pair : Value)
 		{
 			Serializer->WriteKey(Pair.Key);
-			FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Pair.Value);
+			FTypeSerializer<T>::Serialize(Instance, Field, Serializer, Pair.Value);
 			Serializer->PopKey(Pair.Key);
 		}
 		Serializer->PopObject();
@@ -223,11 +200,11 @@ struct FTypeDeserializer<TMap<FString, T>>
 			{
 				if (Value.Contains(Key))
 				{
-					NewValue.Add(Key, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value[Key]));
+					NewValue.Add(Key, FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, Value[Key]));
 				}
 				else
 				{
-					NewValue.Add(Key, FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, FDataReflectionTools::FTypeDefault<T>::GetDefaultValue()));
+					NewValue.Add(Key, FTypeDeserializer<T>::Deserialize(Instance, Field, Deserializer, FTypeDefault<T>::GetDefaultValue()));
 				}
 				Deserializer->PopKey(Key);
 			}
@@ -235,12 +212,11 @@ struct FTypeDeserializer<TMap<FString, T>>
 		}
 		else
 		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<TMap<FString, T>>::Type())
+			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FType<TMap<FString, T>>::Type())
 		}
 		return NewValue;
 	}
 };
-} // namespace FDataReflectionTools
 
 /***********************************
 * Property
@@ -252,24 +228,24 @@ struct FDataProperty : public FAbstractDataProperty
 	T Value;
 
 	FDataProperty()
-		: Value(FDataReflectionTools::FTypeDefault<T>::GetDefaultValue())
+		: Value(FTypeDefault<T>::GetDefaultValue())
 	{
 	}
 	virtual ~FDataProperty() {}
 
 	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<T>::Serialize(Instance, GetField(), Serializer, Get());
+		FTypeSerializer<T>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		Set(FDataReflectionTools::FTypeDeserializer<T>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
+		Set(FTypeDeserializer<T>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
 	virtual void Reset(UPsData* Instance) override
 	{
-		Set(FDataReflectionTools::FTypeDefault<T>::GetDefaultValue(), Instance);
+		Set(FTypeDefault<T>::GetDefaultValue(), Instance);
 	}
 
 	const T& Get() const
@@ -284,14 +260,14 @@ struct FDataProperty : public FAbstractDataProperty
 
 	void Set(const T& NewValue, UPsData* Instance)
 	{
-		if (FDataReflectionTools::FTypeComparator<T>::Compare(Value, NewValue))
+		if (FTypeComparator<T>::Compare(Value, NewValue))
 		{
 			return;
 		}
 
 		Value = NewValue;
 
-		FDataReflectionTools::FPsDataFriend::Changed(Instance, GetField());
+		FPsDataFriend::Changed(Instance, GetField());
 	}
 };
 
@@ -313,12 +289,12 @@ struct FDataProperty<TArray<T>> : public FAbstractDataProperty
 
 	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TArray<T>>::Serialize(Instance, GetField(), Serializer, Get());
+		FTypeSerializer<TArray<T>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		Set(FDataReflectionTools::FTypeDeserializer<TArray<T>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
+		Set(FTypeDeserializer<TArray<T>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
 	virtual void Reset(UPsData* Instance) override
@@ -333,14 +309,14 @@ struct FDataProperty<TArray<T>> : public FAbstractDataProperty
 
 	void Set(const TArray<T>& NewValue, UPsData* Instance)
 	{
-		if (FDataReflectionTools::FTypeComparator<TArray<T>>::Compare(Value, NewValue))
+		if (FTypeComparator<TArray<T>>::Compare(Value, NewValue))
 		{
 			return;
 		}
 
 		Value = NewValue;
 
-		FDataReflectionTools::FPsDataFriend::Changed(Instance, GetField());
+		FPsDataFriend::Changed(Instance, GetField());
 	}
 };
 
@@ -362,12 +338,12 @@ struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 
 	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T>>::Serialize(Instance, GetField(), Serializer, Get());
+		FTypeSerializer<TMap<FString, T>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		Set(FDataReflectionTools::FTypeDeserializer<TMap<FString, T>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
+		Set(FTypeDeserializer<TMap<FString, T>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
 	virtual void Reset(UPsData* Instance) override
@@ -382,7 +358,7 @@ struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 
 	void Set(const TMap<FString, T>& NewValue, UPsData* Instance)
 	{
-		if (FDataReflectionTools::FTypeComparator<TMap<FString, T>>::Compare(Value, NewValue))
+		if (FTypeComparator<TMap<FString, T>>::Compare(Value, NewValue))
 		{
 			return;
 		}
@@ -392,7 +368,7 @@ struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 			return A < B;
 		});
 
-		FDataReflectionTools::FPsDataFriend::Changed(Instance, GetField());
+		FPsDataFriend::Changed(Instance, GetField());
 	}
 };
 
@@ -414,12 +390,12 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 
 	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<T*>::Serialize(Instance, GetField(), Serializer, Get());
+		FTypeSerializer<T*>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		Set(FDataReflectionTools::FTypeDeserializer<T*>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
+		Set(FTypeDeserializer<T*>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
 	virtual void Reset(UPsData* Instance) override
@@ -462,18 +438,18 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 
 		if (Value)
 		{
-			FDataReflectionTools::FPsDataFriend::RemoveChild(Instance, static_cast<UPsData*>(static_cast<void*>(Value)));
+			FPsDataFriend::RemoveChild(Instance, static_cast<UPsData*>(static_cast<void*>(Value)));
 		}
 
 		Value = NewValue;
 
 		if (NewValue)
 		{
-			FDataReflectionTools::FPsDataFriend::ChangeDataName(static_cast<UPsData*>(static_cast<void*>(NewValue)), Field->Name, TEXT(""));
-			FDataReflectionTools::FPsDataFriend::AddChild(Instance, static_cast<UPsData*>(static_cast<void*>(NewValue)));
+			FPsDataFriend::ChangeDataName(static_cast<UPsData*>(static_cast<void*>(NewValue)), Field->Name, TEXT(""));
+			FPsDataFriend::AddChild(Instance, static_cast<UPsData*>(static_cast<void*>(NewValue)));
 		}
 
-		FDataReflectionTools::FPsDataFriend::Changed(Instance, Field);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 };
 
@@ -495,12 +471,12 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TArray<T*>>::Serialize(Instance, GetField(), Serializer, Get());
+		FTypeSerializer<TArray<T*>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		Set(FDataReflectionTools::FTypeDeserializer<TArray<T*>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
+		Set(FTypeDeserializer<TArray<T*>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
 	virtual void Reset(UPsData* Instance) override
@@ -522,8 +498,8 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 		{
 			if (NewValue[i]->GetParent() != Instance)
 			{
-				FDataReflectionTools::FPsDataFriend::ChangeDataName(NewValue[i], FString::FromInt(i), Field->Name);
-				FDataReflectionTools::FPsDataFriend::AddChild(Instance, NewValue[i]);
+				FPsDataFriend::ChangeDataName(NewValue[i], FString::FromInt(i), Field->Name);
+				FPsDataFriend::AddChild(Instance, NewValue[i]);
 				bChange = true;
 			}
 		}
@@ -532,7 +508,7 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 		{
 			if (!NewValue.Contains(Value[i])) //TODO: optimization
 			{
-				FDataReflectionTools::FPsDataFriend::RemoveChild(Instance, Value[i]);
+				FPsDataFriend::RemoveChild(Instance, Value[i]);
 				bChange = true;
 			}
 		}
@@ -544,7 +520,7 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 		Value = NewValue;
 
-		FDataReflectionTools::FPsDataFriend::Changed(Instance, Field);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 };
 
@@ -566,12 +542,12 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 
 	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) override
 	{
-		FDataReflectionTools::FTypeSerializer<TMap<FString, T*>>::Serialize(Instance, GetField(), Serializer, Get());
+		FTypeSerializer<TMap<FString, T*>>::Serialize(Instance, GetField(), Serializer, Get());
 	}
 
 	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) override
 	{
-		Set(FDataReflectionTools::FTypeDeserializer<TMap<FString, T*>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
+		Set(FTypeDeserializer<TMap<FString, T*>>::Deserialize(Instance, GetField(), Deserializer, Value), Instance);
 	}
 
 	virtual void Reset(UPsData* Instance) override
@@ -593,8 +569,8 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 		{
 			if (Pair.Value->GetParent() != Instance)
 			{
-				FDataReflectionTools::FPsDataFriend::ChangeDataName(Pair.Value, Pair.Key, Field->Name);
-				FDataReflectionTools::FPsDataFriend::AddChild(Instance, Pair.Value);
+				FPsDataFriend::ChangeDataName(Pair.Value, Pair.Key, Field->Name);
+				FPsDataFriend::AddChild(Instance, Pair.Value);
 				bChange = true;
 			}
 		}
@@ -604,7 +580,7 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 			auto Find = NewValue.Find(Pair.Key);
 			if (!Find)
 			{
-				FDataReflectionTools::FPsDataFriend::RemoveChild(Instance, Pair.Value);
+				FPsDataFriend::RemoveChild(Instance, Pair.Value);
 				bChange = true;
 			}
 		}
@@ -619,12 +595,9 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 			return A < B;
 		});
 
-		FDataReflectionTools::FPsDataFriend::Changed(Instance, Field);
+		FPsDataFriend::Changed(Instance, Field);
 	}
 };
-
-namespace FDataReflectionTools
-{
 
 /***********************************
  * UNSAFE GET PROPERTY
@@ -648,4 +621,5 @@ void UnsafeSet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typ
 	FDataProperty<T>* Property = static_cast<FDataProperty<T>*>(FPsDataFriend::GetProperties(Instance)[Field->Index]);
 	Property->Set(NewValue, Instance);
 }
-} // namespace FDataReflectionTools
+
+} // namespace PsDataTools

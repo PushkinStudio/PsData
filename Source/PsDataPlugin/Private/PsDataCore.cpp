@@ -7,7 +7,10 @@
 
 #include "UObject/UObjectIterator.h"
 
-TMap<UClass*, FDataClassFields> FDataReflection::FieldsByClass;
+namespace PsDataTools
+{
+
+TMap<UClass*, FClassFields> FDataReflection::FieldsByClass;
 TMap<FString, const TArray<FString>> FDataReflection::SplittedPath;
 TArray<const char*> FDataReflection::MetaCollection;
 bool FDataReflection::bCompiled = false;
@@ -36,7 +39,9 @@ void FDataReflection::InitField(const char* CharName, int32 Hash, FAbstractDataT
 
 		if (Field.IsValid())
 		{
+#if !UE_BUILD_SHIPPING
 			check(FieldsByClass.FindChecked(OwnerClass->GetSuperClass()).FieldsByHash.FindChecked(Hash) == Field);
+#endif
 		}
 		else
 		{
@@ -61,7 +66,7 @@ void FDataReflection::InitField(const char* CharName, int32 Hash, FAbstractDataT
 		UE_LOG(LogData, VeryVerbose, TEXT(" %02d %s %s::%s (%d)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *FieldName, Hash);
 	}
 
-	FDataReflectionTools::FPsDataFriend::GetProperties(Instance).Add(Property);
+	PsDataTools::FPsDataFriend::GetProperties(Instance).Add(Property);
 }
 
 void FDataReflection::InitLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection, UPsData* Instance)
@@ -80,7 +85,7 @@ void FDataReflection::InitLink(const char* CharName, const char* CharPath, const
 			auto& PathField = GetFieldByName(OwnerClass, Path);
 			if (PathField.IsValid())
 			{
-				if (PathField->Context->IsA(&FDataReflectionTools::GetContext<FString>()))
+				if (PathField->Context->IsA(&PsDataTools::GetContext<FString>()))
 				{
 					bPathProperty = true;
 				}
@@ -178,7 +183,7 @@ void FDataReflection::Fill(UPsData* Instance)
 		return;
 	}
 
-	auto& Properties = FDataReflectionTools::FPsDataFriend::GetProperties(Instance);
+	auto& Properties = PsDataTools::FPsDataFriend::GetProperties(Instance);
 	for (const auto& Pair : FDataReflection::GetFields(Instance->GetClass()))
 	{
 		const auto& Field = Pair.Value;
@@ -192,7 +197,7 @@ void FDataReflection::Fill(UPsData* Instance)
 
 	if (!bDefaultObject)
 	{
-		FDataReflectionTools::FPsDataFriend::InitProperties(Instance);
+		PsDataTools::FPsDataFriend::InitProperties(Instance);
 	}
 }
 
@@ -361,3 +366,5 @@ void FDataReflection::Compile()
 		}
 	}
 }
+
+} // namespace PsDataTools

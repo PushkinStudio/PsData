@@ -12,7 +12,7 @@
 void FPsDataPluginModule::StartupModule()
 {
 	FCoreDelegates::OnPostEngineInit.AddLambda([] {
-		FDataReflection::Compile();
+		PsDataTools::FDataReflection::Compile();
 		UPsDataHardObjectPtrSingleton::Init();
 
 		FDataDelegates::OnPostDataModuleInit.Broadcast();

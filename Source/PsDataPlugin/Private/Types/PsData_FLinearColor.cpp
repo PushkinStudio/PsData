@@ -9,7 +9,7 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, FLinearColor, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, FLinearColor>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, FLinearColor>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -21,7 +21,7 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, FLinearColor>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -33,7 +33,7 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(FLinearColor, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<FLinearColor>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<FLinearColor>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -45,7 +45,7 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<FLinearColor>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -57,7 +57,7 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execSetProperty)
 	P_GET_STRUCT_REF(FLinearColor, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<FLinearColor>(Target, Hash, Value);
+	PsDataTools::SetByHash<FLinearColor>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -69,7 +69,7 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	FLinearColor* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -133,7 +133,7 @@ FLinearColor UPsDataFLinearColorLibrary::TypeDeserialize(const UPsData* const In
 	}
 	else
 	{
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FLinearColor>::Type());
+		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FLinearColor>::Type());
 	}
 	return Result;
 }

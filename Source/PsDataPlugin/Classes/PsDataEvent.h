@@ -7,8 +7,27 @@
 
 #include "PsDataEvent.generated.h"
 
+using FPsDataEventScopeGuardCallback = TFunction<void()>;
+
+struct PSDATAPLUGIN_API FPsDataEventScopeGuard
+{
+public:
+	FPsDataEventScopeGuard();
+	~FPsDataEventScopeGuard();
+
+private:
+	void Invoke();
+
+public:
+	static void AddCallback(FPsDataEventScopeGuardCallback Function);
+	static bool IsGuarded();
+
+private:
+	static int32 Index;
+	static TArray<FPsDataEventScopeGuardCallback> Callbacks;
+};
+
 class UPsData;
-struct FDataField;
 
 UCLASS(BlueprintType, Blueprintable)
 class PSDATAPLUGIN_API UPsDataEvent : public UObject
@@ -19,8 +38,8 @@ public:
 	/** Added */
 	static const FString Added;
 
-	/** Removing */
-	static const FString Removing;
+	/** Removed */
+	static const FString Removed;
 
 	/** Changed */
 	static const FString Changed;
@@ -75,10 +94,6 @@ class PSDATAPLUGIN_API UPsDataEventFunctionLibrary : public UBlueprintFunctionLi
 	GENERATED_BODY()
 
 public:
-	/***********************************
-	 * Event
-	 ***********************************/
-
 	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Event", meta = (DisplayName = "Get Target"))
 	static void GetEventTarget(UPsDataEvent* Event, UPsData*& Target);
 

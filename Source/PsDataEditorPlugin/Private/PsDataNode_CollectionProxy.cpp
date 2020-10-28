@@ -76,7 +76,7 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 
 	for (UClass* Class : TObjectRange<UClass>())
 	{
-		for (auto& Pair : FDataReflection::GetFields(Class))
+		for (auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
 		{
 			if (Pair.Value->Context->IsData() && Pair.Value->Context->IsContainer())
 			{

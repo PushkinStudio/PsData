@@ -10,7 +10,8 @@
 #include "PsDataFunctionLibrary.h"
 #include "PsDataHardObjectPtr.h"
 #include "PsDataRoot.h"
-#include "PsDataUtils.h"
+#include "PsDataStringView.h"
+#include "PsDataTraits.h"
 #include "Types/PsData_Enum.h"
 #include "Types/PsData_FLinearColor.h"
 #include "Types/PsData_FName.h"
@@ -38,37 +39,35 @@
 
 #define _UNIQ(name) _TOKENPASTE_TwoParams(__d##name, __LINE__)
 
-#define _DPROP_DECLARE(__Type__, __Name__)                                                                                                    \
-	static_assert(!FDataReflectionTools::Type::Equal(#__Name__, "Name"), "Bad property name");                                                \
-                                                                                                                                              \
-protected:                                                                                                                                    \
-	struct _UNIQ(DPropType)                                                                                                                   \
-		: public FDataProperty<__Type__>                                                                                                      \
-		, public FNoncopyable                                                                                                                 \
-	{                                                                                                                                         \
-		using PropertyType = __Type__;                                                                                                        \
-		static constexpr int32 PropertyHash = FDataReflectionTools::crc32(#__Name__);                                                         \
-                                                                                                                                              \
-		static TSharedPtr<FDataField>& StaticField()                                                                                          \
-		{                                                                                                                                     \
-			static TSharedPtr<FDataField> Field;                                                                                              \
-			return Field;                                                                                                                     \
-		}                                                                                                                                     \
-                                                                                                                                              \
-		_UNIQ(DPropType)                                                                                                                      \
-		(const char* Name, UPsData* Instance)                                                                                                 \
-		{                                                                                                                                     \
-			FDataReflection::InitField(Name, PropertyHash, &FDataReflectionTools::GetContext<PropertyType>(), StaticField(), Instance, this); \
-		}                                                                                                                                     \
-                                                                                                                                              \
-		virtual TSharedPtr<const FDataField> GetField() const override                                                                        \
-		{                                                                                                                                     \
-			return StaticField();                                                                                                             \
-		}                                                                                                                                     \
-	};                                                                                                                                        \
-                                                                                                                                              \
-	_UNIQ(DPropType)                                                                                                                          \
-	__dprop_##__Name__{#__Name__, this};
+#define _DPROP_DECLARE(__Type__, __Name__)                                                                                                        \
+	static_assert(!PsDataTools::TStringView::Equal(#__Name__, "Name"), "Bad property name");                                                      \
+                                                                                                                                                  \
+protected:                                                                                                                                        \
+	struct DPropType##__Name__                                                                                                                    \
+		: public PsDataTools::FDataProperty<__Type__>,                                                                                            \
+		  public FNoncopyable                                                                                                                     \
+	{                                                                                                                                             \
+		using PropertyType = __Type__;                                                                                                            \
+		static constexpr int32 PropertyHash = PsDataTools::TStringView(#__Name__).GetHash();                                                      \
+                                                                                                                                                  \
+		static TSharedPtr<FDataField>& StaticField()                                                                                              \
+		{                                                                                                                                         \
+			static TSharedPtr<FDataField> Field;                                                                                                  \
+			return Field;                                                                                                                         \
+		}                                                                                                                                         \
+                                                                                                                                                  \
+		DPropType##__Name__(const char* Name, UPsData* Instance)                                                                                  \
+		{                                                                                                                                         \
+			PsDataTools::FDataReflection::InitField(Name, PropertyHash, &PsDataTools::GetContext<PropertyType>(), StaticField(), Instance, this); \
+		}                                                                                                                                         \
+                                                                                                                                                  \
+		virtual TSharedPtr<const FDataField> GetField() const override                                                                            \
+		{                                                                                                                                         \
+			return StaticField();                                                                                                                 \
+		}                                                                                                                                         \
+	};                                                                                                                                            \
+                                                                                                                                                  \
+	DPropType##__Name__ __dprop_##__Name__{#__Name__, this};
 
 #define _DPROP_DEPRECATE(__Name__) DEPRECATED(0, "Property " __Name__ " was marked as deprecated")
 
@@ -79,7 +78,7 @@ protected:                                                                      
 #define _DPROP_BIND(__Name__)                                                   \
 	static const FString& Get##__Name__##ChangedEventName()                     \
 	{                                                                           \
-		return _UNIQ(DPropType)::StaticField()->GetChangedEventName();          \
+		return DPropType##__Name__::StaticField()->GetChangedEventName();       \
 	}                                                                           \
                                                                                 \
 	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const \
@@ -95,7 +94,7 @@ protected:                                                                      
 	_DPROP_DEPRECATE(__Name__)                                                  \
 	static const FString& Get##__Name__##ChangedEventName()                     \
 	{                                                                           \
-		return _UNIQ(DPropType)::StaticField()->GetChangedEventName();          \
+		return DPropType##__Name__::StaticField()->GetChangedEventName();       \
 	}                                                                           \
                                                                                 \
 	_DPROP_DEPRECATE(__Name__)                                                  \
@@ -108,144 +107,152 @@ protected:                                                                      
  * Macro DMETA
  ***********************************/
 
-#define DMETA(...) \
-protected:         \
-	const FDataReflectionTools::FDMeta _UNIQ(meta){#__VA_ARGS__};
+#define DMETA(...)                                                \
+protected:                                                        \
+	struct _UNIQ(DMetaType)                                       \
+		: public FNoncopyable                                     \
+	{                                                             \
+		_UNIQ(DMetaType)                                          \
+		()                                                        \
+		{                                                         \
+			PsDataTools::FDataReflection::InitMeta(#__VA_ARGS__); \
+		}                                                         \
+	} _UNIQ(meta)();
 
 /***********************************
  * Macro DPROP
  ***********************************/
 
-#define DPROP(__Type__, __Name__)                                                        \
-	static_assert(                                                                       \
-		FDataReflectionTools::TIsContainer<__Type__>::Value,                             \
-		"Macro DPROP is available only for non-container types");                        \
-                                                                                         \
-	_DPROP_DECLARE(__Type__, __Name__);                                                  \
-                                                                                         \
-public:                                                                                  \
-	typename FDataReflectionTools::TConstRef<__Type__, true>::Type Get##__Name__() const \
-	{                                                                                    \
-		return __dprop_##__Name__.Get();                                                 \
-	}                                                                                    \
-                                                                                         \
-	typename FDataReflectionTools::TConstRef<__Type__>::Type Get##__Name__()             \
-	{                                                                                    \
-		return __dprop_##__Name__.Get();                                                 \
-	}                                                                                    \
-                                                                                         \
-	void Set##__Name__(FDataReflectionTools::TConstRef<__Type__>::Type Value)            \
-	{                                                                                    \
-		__dprop_##__Name__.Set(Value, this);                                             \
-	}                                                                                    \
-                                                                                         \
+#define DPROP(__Type__, __Name__)                                               \
+	static_assert(                                                              \
+		PsDataTools::TIsContainer<__Type__>::Value,                             \
+		"Macro DPROP is available only for non-container types");               \
+                                                                                \
+	_DPROP_DECLARE(__Type__, __Name__);                                         \
+                                                                                \
+public:                                                                         \
+	typename PsDataTools::TConstRef<__Type__, true>::Type Get##__Name__() const \
+	{                                                                           \
+		return __dprop_##__Name__.Get();                                        \
+	}                                                                           \
+                                                                                \
+	typename PsDataTools::TConstRef<__Type__>::Type Get##__Name__()             \
+	{                                                                           \
+		return __dprop_##__Name__.Get();                                        \
+	}                                                                           \
+                                                                                \
+	void Set##__Name__(PsDataTools::TConstRef<__Type__>::Type Value)            \
+	{                                                                           \
+		__dprop_##__Name__.Set(Value, this);                                    \
+	}                                                                           \
+                                                                                \
 	_DPROP_BIND(__Name__);
 
 /***********************************
  * Macro DPROP_DEPRECATED
  ***********************************/
 
-#define DPROP_DEPRECATED(__Type__, __Name__)                                             \
-	static_assert(                                                                       \
-		FDataReflectionTools::TIsContainer<__Type__>::Value,                             \
-		"Macro DPROP_DEPRECATED is available only for non-container types");             \
-                                                                                         \
-	DMETA(Deprecated);                                                                   \
-	_DPROP_DECLARE(__Type__, __Name__);                                                  \
-                                                                                         \
-public:                                                                                  \
-	_DPROP_DEPRECATE(__Name__)                                                           \
-	typename FDataReflectionTools::TConstRef<__Type__, true>::Type Get##__Name__() const \
-	{                                                                                    \
-		return __dprop_##__Name__.Get();                                                 \
-	}                                                                                    \
-                                                                                         \
-	_DPROP_DEPRECATE(__Name__)                                                           \
-	typename FDataReflectionTools::TConstRef<__Type__>::Type Get##__Name__()             \
-	{                                                                                    \
-		return __dprop_##__Name__.Get();                                                 \
-	}                                                                                    \
-                                                                                         \
-	_DPROP_DEPRECATE(__Name__)                                                           \
-	void Set##__Name__(FDataReflectionTools::TConstRef<__Type__>::Type Value)            \
-	{                                                                                    \
-		__dprop_##__Name__.Set(Value, this);                                             \
-	}                                                                                    \
-                                                                                         \
+#define DPROP_DEPRECATED(__Type__, __Name__)                                    \
+	static_assert(                                                              \
+		PsDataTools::TIsContainer<__Type__>::Value,                             \
+		"Macro DPROP_DEPRECATED is available only for non-container types");    \
+                                                                                \
+	DMETA(Deprecated);                                                          \
+	_DPROP_DECLARE(__Type__, __Name__);                                         \
+                                                                                \
+public:                                                                         \
+	_DPROP_DEPRECATE(__Name__)                                                  \
+	typename PsDataTools::TConstRef<__Type__, true>::Type Get##__Name__() const \
+	{                                                                           \
+		return __dprop_##__Name__.Get();                                        \
+	}                                                                           \
+                                                                                \
+	_DPROP_DEPRECATE(__Name__)                                                  \
+	typename PsDataTools::TConstRef<__Type__>::Type Get##__Name__()             \
+	{                                                                           \
+		return __dprop_##__Name__.Get();                                        \
+	}                                                                           \
+                                                                                \
+	_DPROP_DEPRECATE(__Name__)                                                  \
+	void Set##__Name__(PsDataTools::TConstRef<__Type__>::Type Value)            \
+	{                                                                           \
+		__dprop_##__Name__.Set(Value, this);                                    \
+	}                                                                           \
+                                                                                \
 	_DPROP_BIND_DEPRECATED(__Name__);
 
 /***********************************
  * Macro DPROP_CONST
  ***********************************/
 
-#define DPROP_CONST(__Type__, __Name__, __Friend__)                                      \
-	static_assert(                                                                       \
-		FDataReflectionTools::TIsContainer<__Type__>::Value,                             \
-		"Macro DPROP_CONST is available only for non-container types");                  \
-                                                                                         \
-	DMETA(ReadOnly, Strict);                                                             \
-	_DPROP_DECLARE(__Type__, __Name__);                                                  \
-                                                                                         \
-public:                                                                                  \
-	typename FDataReflectionTools::TConstRef<__Type__, true>::Type Get##__Name__() const \
-	{                                                                                    \
-		return __dprop_##__Name__.Get();                                                 \
-	}                                                                                    \
-                                                                                         \
-	struct FMutable_##__Name__                                                           \
-	{                                                                                    \
-		FMutable_##__Name__(_UNIQ(DPropType) * InProperty)                               \
-			: Property(InProperty)                                                       \
-		{                                                                                \
-		}                                                                                \
-                                                                                         \
-	private:                                                                             \
-		friend class __Friend__;                                                         \
-                                                                                         \
-		_UNIQ(DPropType) * Property;                                                     \
-                                                                                         \
-		typename FDataReflectionTools::TConstRef<__Type__>::Type operator()() const      \
-		{                                                                                \
-			return Property->Get();                                                      \
-		}                                                                                \
+#define DPROP_CONST(__Type__, __Name__, __Friend__)                             \
+	static_assert(                                                              \
+		PsDataTools::TIsContainer<__Type__>::Value,                             \
+		"Macro DPROP_CONST is available only for non-container types");         \
+                                                                                \
+	DMETA(ReadOnly, Strict);                                                    \
+	_DPROP_DECLARE(__Type__, __Name__);                                         \
+                                                                                \
+public:                                                                         \
+	typename PsDataTools::TConstRef<__Type__, true>::Type Get##__Name__() const \
+	{                                                                           \
+		return __dprop_##__Name__.Get();                                        \
+	}                                                                           \
+                                                                                \
+	struct FMutable_##__Name__                                                  \
+	{                                                                           \
+		FMutable_##__Name__(DPropType##__Name__* InProperty)                    \
+			: Property(InProperty)                                              \
+		{                                                                       \
+		}                                                                       \
+                                                                                \
+	private:                                                                    \
+		friend class __Friend__;                                                \
+                                                                                \
+		DPropType##__Name__* Property;                                          \
+                                                                                \
+		typename PsDataTools::TConstRef<__Type__>::Type operator()() const      \
+		{                                                                       \
+			return Property->Get();                                             \
+		}                                                                       \
 	} const GetMutable##__Name__{&__dprop_##__Name__};
 
 /***********************************
  * Macro DPROP_CONST_DEPRECATED
  ***********************************/
 
-#define DPROP_CONST_DEPRECATED(__Type__, __Name__, __Friend__)                           \
-	static_assert(                                                                       \
-		FDataReflectionTools::TIsContainer<__Type__>::Value,                             \
-		"Macro DPROP_CONST_DEPRECATED is available only for non-container types");       \
-                                                                                         \
-	DMETA(ReadOnly, Strict, Deprecated);                                                 \
-	_DPROP_DECLARE(__Type__, __Name__);                                                  \
-                                                                                         \
-public:                                                                                  \
-	_DPROP_DEPRECATE(__Name__)                                                           \
-	typename FDataReflectionTools::TConstRef<__Type__, true>::Type Get##__Name__() const \
-	{                                                                                    \
-		return __dprop_##__Name__.Get();                                                 \
-	}                                                                                    \
-                                                                                         \
-	struct FMutable_##__Name__                                                           \
-	{                                                                                    \
-		FMutable_##__Name__(_UNIQ(DPropType) * InProperty)                               \
-			: Property(InProperty)                                                       \
-		{                                                                                \
-		}                                                                                \
-                                                                                         \
-	private:                                                                             \
-		friend class __Friend__;                                                         \
-                                                                                         \
-		_UNIQ(DPropType) * Property;                                                     \
-                                                                                         \
-		_DPROP_DEPRECATE(__Name__)                                                       \
-		typename FDataReflectionTools::TConstRef<__Type__>::Type operator()() const      \
-		{                                                                                \
-			return Property->Get();                                                      \
-		}                                                                                \
+#define DPROP_CONST_DEPRECATED(__Type__, __Name__, __Friend__)                     \
+	static_assert(                                                                 \
+		PsDataTools::TIsContainer<__Type__>::Value,                                \
+		"Macro DPROP_CONST_DEPRECATED is available only for non-container types"); \
+                                                                                   \
+	DMETA(ReadOnly, Strict, Deprecated);                                           \
+	_DPROP_DECLARE(__Type__, __Name__);                                            \
+                                                                                   \
+public:                                                                            \
+	_DPROP_DEPRECATE(__Name__)                                                     \
+	typename PsDataTools::TConstRef<__Type__, true>::Type Get##__Name__() const    \
+	{                                                                              \
+		return __dprop_##__Name__.Get();                                           \
+	}                                                                              \
+                                                                                   \
+	struct FMutable_##__Name__                                                     \
+	{                                                                              \
+		FMutable_##__Name__(DPropType##__Name__* InProperty)                       \
+			: Property(InProperty)                                                 \
+		{                                                                          \
+		}                                                                          \
+                                                                                   \
+	private:                                                                       \
+		friend class __Friend__;                                                   \
+                                                                                   \
+		DPropType##__Name__* Property;                                             \
+                                                                                   \
+		_DPROP_DEPRECATE(__Name__)                                                 \
+		typename PsDataTools::TConstRef<__Type__>::Type operator()() const         \
+		{                                                                          \
+			return Property->Get();                                                \
+		}                                                                          \
 	} const GetMutable##__Name__{&__dprop_##__Name__};
 
 /***********************************
@@ -254,7 +261,7 @@ public:                                                                         
 
 #define DARRAY(__Type__, __Name__)                                                                                             \
 	static_assert(                                                                                                             \
-		FDataReflectionTools::TIsContainer<TArray<__Type__>>::Array,                                                           \
+		PsDataTools::TIsContainer<TArray<__Type__>>::Array,                                                                    \
 		"Macro DARRAY is available only for TArray<ContentType> type");                                                        \
                                                                                                                                \
 	_DPROP_DECLARE(TArray<__Type__>, __Name__);                                                                                \
@@ -278,7 +285,7 @@ public:                                                                         
 
 #define DARRAY_DEPRECATED(__Type__, __Name__)                                                                                  \
 	static_assert(                                                                                                             \
-		FDataReflectionTools::TIsContainer<TArray<__Type__>>::Array,                                                           \
+		PsDataTools::TIsContainer<TArray<__Type__>>::Array,                                                                    \
 		"Macro DARRAY_DEPRECATED is available only for TArray<ContentType> type");                                             \
                                                                                                                                \
 	DMETA(Deprecated)                                                                                                          \
@@ -305,7 +312,7 @@ public:                                                                         
 
 #define DMAP(__Type__, __Name__)                                                                                             \
 	static_assert(                                                                                                           \
-		FDataReflectionTools::TIsContainer<TMap<FString, __Type__>>::Map,                                                    \
+		PsDataTools::TIsContainer<TMap<FString, __Type__>>::Map,                                                             \
 		"Macro DMAP is available only for TMap<FString, ContentType> type");                                                 \
                                                                                                                              \
 	_DPROP_DECLARE(TMap<FString COMMA __Type__>, __Name__);                                                                  \
@@ -329,7 +336,7 @@ public:                                                                         
 
 #define DMAP_DEPRECATED(__Type__, __Name__)                                                                                  \
 	static_assert(                                                                                                           \
-		FDataReflectionTools::TIsContainer<TMap<FString, __Type__>>::Map,                                                    \
+		PsDataTools::TIsContainer<TMap<FString, __Type__>>::Map,                                                             \
 		"Macro DMAP_DEPRECATED is available only for TMap<FString, ContentType> type");                                      \
                                                                                                                              \
 	DMETA(Deprecated);                                                                                                       \
@@ -354,44 +361,39 @@ public:                                                                         
  * Macro DLINK
  ***********************************/
 
-#define DLINK(__ReturnType__, __Name__, __Path__)      \
-private:                                               \
-	typedef decltype(__dprop_##__Name__) _UNIQ(dprop); \
-                                                       \
-public:                                                \
-	const FDataReflectionTools::FDLink<_UNIQ(dprop)::PropertyType, __ReturnType__, _UNIQ(dprop)::PropertyHash> LinkBy##__Name__{#__Name__, #__Path__, #__ReturnType__, this};
+#define DLINK(__ReturnType__, __Name__, __Path__) \
+public:                                           \
+	const PsDataTools::FDLink<DPropType##__Name__::PropertyType, __ReturnType__, DPropType##__Name__::PropertyHash> LinkBy##__Name__{#__Name__, #__Path__, #__ReturnType__, this};
 
 /***********************************
  * Macro DLINK_DEPRECATED
  ***********************************/
 
 #define DLINK_DEPRECATED(__ReturnType__, __Name__, __Path__) \
-private:                                                     \
-	typedef decltype(__dprop_##__Name__) _UNIQ(dprop);       \
-                                                             \
 public:                                                      \
 	_DPROP_DEPRECATE(__Name__)                               \
-	const FDataReflectionTools::FDLink<_UNIQ(dprop)::PropertyType, __ReturnType__, _UNIQ(dprop)::PropertyHash> LinkBy##__Name__{#__Name__, #__Path__, #__ReturnType__, this};
+	const PsDataTools::FDLink<DPropType##__Name__::PropertyType, __ReturnType__, DPropType##__Name__::PropertyHash> LinkBy##__Name__{#__Name__, #__Path__, #__ReturnType__, this};
 
 /***********************************
  * Macro DLINK_ABSTRACT
  ***********************************/
 
-#define DLINK_ABSTRACT(__ReturnType__, __Name__)       \
-private:                                               \
-	typedef decltype(__dprop_##__Name__) _UNIQ(dprop); \
-                                                       \
-public:                                                \
-	const FDataReflectionTools::FDLink<_UNIQ(dprop)::PropertyType, __ReturnType__, _UNIQ(dprop)::PropertyHash> LinkByAbstract##__Name__{#__Name__, #__ReturnType__, this};
+#define DLINK_ABSTRACT(__ReturnType__, __Name__) \
+public:                                          \
+	const PsDataTools::FDLink<DPropType##__Name__::PropertyType, __ReturnType__, DPropType##__Name__::PropertyHash> LinkByAbstract##__Name__{#__Name__, #__ReturnType__, this};
 
 /***********************************
  * Macro DLINK_ABSTRACT_DEPRECATED
  ***********************************/
 
 #define DLINK_ABSTRACT_DEPRECATED(__ReturnType__, __Name__) \
-private:                                                    \
-	typedef decltype(__dprop_##__Name__) _UNIQ(dprop);      \
-                                                            \
 public:                                                     \
 	_DPROP_DEPRECATE(__Name__)                              \
-	const FDataReflectionTools::FDLink<_UNIQ(dprop)::PropertyType, __ReturnType__, _UNIQ(dprop)::PropertyHash> LinkByAbstract##__Name__{#__Name__, #__ReturnType__, this};
+	const PsDataTools::FDLink<DPropType##__Name__::PropertyType, __ReturnType__, DPropType##__Name__::PropertyHash> LinkByAbstract##__Name__{#__Name__, #__ReturnType__, this};
+
+/***********************************
+ * Macro DEFERRED_EVENT_PROCESSING
+ ***********************************/
+
+#define DEFERRED_EVENT_PROCESSING() \
+	FPsDataEventScopeGuard EventScopeGuard();

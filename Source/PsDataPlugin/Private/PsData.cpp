@@ -19,7 +19,7 @@ FSimpleMulticastDelegate FDataDelegates::OnPostDataModuleInit;
 * PsData friend
 ***********************************/
 
-namespace FDataReflectionTools
+namespace PsDataTools
 {
 void FPsDataFriend::ChangeDataName(UPsData* Data, const FString& Name, const FString& CollectionName)
 {
@@ -59,13 +59,13 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 		return;
 	}
 
-	if (Data->IsBound(UPsDataEvent::Removing, true))
-	{
-		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Removing, true));
-	}
-
 	Parent->Children.Remove(Data);
 	Data->Parent.Reset();
+
+	if (Data->IsBound(UPsDataEvent::Removed, true))
+	{
+		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true));
+	}
 }
 
 void FPsDataFriend::Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field)
@@ -114,7 +114,7 @@ void FPsDataFriend::Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer
 {
 	Data->DataDeserializeInternal(Deserializer);
 }
-} // namespace FDataReflectionTools
+} // namespace PsDataTools
 
 /***********************************
  * FPsDataBind
@@ -197,15 +197,15 @@ UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 	, BroadcastInProgress(0)
 	, bChanged(false)
 {
-	FDataReflection::PreConstruct(this);
+	PsDataTools::FDataReflection::PreConstruct(this);
 }
 
 void UPsData::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	FDataReflection::PostConstruct(this);
-	FDataReflection::Fill(this);
+	PsDataTools::FDataReflection::PostConstruct(this);
+	PsDataTools::FDataReflection::Fill(this);
 }
 
 void UPsData::DropHash()
@@ -290,12 +290,12 @@ bool UPsData::IsBound(const FString& Type, bool bBubbles) const
 
 void UPsData::Broadcast(UPsDataEvent* Event) const
 {
-	const bool bDeferredEventProcessing = false;
+	const bool bDeferredEventProcessing = FPsDataEventScopeGuard::IsGuarded();
 	if (bDeferredEventProcessing)
 	{
 		TWeakObjectPtr<UPsData> WeakPtr(const_cast<UPsData*>(this));
 		Event->AddToRoot();
-		AsyncTask(ENamedThreads::GameThread, [WeakPtr, Event]() {
+		FPsDataEventScopeGuard::AddCallback([WeakPtr, Event]() {
 			Event->RemoveFromRoot();
 			if (WeakPtr.IsValid())
 			{
@@ -331,28 +331,28 @@ void UPsData::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 
 FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
@@ -545,7 +545,7 @@ void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch)
 
 void UPsData::DataSerializeInternal(FPsDataSerializer* Serializer) const
 {
-	for (auto& Pair : FDataReflection::GetAliasFields(this->GetClass()))
+	for (auto& Pair : PsDataTools::FDataReflection::GetAliasFields(this->GetClass()))
 	{
 		Serializer->WriteKey(Pair.Key);
 		Properties[Pair.Value->Index]->Serialize(this, Serializer);
@@ -555,7 +555,7 @@ void UPsData::DataSerializeInternal(FPsDataSerializer* Serializer) const
 
 void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
 {
-	const auto& Fields = FDataReflection::GetAliasFields(this->GetClass());
+	const auto& Fields = PsDataTools::FDataReflection::GetAliasFields(this->GetClass());
 	FString Key;
 	while (Deserializer->ReadKey(Key))
 	{
@@ -666,7 +666,7 @@ FString UPsData::GetPathFromRoot() const
 
 void UPsData::Reset()
 {
-	for (const auto& Pair : FDataReflection::GetFields(GetClass()))
+	for (const auto& Pair : PsDataTools::FDataReflection::GetFields(GetClass()))
 	{
 		const auto& Field = Pair.Value;
 		Properties[Field->Index]->Reset(this);
@@ -696,7 +696,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 	UPsData* RootData = Data->GetRoot();
 	FString Path = GetPathFromRoot();
 
-	for (auto& Pair : FDataReflection::GetLinks(GetClass()))
+	for (auto& Pair : PsDataTools::FDataReflection::GetLinks(GetClass()))
 	{
 		const FString FieldPath = Path + TEXT(".") + Pair.Value->Name;
 
@@ -710,7 +710,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 			UPsDataFunctionLibrary::GetLinkKeys(Data, Pair.Value, Keys);
 			TMap<FString, UPsData*>* MapPtr = nullptr;
 			const FString& LinkPath = UPsDataFunctionLibrary::GetLinkPath(Data, Pair.Value);
-			if (FDataReflectionTools::GetByPath(RootData, LinkPath, MapPtr))
+			if (PsDataTools::GetByPath(RootData, LinkPath, MapPtr))
 			{
 				TMap<FString, UPsData*> Map = *MapPtr;
 				for (const FString& Key : Keys)
@@ -736,14 +736,14 @@ TArray<FPsDataReport> UPsData::Validation() const
 		}
 	}
 
-	for (auto& Pair : FDataReflection::GetFields(this->GetClass()))
+	for (auto& Pair : PsDataTools::FDataReflection::GetFields(this->GetClass()))
 	{
 		if (Pair.Value->Context->IsData())
 		{
 			if (Pair.Value->Context->IsArray())
 			{
 				TArray<UPsData*>* Value = nullptr;
-				if (FDataReflectionTools::GetByField(Data, Pair.Value, Value))
+				if (PsDataTools::GetByField(Data, Pair.Value, Value))
 				{
 					for (UPsData* Element : *Value)
 					{
@@ -757,7 +757,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 			else if (Pair.Value->Context->IsMap())
 			{
 				TMap<FString, UPsData*>* Value = nullptr;
-				if (FDataReflectionTools::GetByField(Data, Pair.Value, Value))
+				if (PsDataTools::GetByField(Data, Pair.Value, Value))
 				{
 					for (const auto& ElementPair : *Value)
 					{
@@ -771,7 +771,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 			else
 			{
 				UPsData** Value = nullptr;
-				if (FDataReflectionTools::GetByField(Data, Pair.Value, Value))
+				if (PsDataTools::GetByField(Data, Pair.Value, Value))
 				{
 					if ((*Value))
 					{

@@ -9,7 +9,7 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, uint8, Z_Param_Out_Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, uint8>>(Z_Param_Target, Z_Param_Crc32, Z_Param_Out_Value);
+	PsDataTools::SetByHash<TMap<FString, uint8>>(Z_Param_Target, Z_Param_Crc32, Z_Param_Out_Value);
 	P_NATIVE_END;
 }
 
@@ -21,7 +21,7 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, uint8>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Z_Param_Target, Z_Param_Crc32, Result);
+	PsDataTools::GetByHash(Z_Param_Target, Z_Param_Crc32, Result);
 	Z_Param_Out_Out = *Result;
 	P_NATIVE_END;
 }
@@ -33,7 +33,7 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(uint8, Z_Param_Out_Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<uint8>>(Z_Param_Target, Z_Param_Crc32, Z_Param_Out_Value);
+	PsDataTools::SetByHash<TArray<uint8>>(Z_Param_Target, Z_Param_Crc32, Z_Param_Out_Value);
 	P_NATIVE_END;
 }
 
@@ -45,7 +45,7 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<uint8>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Z_Param_Target, Z_Param_Crc32, Result);
+	PsDataTools::GetByHash(Z_Param_Target, Z_Param_Crc32, Result);
 	Z_Param_Out_Out = *Result;
 	P_NATIVE_END;
 }
@@ -57,7 +57,7 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execSetProperty)
 	P_GET_PROPERTY(FByteProperty, Z_Param_Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<uint8>(Z_Param_Target, Z_Param_Crc32, Z_Param_Value);
+	PsDataTools::SetByHash<uint8>(Z_Param_Target, Z_Param_Crc32, Z_Param_Value);
 	P_NATIVE_END;
 }
 
@@ -69,7 +69,7 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	uint8* Result = nullptr;
-	FDataReflectionTools::GetByHash(Z_Param_Target, Z_Param_Crc32, Result);
+	PsDataTools::GetByHash(Z_Param_Target, Z_Param_Crc32, Result);
 	Z_Param_Out_Out = *Result;
 	P_NATIVE_END;
 }

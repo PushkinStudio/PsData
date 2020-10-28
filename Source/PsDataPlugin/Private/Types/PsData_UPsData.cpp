@@ -11,7 +11,7 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, UPsData*, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, UPsData*>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, UPsData*>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -23,7 +23,7 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, UPsData*>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -35,7 +35,7 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(UPsData*, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<UPsData*>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<UPsData*>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -47,7 +47,7 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<UPsData*>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -59,7 +59,7 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execSetProperty)
 	P_GET_OBJECT(UPsData, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<UPsData*>(Target, Hash, Value);
+	PsDataTools::SetByHash<UPsData*>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -71,7 +71,7 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	UPsData** Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

@@ -4,13 +4,15 @@
 
 #include "CoreMinimal.h"
 
+#include "PsDataStringView.h"
+
 #include <type_traits>
 
 /***********************************
  * TAlwaysFalse trait
  ***********************************/
 
-namespace FDataReflectionTools
+namespace PsDataTools
 {
 template <typename T>
 struct TAlwaysFalse : std::false_type
@@ -176,14 +178,111 @@ struct TIsContainer<TMap<K, T>>
 	static constexpr bool Map = true;
 };
 
-/***********************************
-* Const cast
-***********************************/
+#define CLANG defined(__clang__)
 
-template <typename T>
-T* MutableThis(const T* This)
+#if CLANG
+#define __FUNCTION_SIGNATURE__ __PRETTY_FUNCTION__
+#else
+#define __FUNCTION_SIGNATURE__ __FUNCSIG__
+#endif
+
+constexpr TStringView GetSignature(const char* s)
 {
-	return const_cast<T*>(This);
+	const TStringView Prefix("FType<");
+	const TStringView Postfix(">::ContentType");
+	TStringView Signature(s);
+
+	Signature.RightChopInline(Signature.Find(Prefix) + Prefix.Len());
+	Signature.LeftInline(Signature.Find(Postfix));
+
+	return Signature;
 }
 
-} // namespace FDataReflectionTools
+template <typename T>
+struct FType
+{
+	static FString ContentType()
+	{
+		constexpr TStringView Signature = GetSignature(__FUNCTION_SIGNATURE__);
+		FString Result = FString(Signature.Len(), Signature.GetData());
+
+		Result.ReplaceInline(TEXT("> "), TEXT(">"));
+
+#if !CLANG
+		Result.RemoveFromStart(TEXT("enum "), ESearchCase::CaseSensitive);
+		Result.RemoveFromStart(TEXT("class "), ESearchCase::CaseSensitive);
+		Result.RemoveFromStart(TEXT("struct "), ESearchCase::CaseSensitive);
+#endif
+
+		return Result;
+	}
+
+	static FString Type()
+	{
+		return ContentType();
+	}
+
+	static constexpr uint32 Hash()
+	{
+		return TStringView(__FUNCTION_SIGNATURE__).GetHash();
+	}
+};
+
+template <typename T>
+struct FType<T*>
+{
+	static FString ContentType()
+	{
+		return FType<T>::ContentType();
+	}
+
+	static FString Type()
+	{
+		return FString::Printf(TEXT("%s*"), *ContentType());
+	}
+
+	static constexpr uint32 Hash()
+	{
+		return TStringView(__FUNCTION_SIGNATURE__).GetHash();
+	}
+};
+
+template <typename T>
+struct FType<TArray<T>>
+{
+	static FString ContentType()
+	{
+		return FType<TRemovePointer<T>::Type>::ContentType();
+	}
+
+	static FString Type()
+	{
+		return FString::Printf(TEXT("TArray<%s>"), *FType<T>::Type());
+	}
+
+	static constexpr uint32 Hash()
+	{
+		return TStringView(__FUNCTION_SIGNATURE__).GetHash();
+	}
+};
+
+template <typename T>
+struct FType<TMap<FString, T>>
+{
+	static FString ContentType()
+	{
+		return FType<TRemovePointer<T>::Type>::ContentType();
+	}
+
+	static FString Type()
+	{
+		return FString::Printf(TEXT("TMap<FString, %s>"), *FType<T>::Type());
+	}
+
+	static constexpr uint32 Hash()
+	{
+		return TStringView(__FUNCTION_SIGNATURE__).GetHash();
+	}
+};
+
+} // namespace PsDataTools

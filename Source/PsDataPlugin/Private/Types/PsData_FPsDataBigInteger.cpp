@@ -386,7 +386,7 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, FPsDataBigInteger, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, FPsDataBigInteger>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, FPsDataBigInteger>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -398,7 +398,7 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, FPsDataBigInteger>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -410,7 +410,7 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(FPsDataBigInteger, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<FPsDataBigInteger>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<FPsDataBigInteger>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -422,7 +422,7 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<FPsDataBigInteger>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -434,7 +434,7 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetProperty)
 	P_GET_STRUCT_REF(FPsDataBigInteger, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<FPsDataBigInteger>(Target, Hash, Value);
+	PsDataTools::SetByHash<FPsDataBigInteger>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -446,7 +446,7 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	FPsDataBigInteger* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -477,6 +477,6 @@ FPsDataBigInteger UPsDataBigIntegerLibrary::TypeDeserialize(const UPsData* const
 		return Int32Value;
 	}
 
-	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *FDataReflectionTools::FType<FPsDataBigInteger>::Type());
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FPsDataBigInteger>::Type());
 	return Value;
 }

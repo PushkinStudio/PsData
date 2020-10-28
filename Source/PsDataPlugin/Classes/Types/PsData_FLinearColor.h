@@ -52,6 +52,8 @@ public:
 	static FLinearColor TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FLinearColor& Value);
 };
 
+namespace PsDataTools
+{
 template <>
 struct FDataTypeContext<FLinearColor> : public FDataTypeContextExtended<FLinearColor, UPsDataFLinearColorLibrary>
 {
@@ -67,8 +69,6 @@ struct FDataTypeContext<TMap<FString, FLinearColor>> : public FDataTypeContextEx
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeSerializer<FLinearColor> : public FTypeSerializerExtended<FLinearColor, UPsDataFLinearColorLibrary>
 {
@@ -79,4 +79,4 @@ struct FTypeDeserializer<FLinearColor> : public FTypeDeserializerExtended<FLinea
 {
 };
 
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

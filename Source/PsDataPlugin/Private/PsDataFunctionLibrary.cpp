@@ -23,7 +23,7 @@ const FString& UPsDataFunctionLibrary::GetLinkPath(const UPsData* ConstTarget, T
 	if (Link->bPathProperty)
 	{
 		FString* PropertyPtr = nullptr;
-		if (FDataReflectionTools::GetByName<FString>(Target, Link->Path, PropertyPtr))
+		if (PsDataTools::GetByName<FString>(Target, Link->Path, PropertyPtr))
 		{
 			return *PropertyPtr;
 		}
@@ -39,31 +39,31 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 {
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
-	auto& Field = FDataReflection::GetFieldByName(Target->GetClass(), Link->Name);
+	auto& Field = PsDataTools::FDataReflection::GetFieldByName(Target->GetClass(), Link->Name);
 	check(Field.IsValid());
 
-	if (Field->Context->IsA(&FDataReflectionTools::GetContext<FString>()))
+	if (Field->Context->IsA(&PsDataTools::GetContext<FString>()))
 	{
 		FString* PropertyPtr = nullptr;
-		if (FDataReflectionTools::GetByField<FString>(Target, Field, PropertyPtr))
+		if (PsDataTools::GetByField<FString>(Target, Field, PropertyPtr))
 		{
 			OutKeys.Add(*PropertyPtr);
 			return;
 		}
 	}
-	else if (Field->Context->IsA(&FDataReflectionTools::GetContext<TArray<FString>>()))
+	else if (Field->Context->IsA(&PsDataTools::GetContext<TArray<FString>>()))
 	{
 		TArray<FString>* PropertyPtr = nullptr;
-		if (FDataReflectionTools::GetByField<TArray<FString>>(Target, Field, PropertyPtr))
+		if (PsDataTools::GetByField<TArray<FString>>(Target, Field, PropertyPtr))
 		{
 			OutKeys.Append(*PropertyPtr);
 			return;
 		}
 	}
-	else if (Field->Context->IsA(&FDataReflectionTools::GetContext<FName>()))
+	else if (Field->Context->IsA(&PsDataTools::GetContext<FName>()))
 	{
 		FName* PropertyPtr = nullptr;
-		if (FDataReflectionTools::GetByField<FName>(Target, Field, PropertyPtr))
+		if (PsDataTools::GetByField<FName>(Target, Field, PropertyPtr))
 		{
 			if (*PropertyPtr == NAME_None)
 			{
@@ -76,10 +76,10 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 			return;
 		}
 	}
-	else if (Field->Context->IsA(&FDataReflectionTools::GetContext<TArray<FName>>()))
+	else if (Field->Context->IsA(&PsDataTools::GetContext<TArray<FName>>()))
 	{
 		TArray<FName>* PropertyPtr = nullptr;
-		if (FDataReflectionTools::GetByField<TArray<FName>>(Target, Field, PropertyPtr))
+		if (PsDataTools::GetByField<TArray<FName>>(Target, Field, PropertyPtr))
 		{
 			OutKeys.Reserve(PropertyPtr->Num());
 			for (const FName& Name : *PropertyPtr)
@@ -103,7 +103,7 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 		if (!Field->Context->IsContainer())
 		{
 			uint8* PropertyPtr = nullptr;
-			if (FDataReflectionTools::GetByField<uint8>(Target, Field, PropertyPtr))
+			if (PsDataTools::GetByField<uint8>(Target, Field, PropertyPtr))
 			{
 				OutKeys.Add(Enum->GetNameStringByValue(static_cast<int64>(*PropertyPtr)).ToLower());
 				return;
@@ -112,7 +112,7 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 		else if (Field->Context->IsArray())
 		{
 			TArray<uint8>* PropertyPtr = nullptr;
-			if (FDataReflectionTools::GetByField<TArray<uint8>>(Target, Field, PropertyPtr))
+			if (PsDataTools::GetByField<TArray<uint8>>(Target, Field, PropertyPtr))
 			{
 				OutKeys.Reserve(PropertyPtr->Num());
 				for (const uint8& Byte : *PropertyPtr)
@@ -139,7 +139,7 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 {
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
-	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
+	TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
 	check(Link.IsValid());
 	check(!Link->bAbstract);
 
@@ -151,7 +151,7 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(RootData, LinkPath, MapPtr))
+	if (!PsDataTools::GetByPath<TMap<FString, UPsData*>>(RootData, LinkPath, MapPtr))
 	{
 		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *LinkPath, *Target->GetClass()->GetName())
 	}
@@ -174,7 +174,7 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 {
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
-	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
+	TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
 	check(Link.IsValid());
 	check(!Link->bAbstract);
 
@@ -186,7 +186,7 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
 	TMap<FString, UPsData*>* MapPtr = nullptr;
-	if (!FDataReflectionTools::GetByPath<TMap<FString, UPsData*>>(RootData, LinkPath, MapPtr))
+	if (!PsDataTools::GetByPath<TMap<FString, UPsData*>>(RootData, LinkPath, MapPtr))
 	{
 		UE_LOG(LogData, Fatal, TEXT("Can't find path \"%s\" in \"%s\""), *LinkPath, *Target->GetClass()->GetName())
 	}
@@ -213,7 +213,7 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 
 bool UPsDataFunctionLibrary::IsLinkEmpty(const UPsData* ConstTarget, int32 Hash)
 {
-	TSharedPtr<const FDataLink> Link = FDataReflection::GetLinkByHash(ConstTarget->GetClass(), Hash);
+	TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(ConstTarget->GetClass(), Hash);
 	if (Link.IsValid())
 	{
 		if (!Link->Meta.bNullable)
@@ -242,7 +242,7 @@ UPsDataBlueprintMapProxy* UPsDataFunctionLibrary::GetMapProxy(UPsData* Target, i
 {
 	//TODO: Always NewObject?
 	UPsDataBlueprintMapProxy* Result = NewObject<UPsDataBlueprintMapProxy>();
-	Result->Init(Target, FDataReflection::GetFieldByHash(Target->GetClass(), Crc32));
+	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Crc32));
 	return Result;
 }
 
@@ -250,6 +250,6 @@ UPsDataBlueprintArrayProxy* UPsDataFunctionLibrary::GetArrayProxy(UPsData* Targe
 {
 	//TODO: Always NewObject?
 	UPsDataBlueprintArrayProxy* Result = NewObject<UPsDataBlueprintArrayProxy>();
-	Result->Init(Target, FDataReflection::GetFieldByHash(Target->GetClass(), Crc32));
+	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Crc32));
 	return Result;
 }

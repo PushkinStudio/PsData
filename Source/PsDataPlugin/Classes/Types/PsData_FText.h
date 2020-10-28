@@ -53,6 +53,9 @@ public:
 	static FText TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FText& Value);
 };
 
+namespace PsDataTools
+{
+
 template <>
 struct FDataTypeContext<FText> : public FDataTypeContextExtended<FText, UPsDataFTextLibrary>
 {
@@ -68,8 +71,6 @@ struct FDataTypeContext<TMap<FString, FText>> : public FDataTypeContextExtended<
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeComparator<FText>
 {
@@ -108,4 +109,4 @@ struct FTypeDeserializer<FText> : public FTypeDeserializerExtended<FText, UPsDat
 {
 };
 
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

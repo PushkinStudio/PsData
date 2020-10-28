@@ -9,7 +9,7 @@ DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execSetMapProperty)
 	P_GET_TMAP_REF(FString, TSoftObjectPtr<UObject>, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TMap<FString, TSoftObjectPtr<UObject>>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TMap<FString, TSoftObjectPtr<UObject>>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -21,7 +21,7 @@ DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execGetMapProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, TSoftObjectPtr<UObject>>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -33,7 +33,7 @@ DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execSetArrayProperty)
 	P_GET_TARRAY_REF(TSoftObjectPtr<UObject>, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TArray<TSoftObjectPtr<UObject>>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TArray<TSoftObjectPtr<UObject>>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -45,7 +45,7 @@ DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execGetArrayProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<TSoftObjectPtr<UObject>>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -57,7 +57,7 @@ DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execSetProperty)
 	P_GET_SOFTOBJECT_REF(TSoftObjectPtr<UObject>, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	FDataReflectionTools::SetByHash<TSoftObjectPtr<UObject>>(Target, Hash, Value);
+	PsDataTools::SetByHash<TSoftObjectPtr<UObject>>(Target, Hash, Value);
 	P_NATIVE_END;
 }
 
@@ -69,7 +69,7 @@ DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execGetProperty)
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TSoftObjectPtr<UObject>* Result = nullptr;
-	FDataReflectionTools::GetByHash(Target, Hash, Result);
+	PsDataTools::GetByHash(Target, Hash, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

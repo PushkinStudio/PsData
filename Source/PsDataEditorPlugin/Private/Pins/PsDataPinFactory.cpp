@@ -30,10 +30,10 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 	TArray<TSharedPtr<FEventPath>> Events;
 
 	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Added, TEXT(""), true)));
-	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Removing, TEXT(""), true)));
+	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Removed, TEXT(""), true)));
 	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Changed, TEXT(""), true)));
 
-	for (auto& Pair : FDataReflection::GetFields(TargetClass))
+	for (auto& Pair : PsDataTools::FDataReflection::GetFields(TargetClass))
 	{
 		if (Pair.Value->Meta.bEvent)
 		{
@@ -57,7 +57,7 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 			continue;
 		}
 
-		for (auto& Pair : FDataReflection::GetFields(Class))
+		for (auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
 		{
 			FString Path = Child.Path + TEXT(".") + Pair.Value->Name;
 			if (Pair.Value->Meta.bEvent && Pair.Value->Meta.bBubbles)

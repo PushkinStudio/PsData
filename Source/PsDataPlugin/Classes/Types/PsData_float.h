@@ -51,7 +51,8 @@ public:
 	static void TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const float& Value);
 	static float TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const float& Value);
 };
-
+namespace PsDataTools
+{
 template <>
 struct FDataTypeContext<float> : public FDataTypeContextExtended<float, UPsDataFloatLibrary>
 {
@@ -67,8 +68,6 @@ struct FDataTypeContext<TMap<FString, float>> : public FDataTypeContextExtended<
 {
 };
 
-namespace FDataReflectionTools
-{
 template <>
 struct FTypeDefault<float>
 {
@@ -85,4 +84,4 @@ struct FTypeDeserializer<float> : public FTypeDeserializerExtended<float, UPsDat
 {
 };
 
-} // namespace FDataReflectionTools
+} // namespace PsDataTools

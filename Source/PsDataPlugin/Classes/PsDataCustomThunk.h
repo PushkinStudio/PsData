@@ -13,42 +13,42 @@ public:
 	static void GetProperty(UPsData* Target, int32 Hash, T& Out)
 	{
 		T* Result = nullptr;
-		FDataReflectionTools::GetByHash(Target, Hash, Result);
+		PsDataTools::GetByHash(Target, Hash, Result);
 		Out = *Result;
 	}
 
 	template <typename T>
 	static void SetProperty(UPsData* Target, int32 Hash, T& Value)
 	{
-		FDataReflectionTools::SetByHash<T>(Target, Hash, Value);
+		PsDataTools::SetByHash<T>(Target, Hash, Value);
 	}
 
 	template <typename T>
 	static void GetArrayProperty(UPsData* Target, int32 Hash, TArray<T>& Out)
 	{
 		TArray<T>* Result = nullptr;
-		FDataReflectionTools::GetByHash(Target, Hash, Result);
+		PsDataTools::GetByHash(Target, Hash, Result);
 		Out = *Result;
 	}
 
 	template <typename T>
-	static void SetArrayProperty(UPsData* Target, int32 Hash, typename FDataReflectionTools::TConstRef<TArray<T>>::Type Value)
+	static void SetArrayProperty(UPsData* Target, int32 Hash, typename PsDataTools::TConstRef<TArray<T>>::Type Value)
 	{
-		FDataReflectionTools::SetByHash<TArray<T>>(Target, Hash, Value);
+		PsDataTools::SetByHash<TArray<T>>(Target, Hash, Value);
 	}
 
 	template <typename T>
 	static void GetMapProperty(UPsData* Target, int32 Hash, TMap<FString, T>& Out)
 	{
 		TMap<FString, T>* Result = nullptr;
-		FDataReflectionTools::GetByHash(Target, Hash, Result);
+		PsDataTools::GetByHash(Target, Hash, Result);
 		Out = *Result;
 	}
 
 	template <typename T>
-	static void SetMapProperty(UPsData* Target, int32 Hash, typename FDataReflectionTools::TConstRef<TMap<FString, T>>::Type Value)
+	static void SetMapProperty(UPsData* Target, int32 Hash, typename PsDataTools::TConstRef<TMap<FString, T>>::Type Value)
 	{
-		FDataReflectionTools::SetByHash<TMap<FString, T>>(Target, Hash, Value);
+		PsDataTools::SetByHash<TMap<FString, T>>(Target, Hash, Value);
 	}
 };
 
@@ -59,41 +59,41 @@ public:
 	static void GetProperty(UPsData* Target, int32 Hash, T& Out)
 	{
 		T* Result = nullptr;
-		FDataReflectionTools::GetByHash(Target, Hash, Result);
+		PsDataTools::GetByHash(Target, Hash, Result);
 		Out = *Result;
 	}
 
 	template <typename T>
 	static void SetProperty(UPsData* Target, int32 Hash, T Value)
 	{
-		FDataReflectionTools::SetByHash<T>(Target, Hash, Value);
+		PsDataTools::SetByHash<T>(Target, Hash, Value);
 	}
 
 	template <typename T>
 	static void GetArrayProperty(UPsData* Target, int32 Hash, TArray<T>& Out)
 	{
 		TArray<T>* Result = nullptr;
-		FDataReflectionTools::GetByHash(Target, Hash, Result);
+		PsDataTools::GetByHash(Target, Hash, Result);
 		Out = *Result;
 	}
 
 	template <typename T>
-	static void SetArrayProperty(UPsData* Target, int32 Hash, typename FDataReflectionTools::TConstRef<TArray<T>>::Type Value)
+	static void SetArrayProperty(UPsData* Target, int32 Hash, typename PsDataTools::TConstRef<TArray<T>>::Type Value)
 	{
-		FDataReflectionTools::SetByHash<TArray<T>>(Target, Hash, Value);
+		PsDataTools::SetByHash<TArray<T>>(Target, Hash, Value);
 	}
 
 	template <typename T>
 	static void GetMapProperty(UPsData* Target, int32 Hash, TMap<FString, T>& Out)
 	{
 		TMap<FString, T>* Result = nullptr;
-		FDataReflectionTools::GetByHash(Target, Hash, Result);
+		PsDataTools::GetByHash(Target, Hash, Result);
 		Out = *Result;
 	}
 
 	template <typename T>
-	static void SetMapProperty(UPsData* Target, int32 Hash, typename FDataReflectionTools::TConstRef<TMap<FString, T>>::Type Value)
+	static void SetMapProperty(UPsData* Target, int32 Hash, typename PsDataTools::TConstRef<TMap<FString, T>>::Type Value)
 	{
-		FDataReflectionTools::SetByHash<TMap<FString, T>>(Target, Hash, Value);
+		PsDataTools::SetByHash<TMap<FString, T>>(Target, Hash, Value);
 	}
 };
