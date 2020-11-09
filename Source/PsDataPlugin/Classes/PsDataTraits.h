@@ -178,9 +178,7 @@ struct TIsContainer<TMap<K, T>>
 	static constexpr bool Map = true;
 };
 
-#define CLANG defined(__clang__)
-
-#if CLANG
+#if defined(__clang__)
 #define __FUNCTION_SIGNATURE__ __PRETTY_FUNCTION__
 #else
 #define __FUNCTION_SIGNATURE__ __FUNCSIG__
@@ -208,7 +206,7 @@ struct FType
 
 		Result.ReplaceInline(TEXT("> "), TEXT(">"));
 
-#if !CLANG
+#if !defined(__clang__)
 		Result.RemoveFromStart(TEXT("enum "), ESearchCase::CaseSensitive);
 		Result.RemoveFromStart(TEXT("class "), ESearchCase::CaseSensitive);
 		Result.RemoveFromStart(TEXT("struct "), ESearchCase::CaseSensitive);
@@ -252,7 +250,7 @@ struct FType<TArray<T>>
 {
 	static FString ContentType()
 	{
-		return FType<TRemovePointer<T>::Type>::ContentType();
+		return FType<typename TRemovePointer<T>::Type>::ContentType();
 	}
 
 	static FString Type()
@@ -271,7 +269,7 @@ struct FType<TMap<FString, T>>
 {
 	static FString ContentType()
 	{
-		return FType<TRemovePointer<T>::Type>::ContentType();
+		return FType<typename TRemovePointer<T>::Type>::ContentType();
 	}
 
 	static FString Type()

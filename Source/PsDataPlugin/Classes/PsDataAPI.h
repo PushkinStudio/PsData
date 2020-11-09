@@ -117,7 +117,7 @@ protected:                                                        \
 		{                                                         \
 			PsDataTools::FDataReflection::InitMeta(#__VA_ARGS__); \
 		}                                                         \
-	} _UNIQ(meta)();
+	} _UNIQ(meta);
 
 /***********************************
  * Macro DPROP
