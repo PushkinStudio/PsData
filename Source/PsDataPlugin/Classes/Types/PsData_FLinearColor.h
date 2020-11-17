@@ -18,28 +18,28 @@ class PSDATAPLUGIN_API UPsDataFLinearColorLibrary : public UBlueprintFunctionLib
 
 public:
 	/** Get property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
-	static void GetProperty(UPsData* Target, int32 Crc32, FLinearColor& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
+	static void GetProperty(UPsData* Target, int32 Hash, FLinearColor& Out);
 
 	/** Set property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
-	static void SetProperty(UPsData* Target, int32 Crc32, const FLinearColor& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
+	static void SetProperty(UPsData* Target, int32 Hash, const FLinearColor& Value);
 
 	/** Get array property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
-	static void GetArrayProperty(UPsData* Target, int32 Crc32, TArray<FLinearColor>& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
+	static void GetArrayProperty(UPsData* Target, int32 Hash, TArray<FLinearColor>& Out);
 
 	/** Set array property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
-	static void SetArrayProperty(UPsData* Target, int32 Crc32, const TArray<FLinearColor>& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
+	static void SetArrayProperty(UPsData* Target, int32 Hash, const TArray<FLinearColor>& Value);
 
 	/** Get map property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
-	static void GetMapProperty(UPsData* Target, int32 Crc32, TMap<FString, FLinearColor>& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
+	static void GetMapProperty(UPsData* Target, int32 Hash, TMap<FString, FLinearColor>& Out);
 
 	/** Set map property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
-	static void SetMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FLinearColor>& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
+	static void SetMapProperty(UPsData* Target, int32 Hash, const TMap<FString, FLinearColor>& Value);
 
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);

@@ -286,28 +286,28 @@ public:
 	//
 
 	/** Get FPsDataBigInteger property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
-	static void GetProperty(UPsData* Target, int32 Crc32, FPsDataBigInteger& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
+	static void GetProperty(UPsData* Target, int32 Hash, FPsDataBigInteger& Out);
 
 	/** Set FPsDataBigInteger property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
-	static void SetProperty(UPsData* Target, int32 Crc32, const FPsDataBigInteger& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
+	static void SetProperty(UPsData* Target, int32 Hash, const FPsDataBigInteger& Value);
 
 	/** Get FPsDataBigInteger array property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
-	static void GetArrayProperty(UPsData* Target, int32 Crc32, TArray<FPsDataBigInteger>& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
+	static void GetArrayProperty(UPsData* Target, int32 Hash, TArray<FPsDataBigInteger>& Out);
 
 	/** Set FPsDataBigInteger array property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
-	static void SetArrayProperty(UPsData* Target, int32 Crc32, const TArray<FPsDataBigInteger>& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
+	static void SetArrayProperty(UPsData* Target, int32 Hash, const TArray<FPsDataBigInteger>& Value);
 
 	/** Get FPsDataBigInteger map property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataOut = "Out"))
-	static void GetMapProperty(UPsData* Target, int32 Crc32, TMap<FString, FPsDataBigInteger>& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
+	static void GetMapProperty(UPsData* Target, int32 Hash, TMap<FString, FPsDataBigInteger>& Out);
 
 	/** Set FPsDataBigInteger map property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Crc32", PsDataIn = "Value"))
-	static void SetMapProperty(UPsData* Target, int32 Crc32, const TMap<FString, FPsDataBigInteger>& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
+	static void SetMapProperty(UPsData* Target, int32 Hash, const TMap<FString, FPsDataBigInteger>& Value);
 
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);

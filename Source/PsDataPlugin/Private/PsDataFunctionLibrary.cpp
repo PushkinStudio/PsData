@@ -238,18 +238,18 @@ bool UPsDataFunctionLibrary::IsLinkEmpty(const UPsData* ConstTarget, int32 Hash)
  * Blueprint collections proxy
  ***********************************/
 
-UPsDataBlueprintMapProxy* UPsDataFunctionLibrary::GetMapProxy(UPsData* Target, int32 Crc32)
+UPsDataBlueprintMapProxy* UPsDataFunctionLibrary::GetMapProxy(UPsData* Target, int32 Hash)
 {
 	//TODO: Always NewObject?
 	UPsDataBlueprintMapProxy* Result = NewObject<UPsDataBlueprintMapProxy>();
-	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Crc32));
+	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Hash));
 	return Result;
 }
 
-UPsDataBlueprintArrayProxy* UPsDataFunctionLibrary::GetArrayProxy(UPsData* Target, int32 Crc32)
+UPsDataBlueprintArrayProxy* UPsDataFunctionLibrary::GetArrayProxy(UPsData* Target, int32 Hash)
 {
 	//TODO: Always NewObject?
 	UPsDataBlueprintArrayProxy* Result = NewObject<UPsDataBlueprintArrayProxy>();
-	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Crc32));
+	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Hash));
 	return Result;
 }

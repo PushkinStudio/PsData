@@ -30,15 +30,15 @@ public:
 
 	/** Get data array property by hash */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static TArray<UPsData*> GetDataArrayByLinkHash(const UPsData* Target, int32 Crc32);
+	static TArray<UPsData*> GetDataArrayByLinkHash(const UPsData* Target, int32 Hash);
 
 	/** Get data property by hash */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static UPsData* GetDataByLinkHash(const UPsData* Target, int32 Crc32);
+	static UPsData* GetDataByLinkHash(const UPsData* Target, int32 Hash);
 
 	/** Is link empty? */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static bool IsLinkEmpty(const UPsData* Target, int32 Crc32);
+	static bool IsLinkEmpty(const UPsData* Target, int32 Hash);
 
 	/***********************************
 	 * Blueprint collections proxy
@@ -46,9 +46,9 @@ public:
 
 	/** Get map proxy property */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static UPsDataBlueprintMapProxy* GetMapProxy(UPsData* Target, int32 Crc32);
+	static UPsDataBlueprintMapProxy* GetMapProxy(UPsData* Target, int32 Hash);
 
 	/** Get map proxy property */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static UPsDataBlueprintArrayProxy* GetArrayProxy(UPsData* Target, int32 Crc32);
+	static UPsDataBlueprintArrayProxy* GetArrayProxy(UPsData* Target, int32 Hash);
 };

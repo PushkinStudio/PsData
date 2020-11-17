@@ -19,7 +19,7 @@ const FName UPsDataNode_Variable::MD_PsDataOut = "PsDataOut";
 const FName UPsDataNode_Variable::MD_PsDataIn = "PsDataIn";
 
 const FName UPsDataNode_Variable::Default_TargetParam = "Target";
-const FName UPsDataNode_Variable::Default_HashParam = "Crc32";
+const FName UPsDataNode_Variable::Default_HashParam = "Hash";
 const FName UPsDataNode_Variable::Default_OutParam = "Out";
 const FName UPsDataNode_Variable::Default_InParam = "Value";
 

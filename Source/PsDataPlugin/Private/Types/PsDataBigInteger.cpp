@@ -910,7 +910,7 @@ FPsDataBigInteger FPsDataBigInteger::Random(int32 NumBytes)
 			Result <<= NumBitsPerWord;
 		}
 
-		const int32 RandWord = MaxWordMask * FMath::FRand();
+		const int32 RandWord = static_cast<int32>(FMath::RandRange(0LL, static_cast<int64>(MaxWordMask)));
 		Result += RandWord;
 	}
 
@@ -921,7 +921,7 @@ FPsDataBigInteger FPsDataBigInteger::Random(int32 NumBytes)
 			Result <<= 8;
 		}
 
-		const int32 RandByte = 0xFF * FMath::FRand();
+		const int32 RandByte = FMath::RandRange(0, 0xFF);
 		Result += RandByte;
 	}
 
