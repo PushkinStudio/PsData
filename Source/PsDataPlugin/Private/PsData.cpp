@@ -14,6 +14,7 @@
 #include "Async/Async.h"
 
 FSimpleMulticastDelegate FDataDelegates::OnPostDataModuleInit;
+TPsDataSimplePromise FDataDelegates::PostDataModuleInitPromise;
 
 /***********************************
 * PsData friend

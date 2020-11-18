@@ -16,6 +16,7 @@ void FPsDataPluginModule::StartupModule()
 		UPsDataHardObjectPtrSingleton::Init();
 
 		FDataDelegates::OnPostDataModuleInit.Broadcast();
+		FDataDelegates::PostDataModuleInitPromise.Resolve();
 	});
 }
 

@@ -4,6 +4,7 @@
 
 #include "PsDataEvent.h"
 #include "PsDataField.h"
+#include "PsDataPromise.h"
 #include "Serialize/PsDataSerialization.h"
 #include "Serialize/Stream/PsDataMD5OutputStream.h"
 
@@ -24,6 +25,7 @@ class PSDATAPLUGIN_API FDataDelegates
 {
 public:
 	static FSimpleMulticastDelegate OnPostDataModuleInit;
+	static TPsDataSimplePromise PostDataModuleInitPromise;
 
 private:
 	// This class is only for namespace use
