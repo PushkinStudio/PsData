@@ -8,8 +8,29 @@
 #include "PsDataTraits.h"
 #include "Serialize/PsDataSerialization.h"
 
+#include "CoreMinimal.h"
+
 namespace PsDataTools
 {
+
+template <typename T>
+UClass* GetPsDataClass()
+{
+	const auto Name = FType<T>::Type();
+	const auto Class = FindObject<UClass>(ANY_PACKAGE, &Name[1]);
+	return Class;
+}
+
+template <typename T>
+UPsData* CastToPsData(T* Value)
+{
+#if !UE_BUILD_SHIPPING
+	const auto Class = GetPsDataClass<T>();
+	check(Class && Class->IsChildOf(UPsData::StaticClass()));
+#endif //UE_BUILD_SHIPPING
+
+	return static_cast<UPsData*>(static_cast<void*>(Value));
+}
 
 /***********************************
 * Comparison
@@ -428,6 +449,8 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 
 	void Set(T* NewValue, UPsData* Instance)
 	{
+		FPsDataEventScopeGuard EventGuard;
+
 		auto Field = GetField();
 		check(!Field->Meta.bStrict || NewValue != nullptr);
 
@@ -438,15 +461,15 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 
 		if (Value)
 		{
-			FPsDataFriend::RemoveChild(Instance, static_cast<UPsData*>(static_cast<void*>(Value)));
+			FPsDataFriend::RemoveChild(Instance, CastToPsData(Value));
 		}
 
 		Value = NewValue;
 
 		if (NewValue)
 		{
-			FPsDataFriend::ChangeDataName(static_cast<UPsData*>(static_cast<void*>(NewValue)), Field->Name, TEXT(""));
-			FPsDataFriend::AddChild(Instance, static_cast<UPsData*>(static_cast<void*>(NewValue)));
+			FPsDataFriend::ChangeDataName(CastToPsData(NewValue), Field->Name, TEXT(""));
+			FPsDataFriend::AddChild(Instance, CastToPsData(NewValue));
 		}
 
 		FPsDataFriend::Changed(Instance, Field);
@@ -491,15 +514,17 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 	void Set(const TArray<T*>& NewValue, UPsData* Instance)
 	{
+		FPsDataEventScopeGuard EventGuard;
+
 		bool bChange = false;
 		auto Field = GetField();
 
 		for (int32 i = 0; i < NewValue.Num(); ++i)
 		{
-			if (NewValue[i]->GetParent() != Instance)
+			if (CastToPsData(NewValue[i])->GetParent() != Instance)
 			{
-				FPsDataFriend::ChangeDataName(NewValue[i], FString::FromInt(i), Field->Name);
-				FPsDataFriend::AddChild(Instance, NewValue[i]);
+				FPsDataFriend::ChangeDataName(CastToPsData(NewValue[i]), FString::FromInt(i), Field->Name);
+				FPsDataFriend::AddChild(Instance, CastToPsData(NewValue[i]));
 				bChange = true;
 			}
 		}
@@ -508,7 +533,7 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 		{
 			if (!NewValue.Contains(Value[i])) //TODO: optimization
 			{
-				FPsDataFriend::RemoveChild(Instance, Value[i]);
+				FPsDataFriend::RemoveChild(Instance, CastToPsData(Value[i]));
 				bChange = true;
 			}
 		}
@@ -562,15 +587,17 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 
 	void Set(const TMap<FString, T*>& NewValue, UPsData* Instance)
 	{
+		FPsDataEventScopeGuard EventGuard;
+
 		bool bChange = false;
 		auto Field = GetField();
 
 		for (auto& Pair : NewValue)
 		{
-			if (Pair.Value->GetParent() != Instance)
+			if (CastToPsData(Pair.Value)->GetParent() != Instance)
 			{
-				FPsDataFriend::ChangeDataName(Pair.Value, Pair.Key, Field->Name);
-				FPsDataFriend::AddChild(Instance, Pair.Value);
+				FPsDataFriend::ChangeDataName(CastToPsData(Pair.Value), Pair.Key, Field->Name);
+				FPsDataFriend::AddChild(Instance, CastToPsData(Pair.Value));
 				bChange = true;
 			}
 		}
@@ -580,7 +607,7 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 			auto Find = NewValue.Find(Pair.Key);
 			if (!Find)
 			{
-				FPsDataFriend::RemoveChild(Instance, Pair.Value);
+				FPsDataFriend::RemoveChild(Instance, CastToPsData(Pair.Value));
 				bChange = true;
 			}
 		}

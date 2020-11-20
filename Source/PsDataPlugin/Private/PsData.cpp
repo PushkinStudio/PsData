@@ -3,6 +3,7 @@
 #include "PsData.h"
 
 #include "PsDataCore.h"
+#include "PsDataDeferredTask.h"
 #include "PsDataProperty.h"
 #include "PsDataRoot.h"
 #include "Serialize/PsDataBinarySerialization.h"
@@ -10,8 +11,6 @@
 #include "Serialize/Stream/PsDataBufferOutputStream.h"
 #include "Serialize/Stream/PsDataMD5OutputStream.h"
 #include "Types/PsData_UPsData.h"
-
-#include "Async/Async.h"
 
 FSimpleMulticastDelegate FDataDelegates::OnPostDataModuleInit;
 TPsDataSimplePromise FDataDelegates::PostDataModuleInitPromise;
@@ -81,15 +80,11 @@ void FPsDataFriend::Changed(UPsData* Data, const TSharedPtr<const FDataField>& F
 	if (!Data->bChanged)
 	{
 		Data->bChanged = true;
-		TWeakObjectPtr<UPsData> DataWeakPtr(Data);
-		AsyncTask(ENamedThreads::GameThread, [DataWeakPtr]() {
-			if (DataWeakPtr.IsValid())
+		DeferredTask(Data, [Data]() {
+			Data->bChanged = false;
+			if (Data->IsBound(UPsDataEvent::Changed, false))
 			{
-				DataWeakPtr->bChanged = false;
-				if (DataWeakPtr->IsBound(UPsDataEvent::Changed, false))
-				{
-					DataWeakPtr->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
-				}
+				Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
 			}
 		});
 	}
@@ -294,13 +289,12 @@ void UPsData::Broadcast(UPsDataEvent* Event) const
 	const bool bDeferredEventProcessing = FPsDataEventScopeGuard::IsGuarded();
 	if (bDeferredEventProcessing)
 	{
-		TWeakObjectPtr<UPsData> WeakPtr(const_cast<UPsData*>(this));
 		Event->AddToRoot();
-		FPsDataEventScopeGuard::AddCallback([WeakPtr, Event]() {
+		FPsDataEventScopeGuard::AddCallback([WeakThis = MakeWeakObjectPtr(this), Event]() {
 			Event->RemoveFromRoot();
-			if (WeakPtr.IsValid())
+			if (WeakThis.IsValid())
 			{
-				WeakPtr->BroadcastInternal(Event, nullptr);
+				WeakThis->BroadcastInternal(Event, nullptr);
 			}
 		});
 	}

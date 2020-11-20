@@ -73,7 +73,7 @@ private:
 		}
 	}
 
-	void BroadcastSingle(const FPsDataPromiseDelegate& Delegate)
+	void ExecuteSingle(const FPsDataPromiseDelegate& Delegate)
 	{
 		Delegate.ExecuteIfBound(Value.Get());
 	}
