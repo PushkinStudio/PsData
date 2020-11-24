@@ -133,6 +133,11 @@ public:
 	/** Constructor */
 	FPsDataBindCollection();
 
+	~FPsDataBindCollection()
+	{
+		Unbind();
+	}
+
 	/** Add */
 	void Add(const FPsDataBind& Bind);
 

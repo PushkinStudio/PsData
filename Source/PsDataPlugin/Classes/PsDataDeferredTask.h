@@ -5,6 +5,8 @@
 #include "Async/Async.h"
 #include "CoreMinimal.h"
 
+#include <tuple>
+
 namespace PsDataTools
 {
 

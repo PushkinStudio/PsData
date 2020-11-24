@@ -48,7 +48,13 @@ public:
 	static const FString NameChanged;
 
 	UFUNCTION(BlueprintPure, Category = "PsData|Event")
-	static UPsDataEvent* ConstructEvent(FString EventType, bool bEventBubbles);
+	static UPsDataEvent* ConstructEvent(FString EventType, bool bEventBubbles, UClass* EventClass = nullptr);
+
+	template <class EventClass>
+	static EventClass* ConstructEvent(FString EventType, bool bEventBubbles)
+	{
+		return CastChecked<EventClass>(ConstructEvent(EventType, bEventBubbles, EventClass::StaticClass()));
+	}
 
 private:
 	friend class UPsData;

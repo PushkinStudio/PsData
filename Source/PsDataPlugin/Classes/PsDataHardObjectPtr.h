@@ -5,39 +5,11 @@
 #include "CoreMinimal.h"
 #include "Templates/EnableIf.h"
 #include "Templates/PointerIsConvertibleFromTo.h"
-
-#include "PsDataHardObjectPtr.generated.h"
-
-/***********************************
- * UPsDataHardObjectPtrSingleton
- ***********************************/
-
-UCLASS()
-class PSDATAPLUGIN_API UPsDataHardObjectPtrSingleton : public UObject
-{
-	GENERATED_UCLASS_BODY()
-
-private:
-	static UPsDataHardObjectPtrSingleton* Singleton;
-
-public:
-	static void Init();
-
-protected:
-	template <class T>
-	friend class THardObjectPtr;
-
-	static UPsDataHardObjectPtrSingleton* Get();
-
-	UPROPERTY(Transient)
-	TMap<const UObject*, int32> ObjectCounters;
-
-	static void RetainObject(const UObject* Object);
-	static void ReleaseObject(const UObject* Object);
-};
+#include "UObject/GCObject.h"
+#include "UObject/UObjectGlobals.h"
 
 template <class T>
-class THardObjectPtr
+class THardObjectPtr : public FGCObject
 {
 private:
 	T* Value;
@@ -84,57 +56,18 @@ public:
 		Other.Value = nullptr;
 	}
 
-	~THardObjectPtr()
-	{
-		if (Value != nullptr)
-		{
-			// In the case of a forward declaration we don't know complete type of T and need to use ResetUnsafe
-			ResetUnsafe();
-		}
-	}
-
 	template <class OtherType>
 	friend class THardObjectPtr;
-
-private:
-	void ResetUnsafe()
-	{
-		// Implementation of the Set method guarantees that this cast is safety
-		const auto Object = static_cast<const UObject*>(static_cast<const void*>(Value));
-		ResetImpl(Object);
-	}
-
-	void ResetImpl(const UObject* Object)
-	{
-		UPsDataHardObjectPtrSingleton::ReleaseObject(Object);
-		Value = nullptr;
-	}
 
 public:
 	void Reset()
 	{
-		ResetImpl(Value);
+		Value = nullptr;
 	}
 
 	void Set(T* NewValue)
 	{
-		static_assert(TPointerIsConvertibleFromTo<T, const UObject>::Value, "Only UObjects are allowed");
-
-		if (Value == NewValue)
-		{
-			return;
-		}
-
-		if (Value != nullptr)
-		{
-			Reset();
-		}
-
-		if (NewValue != nullptr)
-		{
-			UPsDataHardObjectPtrSingleton::RetainObject(NewValue);
-			Value = NewValue;
-		}
+		Value = NewValue;
 	}
 
 	T* Get() const
@@ -175,6 +108,17 @@ public:
 	void operator=(const THardObjectPtr& NewPtr)
 	{
 		Set(NewPtr.Value);
+	}
+
+private:
+	virtual void AddReferencedObjects(FReferenceCollector& Collector) override
+	{
+		Collector.AddReferencedObject(Value);
+	}
+
+	virtual FString GetReferencerName() const override
+	{
+		return "THardObjectPtr";
 	}
 };
 

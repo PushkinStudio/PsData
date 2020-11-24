@@ -5,6 +5,8 @@
 #include "PsData.h"
 #include "PsDataField.h"
 
+#include "UObject/Package.h"
+
 int32 FPsDataEventScopeGuard::Index = 0;
 TArray<FPsDataEventScopeGuardCallback> FPsDataEventScopeGuard::Callbacks;
 
@@ -60,9 +62,14 @@ UPsDataEvent::UPsDataEvent(const class FObjectInitializer& ObjectInitializer)
 {
 }
 
-UPsDataEvent* UPsDataEvent::ConstructEvent(FString EventType, bool bEventBubbles)
+UPsDataEvent* UPsDataEvent::ConstructEvent(FString EventType, bool bEventBubbles, UClass* EventClass)
 {
-	UPsDataEvent* Event = NewObject<UPsDataEvent>();
+	if (!EventClass)
+	{
+		EventClass = UPsDataEvent::StaticClass();
+	}
+
+	UPsDataEvent* Event = NewObject<UPsDataEvent>(GetTransientPackage(), EventClass);
 
 	Event->Type = EventType;
 	Event->bBubbles = bEventBubbles;
