@@ -29,7 +29,7 @@ struct FEventPath
 	}
 };
 
-class PSDATAEDITORPLUGIN_API SPsDataGraphPinEventList : public SGraphPin
+class PSDATAEDITOR_API SPsDataGraphPinEventList : public SGraphPin
 {
 public:
 	SLATE_BEGIN_ARGS(SPsDataGraphPinEventList) {}

@@ -9,7 +9,7 @@
 
 using FPsDataEventScopeGuardCallback = TFunction<void()>;
 
-struct PSDATAPLUGIN_API FPsDataEventScopeGuard
+struct PSDATA_API FPsDataEventScopeGuard
 {
 public:
 	FPsDataEventScopeGuard();
@@ -30,7 +30,7 @@ private:
 class UPsData;
 
 UCLASS(BlueprintType, Blueprintable)
-class PSDATAPLUGIN_API UPsDataEvent : public UObject
+class PSDATA_API UPsDataEvent : public UObject
 {
 	GENERATED_UCLASS_BODY()
 
@@ -95,7 +95,7 @@ public:
 };
 
 UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsDataEvent"))
-class PSDATAPLUGIN_API UPsDataEventFunctionLibrary : public UBlueprintFunctionLibrary
+class PSDATA_API UPsDataEventFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
@@ -106,7 +106,7 @@ public:
 	DECLARE_FUNCTION(execGetEventTarget);
 };
 
-struct PSDATAPLUGIN_API FCustomThunkTemplates_PsDataEvent
+struct PSDATA_API FCustomThunkTemplates_PsDataEvent
 {
 public:
 	static void GetEventTarget(UPsDataEvent* Event, UPsData*& Target);

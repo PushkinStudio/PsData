@@ -8,7 +8,7 @@
  * FPsDataInputStream
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataInputStream
+struct PSDATA_API FPsDataInputStream
 {
 	virtual uint32 ReadUint32() = 0;
 	virtual int32 ReadInt32() = 0;

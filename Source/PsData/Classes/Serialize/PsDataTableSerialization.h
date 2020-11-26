@@ -17,7 +17,7 @@ class UPsData;
  * FTableDataSerializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataTableDeserializer : public FPsDataDeserializer
+struct PSDATA_API FPsDataTableDeserializer : public FPsDataDeserializer
 {
 private:
 	FPsDataJsonDeserializer JsonDeserializer;

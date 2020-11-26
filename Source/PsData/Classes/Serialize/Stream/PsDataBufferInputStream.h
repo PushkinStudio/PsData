@@ -10,7 +10,7 @@
  * FPsDataBufferInputStream
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataBufferInputStream : public FPsDataInputStream
+struct PSDATA_API FPsDataBufferInputStream : public FPsDataInputStream
 {
 public:
 	FPsDataBufferInputStream(const TArray<uint8>& InBuffer);

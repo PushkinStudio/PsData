@@ -12,7 +12,7 @@
 * FPsDataMD5Hash
 ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataMD5Hash
+struct PSDATA_API FPsDataMD5Hash
 {
 	FPsDataMD5Hash(FMD5 Md5Gen);
 
@@ -29,7 +29,7 @@ private:
  * FPsDataMD5OutputStream
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataMD5OutputStream : public FPsDataOutputStream
+struct PSDATA_API FPsDataMD5OutputStream : public FPsDataOutputStream
 {
 public:
 	FPsDataMD5OutputStream();

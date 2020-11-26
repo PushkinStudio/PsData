@@ -1,14 +1,14 @@
 // Copyright 2015-2020 Mail.Ru Group. All Rights Reserved.
 
-#include "PsDataPlugin.h"
+#include "PsDataModule.h"
 
 #include "PsDataCore.h"
 
 #include "Misc/CoreDelegates.h"
 
-#define LOCTEXT_NAMESPACE "FPsDataPluginModule"
+#define LOCTEXT_NAMESPACE "FPsDataModule"
 
-void FPsDataPluginModule::StartupModule()
+void FPsDataModule::StartupModule()
 {
 	FCoreDelegates::OnPostEngineInit.AddLambda([] {
 		PsDataTools::FDataReflection::Compile();
@@ -18,10 +18,10 @@ void FPsDataPluginModule::StartupModule()
 	});
 }
 
-void FPsDataPluginModule::ShutdownModule()
+void FPsDataModule::ShutdownModule()
 {
 }
 
 #undef LOCTEXT_NAMESPACE
 
-IMPLEMENT_MODULE(FPsDataPluginModule, PsDataPlugin)
+IMPLEMENT_MODULE(FPsDataModule, PsData)

@@ -13,7 +13,7 @@ class UPsDataBlueprintArrayProxy;
 struct FDataLink;
 
 UCLASS()
-class PSDATAPLUGIN_API UPsDataFunctionLibrary : public UBlueprintFunctionLibrary
+class PSDATA_API UPsDataFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

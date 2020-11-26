@@ -15,7 +15,7 @@ class UPsData;
  * FTableDataSerializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataStructDeserializer : public FPsDataDeserializer
+struct PSDATA_API FPsDataStructDeserializer : public FPsDataDeserializer
 {
 private:
 	TMap<FString, FString> KeyMap;

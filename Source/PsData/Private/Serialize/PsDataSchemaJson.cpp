@@ -4,7 +4,7 @@
 
 #include "PsData.h"
 #include "PsDataCore.h"
-#include "PsDataPluginDefines.h"
+#include "PsDataDefines.h"
 
 #include "CoreUObject.h"
 #include "Dom/JsonObject.h"

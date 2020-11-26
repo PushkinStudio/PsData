@@ -12,7 +12,7 @@
 #include "PsData_float.generated.h"
 
 UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsData"))
-class PSDATAPLUGIN_API UPsDataFloatLibrary : public UBlueprintFunctionLibrary
+class PSDATA_API UPsDataFloatLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

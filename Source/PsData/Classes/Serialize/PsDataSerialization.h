@@ -15,7 +15,7 @@ class UPsData;
  * FPsDataAllocator
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataAllocator
+struct PSDATA_API FPsDataAllocator
 {
 	UClass* Class;
 	UPsData* Parent;
@@ -30,7 +30,7 @@ struct PSDATAPLUGIN_API FPsDataAllocator
  * FPsDataSerializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataSerializer
+struct PSDATA_API FPsDataSerializer
 {
 public:
 	FPsDataSerializer();
@@ -56,7 +56,7 @@ public:
  * FPsDataDeserializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataDeserializer
+struct PSDATA_API FPsDataDeserializer
 {
 public:
 	FPsDataDeserializer();

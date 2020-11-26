@@ -12,7 +12,7 @@
 #include "PsData_FLinearColor.generated.h"
 
 UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsData"))
-class PSDATAPLUGIN_API UPsDataFLinearColorLibrary : public UBlueprintFunctionLibrary
+class PSDATA_API UPsDataFLinearColorLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

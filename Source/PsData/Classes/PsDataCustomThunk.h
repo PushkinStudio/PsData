@@ -6,7 +6,7 @@
 
 #include "CoreMinimal.h"
 
-struct PSDATAPLUGIN_API FCustomThunkTemplates_PsData
+struct PSDATA_API FCustomThunkTemplates_PsData
 {
 public:
 	template <typename T>
@@ -52,7 +52,7 @@ public:
 	}
 };
 
-struct PSDATAPLUGIN_API FCustomThunkTemplates_PsDataPtr
+struct PSDATA_API FCustomThunkTemplates_PsDataPtr
 {
 public:
 	template <typename T>

@@ -10,7 +10,7 @@
  * FPsDataBufferOutputStream
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataBufferOutputStream : public FPsDataOutputStream
+struct PSDATA_API FPsDataBufferOutputStream : public FPsDataOutputStream
 {
 public:
 	FPsDataBufferOutputStream();

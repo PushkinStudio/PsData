@@ -9,7 +9,7 @@ class FJsonObject;
 //////////////////////////////////////////////////////////////////////////
 // FPsDataSchemaJson generates json description for all PsDatas
 
-struct PSDATAPLUGIN_API FPsDataSchemaJson
+struct PSDATA_API FPsDataSchemaJson
 {
 	static TSharedPtr<FJsonObject> Get();
 };

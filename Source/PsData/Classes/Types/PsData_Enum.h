@@ -13,7 +13,7 @@
 #include "PsData_Enum.generated.h"
 
 UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsData"))
-class PSDATAPLUGIN_API UPsDataEnumLibrary : public UBlueprintFunctionLibrary
+class PSDATA_API UPsDataEnumLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

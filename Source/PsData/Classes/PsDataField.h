@@ -64,7 +64,7 @@ enum class EDataFieldType : uint8
 	MAP = 2
 };
 
-struct PSDATAPLUGIN_API FDataFieldFunctions
+struct PSDATA_API FDataFieldFunctions
 {
 	UClass* Class;
 	FName GetFunctionName;
@@ -81,7 +81,7 @@ struct PSDATAPLUGIN_API FDataFieldFunctions
  * Field Context
  ***********************************/
 
-struct PSDATAPLUGIN_API FAbstractDataTypeContext
+struct PSDATA_API FAbstractDataTypeContext
 {
 	virtual FString GetCppType() const = 0;
 	virtual FString GetCppContentType() const = 0;
@@ -103,7 +103,7 @@ struct PSDATAPLUGIN_API FAbstractDataTypeContext
  * FDataField
  ***********************************/
 
-struct PSDATAPLUGIN_API FDataField
+struct PSDATA_API FDataField
 {
 public:
 	FString Name;
@@ -120,7 +120,7 @@ public:
  * FDataLink
  ***********************************/
 
-struct PSDATAPLUGIN_API FDataLink
+struct PSDATA_API FDataLink
 {
 public:
 	FString Name;

@@ -8,7 +8,7 @@
 #include "PsDataRoot.generated.h"
 
 UCLASS(BlueprintType, Blueprintable)
-class PSDATAPLUGIN_API UPsDataRoot : public UPsData
+class PSDATA_API UPsDataRoot : public UPsData
 {
 	GENERATED_UCLASS_BODY()
 };

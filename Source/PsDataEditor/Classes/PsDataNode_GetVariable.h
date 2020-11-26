@@ -9,7 +9,7 @@
 #include "PsDataNode_GetVariable.generated.h"
 
 UCLASS()
-class PSDATAEDITORPLUGIN_API UPsDataNode_GetVariable : public UPsDataNode_Variable
+class PSDATAEDITOR_API UPsDataNode_GetVariable : public UPsDataNode_Variable
 {
 	GENERATED_BODY()
 

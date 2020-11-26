@@ -25,7 +25,7 @@ struct FClassFields
 	TMap<int32, const TSharedPtr<const FDataLink>> LinksByHash;
 };
 
-struct PSDATAPLUGIN_API FDataReflection
+struct PSDATA_API FDataReflection
 {
 private:
 	static TMap<UClass*, FClassFields> FieldsByClass;

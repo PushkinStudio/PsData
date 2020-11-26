@@ -19,7 +19,7 @@ enum class EPsDataBigIntegerConvertionType : uint8
 };
 
 USTRUCT(BlueprintType, Blueprintable)
-struct PSDATAPLUGIN_API FPsDataShortBigInteger
+struct PSDATA_API FPsDataShortBigInteger
 {
 	GENERATED_BODY()
 
@@ -39,7 +39,7 @@ struct PSDATAPLUGIN_API FPsDataShortBigInteger
 };
 
 USTRUCT(BlueprintType, Blueprintable)
-struct PSDATAPLUGIN_API FPsDataBigInteger
+struct PSDATA_API FPsDataBigInteger
 {
 	GENERATED_BODY()
 

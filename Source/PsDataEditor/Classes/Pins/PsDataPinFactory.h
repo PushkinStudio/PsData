@@ -7,7 +7,7 @@
 
 class SGraphPin;
 
-class PSDATAEDITORPLUGIN_API FPsDataPinFactory : public FGraphPanelPinFactory
+class PSDATAEDITOR_API FPsDataPinFactory : public FGraphPanelPinFactory
 {
 	virtual TSharedPtr<class SGraphPin> CreatePin(class UEdGraphPin* InPin) const override;
 };

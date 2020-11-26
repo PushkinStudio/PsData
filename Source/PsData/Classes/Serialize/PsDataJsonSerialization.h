@@ -14,7 +14,7 @@ class UPsData;
  * FPsDataJsonSerializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataJsonSerializer : public FPsDataSerializer
+struct PSDATA_API FPsDataJsonSerializer : public FPsDataSerializer
 {
 private:
 	TSharedPtr<FJsonObject> RootJson;
@@ -53,7 +53,7 @@ public:
  * FPsDataJsonDeserializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataJsonDeserializer : public FPsDataDeserializer
+struct PSDATA_API FPsDataJsonDeserializer : public FPsDataDeserializer
 {
 private:
 	TSharedPtr<FJsonObject> RootJson;

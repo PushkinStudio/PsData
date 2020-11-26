@@ -12,7 +12,7 @@
 #include "PsData_bool.generated.h"
 
 UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsData"))
-class PSDATAPLUGIN_API UPsDataBoolLibrary : public UBlueprintFunctionLibrary
+class PSDATA_API UPsDataBoolLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

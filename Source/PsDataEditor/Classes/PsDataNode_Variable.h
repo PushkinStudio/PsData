@@ -23,7 +23,7 @@ enum class EPsDataVariablePinType : uint8
 class FNodeHandlingFunctor;
 
 UCLASS()
-class PSDATAEDITORPLUGIN_API UPsDataNode_Variable : public UK2Node_CallFunction
+class PSDATAEDITOR_API UPsDataNode_Variable : public UK2Node_CallFunction
 {
 	GENERATED_UCLASS_BODY()
 

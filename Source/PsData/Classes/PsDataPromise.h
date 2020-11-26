@@ -6,7 +6,7 @@
 #include "Delegates/Delegate.h"
 
 template <typename T>
-class PSDATAPLUGIN_API TPsDataPromise
+class PSDATA_API TPsDataPromise
 {
 public:
 	DECLARE_DELEGATE_OneParam(FPsDataPromiseDelegate, const T&);
@@ -82,7 +82,7 @@ private:
 	TArray<FPsDataPromiseDelegate> Delegates;
 };
 
-class PSDATAPLUGIN_API TPsDataSimplePromise
+class PSDATA_API TPsDataSimplePromise
 {
 public:
 	TPsDataSimplePromise()

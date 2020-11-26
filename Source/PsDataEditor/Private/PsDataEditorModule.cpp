@@ -1,24 +1,24 @@
 // Copyright 2015-2020 Mail.Ru Group. All Rights Reserved.
 
-#include "PsDataEditorPlugin.h"
+#include "PsDataEditorModule.h"
 
 #include "Pins/PsDataPinFactory.h"
 #include "PsData.h"
 
 #include "EdGraphUtilities.h"
 
-#define LOCTEXT_NAMESPACE "PsDataEditorPluginModule"
+#define LOCTEXT_NAMESPACE "PsDataEditorModule"
 
-void FPsDataEditorPluginModule::StartupModule()
+void FPsDataEditorModule::StartupModule()
 {
 	TSharedPtr<FPsDataPinFactory> PinFactory = MakeShareable(new FPsDataPinFactory());
 	FEdGraphUtilities::RegisterVisualPinFactory(PinFactory);
 }
 
-void FPsDataEditorPluginModule::ShutdownModule()
+void FPsDataEditorModule::ShutdownModule()
 {
 }
 
 #undef LOCTEXT_NAMESPACE
 
-IMPLEMENT_MODULE(FPsDataEditorPluginModule, PsDataEditorPlugin)
+IMPLEMENT_MODULE(FPsDataEditorModule, PsDataEditor)

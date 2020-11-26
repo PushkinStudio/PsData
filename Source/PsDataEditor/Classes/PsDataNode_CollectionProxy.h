@@ -9,7 +9,7 @@
 #include "PsDataNode_CollectionProxy.generated.h"
 
 UCLASS()
-class PSDATAEDITORPLUGIN_API UPsDataNode_CollectionProxy : public UPsDataNode_Variable
+class PSDATAEDITOR_API UPsDataNode_CollectionProxy : public UPsDataNode_Variable
 {
 	GENERATED_UCLASS_BODY()
 

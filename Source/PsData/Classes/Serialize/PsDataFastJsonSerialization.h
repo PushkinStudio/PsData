@@ -14,7 +14,7 @@ class UPsData;
  * FPsDataFastJsonSerializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataFastJsonSerializer : public FPsDataSerializer
+struct PSDATA_API FPsDataFastJsonSerializer : public FPsDataSerializer
 {
 public:
 	FPsDataFastJsonSerializer(bool bPretty = false);
@@ -88,7 +88,7 @@ private:
  * FPsDataFastJsonDeserializer
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataFastJsonDeserializer : public FPsDataDeserializer
+struct PSDATA_API FPsDataFastJsonDeserializer : public FPsDataDeserializer
 {
 public:
 	FPsDataFastJsonDeserializer(const FString& InJsonString);

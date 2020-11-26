@@ -8,7 +8,7 @@
  * FPsDataOutputStream
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataOutputStream
+struct PSDATA_API FPsDataOutputStream
 {
 	virtual void WriteUint32(uint32 Value) = 0;
 	virtual void WriteInt32(int32 Value) = 0;

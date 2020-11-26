@@ -13,7 +13,7 @@
 #include "PsData_FPsDataBigInteger.generated.h"
 
 UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsData"))
-class PSDATAPLUGIN_API UPsDataBigIntegerLibrary : public UBlueprintFunctionLibrary
+class PSDATA_API UPsDataBigIntegerLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

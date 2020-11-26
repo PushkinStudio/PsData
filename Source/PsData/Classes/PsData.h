@@ -21,7 +21,7 @@ DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsDataEvent*);                      
 class UPsData;
 class UPsDataRoot;
 
-class PSDATAPLUGIN_API FDataDelegates
+class PSDATA_API FDataDelegates
 {
 public:
 	static FSimpleMulticastDelegate OnPostDataModuleInit;
@@ -36,7 +36,7 @@ private:
 * Abstract property
 ***********************************/
 
-struct PSDATAPLUGIN_API FAbstractDataProperty
+struct PSDATA_API FAbstractDataProperty
 {
 	FAbstractDataProperty() {}
 	virtual ~FAbstractDataProperty() {}
@@ -54,7 +54,7 @@ struct PSDATAPLUGIN_API FAbstractDataProperty
 
 namespace PsDataTools
 {
-struct PSDATAPLUGIN_API FPsDataFriend
+struct PSDATA_API FPsDataFriend
 {
 	static void ChangeDataName(UPsData* Data, const FString& Name, const FString& CollectionName);
 	static void AddChild(UPsData* Parent, UPsData* Data);
@@ -99,7 +99,7 @@ struct FDelegateWrapper
  * FPsDataBind
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataBind
+struct PSDATA_API FPsDataBind
 {
 private:
 	friend UPsData;
@@ -123,7 +123,7 @@ public:
  * FPsDataBindCollection
  ***********************************/
 
-struct PSDATAPLUGIN_API FPsDataBindCollection
+struct PSDATA_API FPsDataBindCollection
 {
 private:
 	/** Collection */
@@ -149,13 +149,13 @@ public:
  * FPsDataReport
  ***********************************/
 
-enum class PSDATAPLUGIN_API EPsDataReportType : uint8
+enum class PSDATA_API EPsDataReportType : uint8
 {
 	Logic = 0,
 	Link = 1,
 };
 
-struct PSDATAPLUGIN_API FPsDataReport
+struct PSDATA_API FPsDataReport
 {
 	EPsDataReportType Type;
 	FString SourcePath;
@@ -171,7 +171,7 @@ struct PSDATAPLUGIN_API FPsDataReport
 ***********************************/
 
 UCLASS(BlueprintType, Blueprintable)
-class PSDATAPLUGIN_API UPsData : public UObject
+class PSDATA_API UPsData : public UObject
 {
 	GENERATED_UCLASS_BODY()
 

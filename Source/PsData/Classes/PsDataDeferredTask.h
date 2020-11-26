@@ -10,7 +10,7 @@
 namespace PsDataTools
 {
 
-struct PSDATAPLUGIN_API FDeferredUniqueTaskHelper
+struct PSDATA_API FDeferredUniqueTaskHelper
 {
 	static bool Register(void* Owner, const FGuid& FunctionGuid);
 	static void Unregister(void* Owner, const FGuid& FunctionGuid);
