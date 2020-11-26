@@ -4,15 +4,15 @@ using System.IO;
 
 namespace UnrealBuildTool.Rules
 {
-	public class PsDataEditorPlugin : ModuleRules
+	public class PsDataEditor : ModuleRules
 	{
-		public PsDataEditorPlugin(ReadOnlyTargetRules Target) : base(Target)
+		public PsDataEditor(ReadOnlyTargetRules Target) : base(Target)
 		{
 			PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
 			PrivateIncludePaths.AddRange(
 				new string[] {
-					"PsDataEditorPlugin/Private",
+					"PsDataEditor/Private",
 				}
 			);
 
@@ -22,7 +22,7 @@ namespace UnrealBuildTool.Rules
 					"Core",
 					"CoreUObject",
 					"Engine",
-					"PsDataPlugin",
+					"PsData",
 					"Json",
 				}
 			);

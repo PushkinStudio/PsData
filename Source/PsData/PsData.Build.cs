@@ -2,16 +2,16 @@
 
 using UnrealBuildTool;
 
-public class PsDataPlugin : ModuleRules
+public class PsData : ModuleRules
 {
-	public PsDataPlugin(ReadOnlyTargetRules Target) : base(Target)
+	public PsData(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 				
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {
-				"PsDataPlugin/Private",
+				"PsData/Private",
 			}
 		);
 			
