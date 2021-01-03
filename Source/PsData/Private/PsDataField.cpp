@@ -28,8 +28,6 @@ FDataFieldMeta::FDataFieldMeta()
 	, bDeprecated(false)
 	, bReadOnly(false)
 	, bAlias(false)
-	, Alias()
-	, EventType()
 {
 }
 

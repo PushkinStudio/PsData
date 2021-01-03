@@ -6,7 +6,6 @@
 
 UPsDataBlueprintArrayProxy::UPsDataBlueprintArrayProxy(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, Proxy()
 {
 }
 

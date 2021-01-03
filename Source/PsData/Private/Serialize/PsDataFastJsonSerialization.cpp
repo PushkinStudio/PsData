@@ -397,7 +397,6 @@ FPsDataFastJsonPointer::FPsDataFastJsonPointer(EPsDataFastJsonToken InToken, int
 	, Depth(InDepth)
 	, StartPosition(InStartPosition)
 	, EndPosition(InEndPosition)
-	, String()
 	, bHasString(false)
 {
 }

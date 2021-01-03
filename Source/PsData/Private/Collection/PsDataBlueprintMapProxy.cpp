@@ -6,7 +6,6 @@
 
 UPsDataBlueprintMapProxy::UPsDataBlueprintMapProxy(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, Proxy()
 {
 }
 

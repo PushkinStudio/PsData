@@ -25,7 +25,6 @@ public:
 	template <typename T>
 	FPsDataStructDeserializer(const T& Struct)
 		: FPsDataDeserializer()
-		, KeyMap()
 		, JsonDeserializer(CreateJsonFromStruct(T::StaticStruct(), &Struct, KeyMap))
 	{
 	}

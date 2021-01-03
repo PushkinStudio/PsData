@@ -188,7 +188,6 @@ FPsDataReport::FPsDataReport(EPsDataReportType InType, const FString& InSourcePa
 
 UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, DataKey()
 	, Parent(nullptr)
 	, BroadcastInProgress(0)
 	, bChanged(false)
