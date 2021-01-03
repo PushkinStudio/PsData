@@ -600,7 +600,7 @@ public:
 	{
 		static_assert(TIsContainer<ReturnType>::Value, "ReturnType must be non-container type");
 
-		FDataReflection::InitLink(Name, TEXT("<ABSTRACT>"), CharReturnType, Hash, true, !TIsContainer<Type>::Value, InInstance);
+		FDataReflection::InitLink(Name, "<ABSTRACT>", CharReturnType, Hash, true, !TIsContainer<Type>::Value, InInstance);
 	}
 
 	typename FDLinkHelper<Type, ReturnType, Hash>::ResultType Get() const
