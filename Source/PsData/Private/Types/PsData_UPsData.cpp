@@ -83,7 +83,7 @@ void UPsDataUPsDataLibrary::TypeSerialize(const UPsData* const Instance, const T
 
 void* UPsDataUPsDataLibrary::TypeDeserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, void* Value)
 {
-	FPsDataAllocator Allocator(CastChecked<UClass>(Field->Context->GetUE4Type()), Instance);
+	const FPsDataAllocator Allocator(CastChecked<UClass>(Field->Context->GetUE4Type()), Instance);
 
 	UPsData* NewValue = static_cast<UPsData*>(Value);
 	if (!Deserializer->ReadValue(NewValue, Allocator))

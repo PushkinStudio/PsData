@@ -456,7 +456,7 @@ void FPsDataFastJsonDeserializer::Parse()
 			break;
 		}
 
-		auto c = Source[Index];
+		const auto c = Source[Index];
 
 		if ((c == '}' || c == ']' || c == ',') && !IsEmpty(Source, PrevIndex, Index - 1))
 		{
@@ -714,7 +714,7 @@ bool FPsDataFastJsonDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator
 	auto& Pointer = Pointers[PointerIndex];
 	if (Pointer.Token == EPsDataFastJsonToken::Value)
 	{
-		auto Value = Pointer.GetString(Source);
+		const auto Value = Pointer.GetString(Source);
 		if (Value.Equals(TEXT("null"), ESearchCase::IgnoreCase))
 		{
 			OutValue = nullptr;

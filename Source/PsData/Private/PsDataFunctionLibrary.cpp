@@ -139,14 +139,14 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 {
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
-	TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
+	const TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
 	check(Link.IsValid());
 	check(!Link->bAbstract);
 
 	TArray<FString> Keys;
 	GetLinkKeys(ConstTarget, Link, Keys);
 
-	auto RootData = Target->GetRoot();
+	const auto RootData = Target->GetRoot();
 	check(RootData);
 
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
@@ -174,14 +174,14 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 {
 	//TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
-	TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
+	const TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
 	check(Link.IsValid());
 	check(!Link->bAbstract);
 
 	TArray<FString> Keys;
 	GetLinkKeys(ConstTarget, Link, Keys);
 
-	auto RootData = Target->GetRoot();
+	const auto RootData = Target->GetRoot();
 	check(RootData);
 
 	const FString& LinkPath = GetLinkPath(ConstTarget, Link);
@@ -213,7 +213,7 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 
 bool UPsDataFunctionLibrary::IsLinkEmpty(const UPsData* ConstTarget, int32 Hash)
 {
-	TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(ConstTarget->GetClass(), Hash);
+	const TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(ConstTarget->GetClass(), Hash);
 	if (Link.IsValid())
 	{
 		if (!Link->Meta.bNullable)

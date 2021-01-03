@@ -1041,7 +1041,7 @@ bool IsDot(TCHAR Char)
 
 PsDataBigIntegerWordType CharToWord(TCHAR Char)
 {
-	char c = static_cast<char>(Char);
+	const char c = static_cast<char>(Char);
 	if (c >= '0' && c <= '9')
 	{
 		return c - '0';
@@ -1097,7 +1097,7 @@ bool IsNumber(const TCHAR* Array, int32 Size, uint8 Divider, bool bSkipDot = fal
 			--NumDotForSkip;
 			continue;
 		}
-		auto Digit = CharToWord(Char);
+		const auto Digit = CharToWord(Char);
 		if (Digit >= Divider)
 		{
 			return false;
@@ -1127,7 +1127,7 @@ int32 FindChar(const TCHAR* Array, int32 Size, char Char1)
 	int32 i = 0;
 	while (i < Size)
 	{
-		auto Char = Array[i];
+		const auto Char = Array[i];
 		if (Char == Char1)
 		{
 			return i;
@@ -1383,7 +1383,7 @@ FString AnyDividerForUnsigned(const FPsDataBigInteger& Value, uint8 Divider)
 
 	TArray<TCHAR> Buffer;
 	Buffer.AddUninitialized(BufferSize);
-	auto BufferPtr = Buffer.GetData();
+	const auto BufferPtr = Buffer.GetData();
 	int32 BufferIndex = BufferSize;
 	FPsDataBigInteger Remainder = Value;
 	while (!Remainder.IsZero())
@@ -1500,7 +1500,7 @@ FPsDataShortBigInteger FPsDataShortBigInteger::FromString(const FString& String,
 bool FPsDataBigInteger::IsScientificNotationFormat(const FString& Value)
 {
 	const auto Size = Value.Len();
-	auto Buffer = Value.GetCharArray().GetData();
+	const auto Buffer = Value.GetCharArray().GetData();
 
 	const auto ePos = Utils::FindChar(Buffer, Size, 'E', 'e');
 	if (ePos != INDEX_NONE)
@@ -1676,7 +1676,7 @@ int64 RandInt64()
 FString RandString(int32 Size, int32 Divider)
 {
 	FString Str;
-	int32 LenOfString = Size + ((FMath::Rand() % Size) - (Size / 2));
+	const int32 LenOfString = Size + ((FMath::Rand() % Size) - (Size / 2));
 	for (int32 j = 0; j < LenOfString; ++j)
 	{
 		Str += Utils::WordToChar(FMath::Rand() % Divider);

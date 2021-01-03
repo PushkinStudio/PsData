@@ -98,16 +98,16 @@ void FDataReflection::InitLink(const char* CharName, const char* CharPath, const
 
 		auto& Fields = FieldsByClass.FindOrAdd(OwnerClass);
 
-		if (auto Find = Fields.LinksByHash.Find(Hash))
+		if (const auto Find = Fields.LinksByHash.Find(Hash))
 		{
-			auto Link = *Find;
+			const auto Link = *Find;
 			if (!Link->bAbstract)
 			{
 				UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s %d"), *OwnerClass->GetName(), *Link->Name, Hash);
 			}
 		}
 
-		TSharedPtr<const FDataLink> Link = MakeShared<FDataLink>(Name, Path, bPathProperty, ReturnType, Hash, bAbstract, bCollection, MetaCollection);
+		const TSharedPtr<const FDataLink> Link = MakeShared<FDataLink>(Name, Path, bPathProperty, ReturnType, Hash, bAbstract, bCollection, MetaCollection);
 		MetaCollection.Reset();
 
 		Fields.LinksByName.Add(Name, Link);
@@ -203,7 +203,7 @@ void FDataReflection::Fill(UPsData* Instance)
 
 const TArray<FString>& FDataReflection::SplitPath(const FString& Path)
 {
-	if (auto Find = SplittedPath.Find(Path))
+	if (const auto Find = SplittedPath.Find(Path))
 	{
 		return *Find;
 	}
@@ -217,7 +217,7 @@ const TSharedPtr<const FDataField>& FDataReflection::GetFieldByName(UClass* Owne
 {
 	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->FieldsByName.Find(Name))
+		if (const auto FieldPtr = MapPtr->FieldsByName.Find(Name))
 		{
 			return *FieldPtr;
 		}
@@ -231,7 +231,7 @@ const TSharedPtr<const FDataField>& FDataReflection::GetFieldByAlias(UClass* Own
 {
 	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->FieldsByAlias.Find(Alias))
+		if (const auto FieldPtr = MapPtr->FieldsByAlias.Find(Alias))
 		{
 			return *FieldPtr;
 		}
@@ -245,7 +245,7 @@ const TSharedPtr<const FDataField>& FDataReflection::GetFieldByHash(UClass* Owne
 {
 	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->FieldsByHash.Find(Hash))
+		if (const auto FieldPtr = MapPtr->FieldsByHash.Find(Hash))
 		{
 			return *FieldPtr;
 		}
@@ -257,7 +257,7 @@ const TSharedPtr<const FDataField>& FDataReflection::GetFieldByHash(UClass* Owne
 
 const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* OwnerClass)
 {
-	auto Find = FieldsByClass.Find(OwnerClass);
+	const auto Find = FieldsByClass.Find(OwnerClass);
 	if (Find)
 	{
 		return Find->FieldsByName;
@@ -269,7 +269,7 @@ const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFie
 
 const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetAliasFields(const UClass* OwnerClass)
 {
-	auto Find = FieldsByClass.Find(OwnerClass);
+	const auto Find = FieldsByClass.Find(OwnerClass);
 	if (Find)
 	{
 		return Find->FieldsByAlias;
@@ -283,7 +283,7 @@ const TSharedPtr<const FDataLink>& FDataReflection::GetLinkByName(UClass* OwnerC
 {
 	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->LinksByName.Find(Name))
+		if (const auto FieldPtr = MapPtr->LinksByName.Find(Name))
 		{
 			return *FieldPtr;
 		}
@@ -297,7 +297,7 @@ const TSharedPtr<const FDataLink>& FDataReflection::GetLinkByHash(UClass* OwnerC
 {
 	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
 	{
-		if (auto FieldPtr = MapPtr->LinksByHash.Find(Hash))
+		if (const auto FieldPtr = MapPtr->LinksByHash.Find(Hash))
 		{
 			return *FieldPtr;
 		}
@@ -309,7 +309,7 @@ const TSharedPtr<const FDataLink>& FDataReflection::GetLinkByHash(UClass* OwnerC
 
 const TMap<FString, const TSharedPtr<const FDataLink>>& FDataReflection::GetLinks(UClass* OwnerClass)
 {
-	auto Find = FieldsByClass.Find(OwnerClass);
+	const auto Find = FieldsByClass.Find(OwnerClass);
 	if (Find)
 	{
 		return Find->LinksByName;

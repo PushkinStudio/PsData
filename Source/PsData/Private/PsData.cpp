@@ -263,7 +263,7 @@ void UPsData::PostDeserialize()
 
 bool UPsData::IsBound(const FString& Type, bool bBubbles) const
 {
-	auto Find = Delegates.Find(Type);
+	const auto Find = Delegates.Find(Type);
 	if (Find)
 	{
 		for (auto& Wrapper : *Find)
@@ -325,28 +325,28 @@ void UPsData::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 
 FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
+	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
 	check(Field.IsValid());
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
@@ -397,7 +397,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 
 	if (!Event->bStopImmediate)
 	{
-		auto Find = Delegates.Find(Event->Type);
+		const auto Find = Delegates.Find(Event->Type);
 		if (Find)
 		{
 			TArray<TSharedRef<FDelegateWrapper>> Copy = *Find;
@@ -455,7 +455,7 @@ FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDynamicDeleg
 		return {};
 	}
 
-	TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
+	const TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
 	Delegates.FindOrAdd(Type).Add(Ref);
 	UpdateDelegates();
 
@@ -469,7 +469,7 @@ FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDelegate& De
 		return FPsDataBind();
 	}
 
-	TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
+	const TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
 	Delegates.FindOrAdd(Type).Add(Ref);
 	UpdateDelegates();
 
@@ -480,7 +480,7 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& 
 {
 	if (Delegate.IsBound())
 	{
-		auto Find = Delegates.Find(Type);
+		const auto Find = Delegates.Find(Type);
 		if (Find)
 		{
 			for (auto& Wrapper : *Find)
@@ -500,7 +500,7 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDelegate& Delegat
 {
 	if (Delegate.IsBound())
 	{
-		auto Find = Delegates.Find(Type);
+		const auto Find = Delegates.Find(Type);
 		if (Find)
 		{
 			for (auto& Wrapper : *Find)
@@ -553,7 +553,7 @@ void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
 	FString Key;
 	while (Deserializer->ReadKey(Key))
 	{
-		if (auto Find = Fields.Find(Key))
+		if (const auto Find = Fields.Find(Key))
 		{
 			auto& Field = *Find;
 			Properties[Field->Index]->Deserialize(this, Deserializer);
@@ -688,7 +688,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 	//TODO: PS-136
 	UPsData* Data = const_cast<UPsData*>(this);
 	UPsData* RootData = Data->GetRoot();
-	FString Path = GetPathFromRoot();
+	const FString Path = GetPathFromRoot();
 
 	for (auto& Pair : PsDataTools::FDataReflection::GetLinks(GetClass()))
 	{

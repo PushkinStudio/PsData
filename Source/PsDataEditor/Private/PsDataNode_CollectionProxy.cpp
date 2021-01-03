@@ -100,13 +100,13 @@ void UPsDataNode_CollectionProxy::UpdatePin(EPsDataVariablePinType PinType, UEdG
 
 UFunction* UPsDataNode_CollectionProxy::GetFunction() const
 {
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
 		return nullptr;
 	}
 
-	FString FunctionName = (Field->Context->IsArray() ? TEXT("GetArrayProxy") : TEXT("GetMapProxy"));
+	const FString FunctionName = (Field->Context->IsArray() ? TEXT("GetArrayProxy") : TEXT("GetMapProxy"));
 	UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
 	return Function;
 }

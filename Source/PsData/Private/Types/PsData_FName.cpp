@@ -86,7 +86,7 @@ FName UPsDataFNameLibrary::TypeDeserialize(const UPsData* const Instance, const 
 	{
 		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FName>::Type())
 	}
-	FString LowercaseString = String.ToLower();
+	const FString LowercaseString = String.ToLower();
 	if (LowercaseString == TEXT("none"))
 	{
 		return NAME_None;

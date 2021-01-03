@@ -44,7 +44,7 @@ FText UPsDataNode_SetVariable::GetNodeTitle(ENodeTitleType::Type TitleType) cons
 void UPsDataNode_SetVariable::ValidateNodeDuringCompilation(class FCompilerResultsLog& MessageLog) const
 {
 	Super::ValidateNodeDuringCompilation(MessageLog);
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (Field.IsValid())
 	{
 		if (Field->Meta.bStrict || Field->Meta.bReadOnly)
@@ -109,7 +109,7 @@ void UPsDataNode_SetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraph
 
 UFunction* UPsDataNode_SetVariable::GetFunction() const
 {
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
 		return nullptr;

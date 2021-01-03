@@ -79,14 +79,14 @@ FDataFieldFunctions::FDataFieldFunctions(UClass* InClass, EDataFieldType FieldTy
 
 UFunction* FDataFieldFunctions::ResolveGetFunction() const
 {
-	auto Result = Class->FindFunctionByName(GetFunctionName);
+	const auto Result = Class->FindFunctionByName(GetFunctionName);
 	check(Result);
 	return Result;
 }
 
 UFunction* FDataFieldFunctions::ResolveSetFunction() const
 {
-	auto Result = Class->FindFunctionByName(SetFunctionName);
+	const auto Result = Class->FindFunctionByName(SetFunctionName);
 	check(Result);
 	return Result;
 }
@@ -219,7 +219,7 @@ std::pair<int, int> Trim(const char* Str, int Size)
 
 void AddToken(TArray<FMetaToken>& Tokens, const char*& Str, int& Size, char c)
 {
-	std::pair<int, int> range = Trim(Str, Size);
+	const std::pair<int, int> range = Trim(Str, Size);
 	if (range.second > 0)
 	{
 		Tokens.Add(FMetaToken(&Str[range.first], range.second));
@@ -231,7 +231,7 @@ void AddToken(TArray<FMetaToken>& Tokens, const char*& Str, int& Size, char c)
 
 void AddToken(TArray<FMetaToken>& Tokens, const char*& Str, int& Size)
 {
-	std::pair<int, int> range = Trim(Str, Size);
+	const std::pair<int, int> range = Trim(Str, Size);
 	if (range.second > 0)
 	{
 		Tokens.Add(FMetaToken(&Str[range.first], range.second));

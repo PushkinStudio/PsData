@@ -22,8 +22,8 @@ UPsDataNode_Link::UPsDataNode_Link(const FObjectInitializer& ObjectInitializer)
 
 void UPsDataNode_Link::AllocateDefaultPins()
 {
-	auto Field = GetProperty();
-	auto Link = GetLink();
+	const auto Field = GetProperty();
+	const auto Link = GetLink();
 	if (Field.IsValid() && Link.IsValid())
 	{
 		UpdateFunctionReference();
@@ -38,10 +38,10 @@ FText UPsDataNode_Link::GetMenuCategory() const
 
 FLinearColor UPsDataNode_Link::GetNodeTitleColor() const
 {
-	auto Link = GetLink();
+	const auto Link = GetLink();
 	if (Link.IsValid())
 	{
-		FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
+		const FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
 		UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
 
 		FProperty* Property = nullptr;
@@ -72,7 +72,7 @@ FSlateIcon UPsDataNode_Link::GetIconAndTint(FLinearColor& ColorOut) const
 {
 	ColorOut = GetNodeTitleColor();
 
-	auto Link = GetLink();
+	const auto Link = GetLink();
 	if (Link.IsValid() && Link->bCollection)
 	{
 		return FSlateIcon("EditorStyle", "Kismet.AllClasses.ArrayVariableIcon");
@@ -131,7 +131,7 @@ void UPsDataNode_Link::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionR
 
 TSharedPtr<const FDataLink> UPsDataNode_Link::GetLink() const
 {
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (Field.IsValid())
 	{
 		return PsDataTools::FDataReflection::GetLinkByHash(TargetClass, Field->Hash);
@@ -164,7 +164,7 @@ UClass* UPsDataNode_Link::GetReturnType(TSharedPtr<const FDataLink> Link) const
 		}
 	}
 
-	auto Find = Classes.Find(ClassName);
+	const auto Find = Classes.Find(ClassName);
 	if (!Find)
 	{
 		return UPsData::StaticClass();
@@ -176,7 +176,7 @@ UClass* UPsDataNode_Link::GetReturnType(TSharedPtr<const FDataLink> Link) const
 void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
 	Super::UpdatePin(PinType, Pin);
-	auto Link = GetLink();
+	const auto Link = GetLink();
 
 	if (PinType == EPsDataVariablePinType::PropertyOut || PinType == EPsDataVariablePinType::OldPropertyOut)
 	{
@@ -201,14 +201,14 @@ void UPsDataNode_Link::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pi
 
 UFunction* UPsDataNode_Link::GetFunction() const
 {
-	auto Field = GetProperty();
-	auto Link = GetLink();
+	const auto Field = GetProperty();
+	const auto Link = GetLink();
 	if (!Field.IsValid() || !Link.IsValid())
 	{
 		return nullptr;
 	}
 
-	FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
+	const FString FunctionName = (Link->bCollection ? TEXT("GetDataArrayByLinkHash") : TEXT("GetDataByLinkHash"));
 	UFunction* Function = UPsDataFunctionLibrary::StaticClass()->FindFunctionByName(FName(*FunctionName));
 
 	return Function;

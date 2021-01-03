@@ -16,7 +16,7 @@ bool FDeferredUniqueTaskHelper::Register(void* Owner, const FGuid& FunctionGuid)
 void FDeferredUniqueTaskHelper::Unregister(void* Owner, const FGuid& FunctionGuid)
 {
 	auto& Set = Registered.FindChecked(Owner);
-	bool bSuccess = Set.Remove(FunctionGuid) == 1;
+	const bool bSuccess = Set.Remove(FunctionGuid) == 1;
 	check(bSuccess);
 
 	if (Set.Num() == 0)

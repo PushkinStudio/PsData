@@ -36,7 +36,7 @@ void FPsDataJsonSerializer::WriteJsonValue(TSharedPtr<FJsonValue> Value)
 		return;
 	}
 
-	TSharedPtr<FJsonValue> Parent = Values.Last();
+	const TSharedPtr<FJsonValue> Parent = Values.Last();
 	if (Parent->Type == EJson::Array)
 	{
 		const TArray<TSharedPtr<FJsonValue>>* ArrayPtr = nullptr;
@@ -173,7 +173,7 @@ TSharedPtr<FJsonValue> FPsDataJsonDeserializer::ReadJsonValue() const
 		return RootValue;
 	}
 
-	TSharedPtr<FJsonValue> Parent = Values.Last();
+	const TSharedPtr<FJsonValue> Parent = Values.Last();
 	TSharedPtr<FJsonValue> Value;
 	if (Parent->Type == EJson::Array)
 	{
@@ -193,7 +193,7 @@ TSharedPtr<FJsonValue> FPsDataJsonDeserializer::ReadJsonValue() const
 bool FPsDataJsonDeserializer::ReadKey(FString& OutKey)
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Object);
-	TSharedPtr<FJsonValue> JsonValue = Values.Last();
+	const TSharedPtr<FJsonValue> JsonValue = Values.Last();
 
 #if WITH_EDITORONLY_DATA
 	check(!Used.Contains(JsonValue));
@@ -224,7 +224,7 @@ bool FPsDataJsonDeserializer::ReadKey(FString& OutKey)
 bool FPsDataJsonDeserializer::ReadIndex()
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Array);
-	TSharedPtr<FJsonValue> JsonValue = Values.Last();
+	const TSharedPtr<FJsonValue> JsonValue = Values.Last();
 
 #if WITH_EDITORONLY_DATA
 	check(!Used.Contains(JsonValue));
@@ -255,7 +255,7 @@ bool FPsDataJsonDeserializer::ReadIndex()
 
 bool FPsDataJsonDeserializer::ReadArray()
 {
-	TSharedPtr<FJsonValue> Value = ReadJsonValue();
+	const TSharedPtr<FJsonValue> Value = ReadJsonValue();
 	if (Value->Type == EJson::Array)
 	{
 		Values.Add(Value);
@@ -266,7 +266,7 @@ bool FPsDataJsonDeserializer::ReadArray()
 
 bool FPsDataJsonDeserializer::ReadObject()
 {
-	TSharedPtr<FJsonValue> Value = ReadJsonValue();
+	const TSharedPtr<FJsonValue> Value = ReadJsonValue();
 	if (Value->Type == EJson::Object)
 	{
 		Values.Add(Value);
@@ -322,7 +322,7 @@ bool FPsDataJsonDeserializer::ReadValue(FName& OutValue)
 
 bool FPsDataJsonDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator)
 {
-	TSharedPtr<FJsonValue> Value = ReadJsonValue();
+	const TSharedPtr<FJsonValue> Value = ReadJsonValue();
 	if (Value->IsNull())
 	{
 		OutValue = nullptr;
@@ -347,7 +347,7 @@ bool FPsDataJsonDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator All
 void FPsDataJsonDeserializer::PopKey(const FString& Key)
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Object);
-	TSharedPtr<FJsonValue> JsonValue = Values.Last();
+	const TSharedPtr<FJsonValue> JsonValue = Values.Last();
 	auto& Iterator = KeysIterator.FindChecked(JsonValue);
 	check(Iterator);
 	check(Iterator.Key() == Key);
@@ -357,7 +357,7 @@ void FPsDataJsonDeserializer::PopKey(const FString& Key)
 void FPsDataJsonDeserializer::PopIndex()
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Array);
-	TSharedPtr<FJsonValue> JsonValue = Values.Last();
+	const TSharedPtr<FJsonValue> JsonValue = Values.Last();
 	auto& Iterator = IndicesIterator.FindChecked(JsonValue);
 	check(Iterator);
 	++Iterator;

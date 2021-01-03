@@ -95,7 +95,7 @@ void FPsDataStructDeserializer::PopObject()
 
 TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap)
 {
-	TSharedPtr<FJsonValue> JsonValue = StructSerialize(Struct, Value, KeyMap);
+	const TSharedPtr<FJsonValue> JsonValue = StructSerialize(Struct, Value, KeyMap);
 	check(JsonValue->Type == EJson::Object);
 
 	/*
@@ -178,7 +178,7 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct*
 
 const FString& FPsDataStructDeserializer::GetNormalizedKey(const FString& Key, TMap<FString, FString>& KeyMap)
 {
-	if (auto KeyPtr = KeyMap.Find(Key))
+	if (const auto KeyPtr = KeyMap.Find(Key))
 	{
 		return *KeyPtr;
 	}

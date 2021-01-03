@@ -11,7 +11,7 @@
 
 void FPsDataEditorModule::StartupModule()
 {
-	TSharedPtr<FPsDataPinFactory> PinFactory = MakeShareable(new FPsDataPinFactory());
+	const TSharedPtr<FPsDataPinFactory> PinFactory = MakeShareable(new FPsDataPinFactory());
 	FEdGraphUtilities::RegisterVisualPinFactory(PinFactory);
 }
 

@@ -40,7 +40,7 @@ void UPsDataNode_Variable::AllocateDefaultPins()
 
 	Super::AllocateDefaultPins();
 
-	auto Function = GetTargetFunction();
+	const auto Function = GetTargetFunction();
 	if (Function)
 	{
 		const auto TargetParam = Function->HasMetaData(MD_PsDataTarget) ? FName(*Function->GetMetaData(MD_PsDataTarget)) : Default_TargetParam;
@@ -90,12 +90,12 @@ void UPsDataNode_Variable::AllocateDefaultPins()
 
 UK2Node::ERedirectType UPsDataNode_Variable::DoPinsMatchForReconstruction(const UEdGraphPin* NewPin, int32 NewPinIndex, const UEdGraphPin* OldPin, int32 OldPinIndex) const
 {
-	ERedirectType RedirectType = Super::DoPinsMatchForReconstruction(NewPin, NewPinIndex, OldPin, OldPinIndex);
+	const ERedirectType RedirectType = Super::DoPinsMatchForReconstruction(NewPin, NewPinIndex, OldPin, OldPinIndex);
 	if (RedirectType == ERedirectType_None && NewPin->Direction == OldPin->Direction)
 	{
 		if (OldPin->PinName == UEdGraphSchema_K2::PN_ReturnValue)
 		{
-			auto Function = GetTargetFunction();
+			const auto Function = GetTargetFunction();
 			if (Function)
 			{
 				const auto OutParam = Function->HasMetaData(MD_PsDataOut) ? FName(*Function->GetMetaData(MD_PsDataOut)) : Default_OutParam;
@@ -116,7 +116,7 @@ FText UPsDataNode_Variable::GetMenuCategory() const
 
 FLinearColor UPsDataNode_Variable::GetNodeTitleColor() const
 {
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
 		return FLinearColor::White;
@@ -148,7 +148,7 @@ FSlateIcon UPsDataNode_Variable::GetIconAndTint(FLinearColor& ColorOut) const
 {
 	ColorOut = GetNodeTitleColor();
 
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
 		return FSlateIcon("EditorStyle", "Kismet.AllClasses.VariableIcon");
@@ -169,7 +169,7 @@ FSlateIcon UPsDataNode_Variable::GetIconAndTint(FLinearColor& ColorOut) const
 
 bool UPsDataNode_Variable::IsDeprecated() const
 {
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (Field.IsValid())
 	{
 		return Field->Meta.bDeprecated;
@@ -183,8 +183,8 @@ bool ObjectCompare(UObject* ObjectA, UObject* ObjectB)
 	{
 		if (ObjectA && ObjectB)
 		{
-			auto StructA = Cast<UStruct>(ObjectA);
-			auto StructB = Cast<UStruct>(ObjectB);
+			const auto StructA = Cast<UStruct>(ObjectA);
+			const auto StructB = Cast<UStruct>(ObjectB);
 
 			if (StructA && StructB)
 			{
@@ -253,14 +253,14 @@ void UPsDataNode_Variable::ValidateNodeDuringCompilation(class FCompilerResultsL
 {
 	Super::ValidateNodeDuringCompilation(MessageLog);
 
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
 		MessageLog.Error(*LOCTEXT("UPsDataNode_Variable", "Node @@: property has been removed").ToString(), this);
 		return;
 	}
 
-	auto Function = GetFunction();
+	const auto Function = GetFunction();
 	if (Function)
 	{
 		FMemberReference NodeFunctionReference = FunctionReference;
@@ -305,7 +305,7 @@ FNodeHandlingFunctor* UPsDataNode_Variable::CreateNodeHandler(class FKismetCompi
 
 TSharedPtr<const FDataField> UPsDataNode_Variable::GetProperty() const
 {
-	auto Find = PsDataTools::FDataReflection::GetFields(TargetClass).Find(PropertyName);
+	const auto Find = PsDataTools::FDataReflection::GetFields(TargetClass).Find(PropertyName);
 	if (Find)
 	{
 		return *Find;
@@ -316,7 +316,7 @@ TSharedPtr<const FDataField> UPsDataNode_Variable::GetProperty() const
 
 void UPsDataNode_Variable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
 {
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (PinType == EPsDataVariablePinType::Target)
 	{
 		if (TargetClass == nullptr)
@@ -382,7 +382,7 @@ UFunction* UPsDataNode_Variable::GetFunction() const
 
 void UPsDataNode_Variable::UpdateFunctionReference()
 {
-	auto Function = GetFunction();
+	const auto Function = GetFunction();
 	if (Function)
 	{
 		SetFromFunction(Function);

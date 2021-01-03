@@ -89,7 +89,7 @@ void UPsDataNode_GetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraph
 
 UFunction* UPsDataNode_GetVariable::GetFunction() const
 {
-	auto Field = GetProperty();
+	const auto Field = GetProperty();
 	if (!Field.IsValid())
 	{
 		return nullptr;

@@ -433,7 +433,7 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 
 	virtual void Allocate(UPsData* Instance) override
 	{
-		FPsDataAllocator Allocator(GetField()->Context->GetUE4Type(), Instance);
+		const FPsDataAllocator Allocator(GetField()->Context->GetUE4Type(), Instance);
 		Set(static_cast<T*>(static_cast<void*>(Allocator())), Instance);
 	}
 
@@ -451,7 +451,7 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 	{
 		FPsDataEventScopeGuard EventGuard;
 
-		auto Field = GetField();
+		const auto Field = GetField();
 		check(!Field->Meta.bStrict || NewValue != nullptr);
 
 		if (Value == NewValue)
@@ -517,7 +517,7 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 		FPsDataEventScopeGuard EventGuard;
 
 		bool bChange = false;
-		auto Field = GetField();
+		const auto Field = GetField();
 
 		for (int32 i = 0; i < NewValue.Num(); ++i)
 		{
@@ -590,7 +590,7 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 		FPsDataEventScopeGuard EventGuard;
 
 		bool bChange = false;
-		auto Field = GetField();
+		const auto Field = GetField();
 
 		for (auto& Pair : NewValue)
 		{

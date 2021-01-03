@@ -234,7 +234,7 @@ bool FPsDataBinaryDeserializer::ReadValue(FName& OutValue)
 {
 	if (ReadToken(EBinaryTokens::Value_FName))
 	{
-		FString String = InputStream->ReadString();
+		const FString String = InputStream->ReadString();
 		OutValue = *String;
 		return true;
 	}
