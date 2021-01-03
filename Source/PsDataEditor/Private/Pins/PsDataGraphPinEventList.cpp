@@ -55,7 +55,7 @@ TSharedRef<SWidget> SPsDataGraphPinEventList::GetDefaultValueWidget()
 
 void SPsDataGraphPinEventList::ComboBoxSelectionChanged(TSharedPtr<FName> NameItem, ESelectInfo::Type SelectInfo)
 {
-	if (const auto Schema = (GraphPinObj ? GraphPinObj->GetSchema() : NULL))
+	if (const auto Schema = (GraphPinObj ? GraphPinObj->GetSchema() : nullptr))
 	{
 		const FName Name = NameItem.IsValid() ? *NameItem : NAME_None;
 		const FString NameAsString = Name.ToString();

@@ -56,7 +56,7 @@ public:
 
 	virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const class FName& Category) override
 	{
-		if (TargetObject == NULL)
+		if (TargetObject == nullptr)
 		{
 			MessageLog.Error(V);
 		}
@@ -374,7 +374,7 @@ void FPsDataHandler_CallFunction::CreateFunctionCallStatement(FKismetFunctionCon
 				}
 			}
 
-			UEdGraphNode** pSrcEventNode = NULL;
+			UEdGraphNode** pSrcEventNode = nullptr;
 			if (!bIsLatent)
 			{
 				pSrcEventNode = CompilerContext.CallsIntoUbergraph.Find(Node);
@@ -748,7 +748,7 @@ void FPsDataHandler_CallFunction::Transform(FKismetFunctionContext& Context, UEd
 		{
 			UEdGraphPin* OldOutPin = K2Schema->FindExecutionPin(*CallFuncNode, EGPD_Output);
 
-			if ((OldOutPin != NULL) && (OldOutPin->LinkedTo.Num() > 0))
+			if ((OldOutPin != nullptr) && (OldOutPin->LinkedTo.Num() > 0))
 			{
 				UK2Node_ExecutionSequence* DummyNode = CompilerContext.SpawnIntermediateNode<UK2Node_ExecutionSequence>(CallFuncNode);
 				DummyNode->AllocateDefaultPins();
@@ -756,7 +756,7 @@ void FPsDataHandler_CallFunction::Transform(FKismetFunctionContext& Context, UEd
 				UEdGraphPin* NewInPin = K2Schema->FindExecutionPin(*DummyNode, EGPD_Input);
 				UEdGraphPin* NewOutPin = K2Schema->FindExecutionPin(*DummyNode, EGPD_Output);
 
-				if ((NewInPin != NULL) && (NewOutPin != NULL))
+				if ((NewInPin != nullptr) && (NewOutPin != nullptr))
 				{
 					CompilerContext.MessageLog.NotifyIntermediatePinCreation(NewOutPin, OldOutPin);
 
@@ -856,7 +856,7 @@ void FPsDataHandler_CallFunction::Compile(FKismetFunctionContext& Context, UEdGr
 	if (!IsCalledFunctionPure(Node))
 	{
 		UEdGraphPin* ExecTriggeringPin = CompilerContext.GetSchema()->FindExecutionPin(*Node, EGPD_Input);
-		if (ExecTriggeringPin == NULL)
+		if (ExecTriggeringPin == nullptr)
 		{
 			CompilerContext.MessageLog.Error(*NSLOCTEXT("KismetCompiler", "NoValidExecutionPinForCallFunc_Error", "@@ must have a valid execution pin").ToString(), Node);
 			return;
@@ -875,7 +875,7 @@ void FPsDataHandler_CallFunction::Compile(FKismetFunctionContext& Context, UEdGr
 		SelfType.PinCategory = UEdGraphSchema_K2::PC_Object;
 		SelfType.PinSubCategory = UEdGraphSchema_K2::PSC_Self;
 
-		if (!CompilerContext.GetSchema()->ArePinTypesCompatible(SelfType, SelfPin->PinType, Context.NewClass) && (SelfPin->DefaultObject == NULL))
+		if (!CompilerContext.GetSchema()->ArePinTypesCompatible(SelfType, SelfPin->PinType, Context.NewClass) && (SelfPin->DefaultObject == nullptr))
 		{
 			CompilerContext.MessageLog.Error(*NSLOCTEXT("KismetCompiler", "PinMustHaveConnectionPruned_Error", "Pin @@ must have a connection.  Self pins cannot be connected to nodes that are culled.").ToString(), SelfPin);
 		}
