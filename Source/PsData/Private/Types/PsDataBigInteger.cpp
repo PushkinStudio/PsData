@@ -67,7 +67,7 @@ FPsDataBigInteger::FPsDataBigInteger(const FPsDataBigInteger& Other)
 	Words.Append(Other.Words.GetData(), Other.GetActualNumWords());
 }
 
-FPsDataBigInteger::FPsDataBigInteger(FPsDataBigInteger&& Other)
+FPsDataBigInteger::FPsDataBigInteger(FPsDataBigInteger&& Other) noexcept
 {
 	checkSlow(Other.Words.Num() > 0);
 	Words = std::move(Other.Words);
@@ -629,7 +629,7 @@ FPsDataBigInteger& FPsDataBigInteger::operator=(const FPsDataBigInteger& Other)
 	return *this;
 }
 
-FPsDataBigInteger& FPsDataBigInteger::operator=(FPsDataBigInteger&& Other)
+FPsDataBigInteger& FPsDataBigInteger::operator=(FPsDataBigInteger&& Other) noexcept
 {
 	checkSlow(Other.Words.Num() > 0);
 	Words = std::move(Other.Words);

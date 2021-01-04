@@ -17,7 +17,7 @@ void SPsDataGraphPinEventList::Construct(const FArguments& InArgs, UEdGraphPin* 
 {
 	EventList = InEventList;
 
-	for (const auto EventPtr : EventList)
+	for (const auto& EventPtr : EventList)
 	{
 		NameList.Add(MakeShareable(new FName(*GenerateName(EventPtr))));
 	}
@@ -62,7 +62,7 @@ void SPsDataGraphPinEventList::ComboBoxSelectionChanged(TSharedPtr<FName> NameIt
 
 		TSharedPtr<FEventPath> Event;
 
-		for (const auto EventPtr : EventList)
+		for (const auto& EventPtr : EventList)
 		{
 			if (NameAsString == GenerateName(EventPtr))
 			{

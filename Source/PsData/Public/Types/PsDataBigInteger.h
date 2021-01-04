@@ -71,7 +71,7 @@ public:
 	FPsDataBigInteger(int64 Value);
 
 	FPsDataBigInteger(const FPsDataBigInteger& Other);
-	FPsDataBigInteger(FPsDataBigInteger&& Other);
+	FPsDataBigInteger(FPsDataBigInteger&& Other) noexcept;
 
 	explicit FPsDataBigInteger(const FString& Value, EPsDataBigIntegerConvertionType ConvertionType = EPsDataBigIntegerConvertionType::Dec);
 	explicit FPsDataBigInteger(const TArray<PsDataBigIntegerWordType>& InitialWords);
@@ -229,7 +229,7 @@ public:
 	bool operator!=(const FPsDataBigInteger& Other) const;
 
 	FPsDataBigInteger& operator=(const FPsDataBigInteger& Other);
-	FPsDataBigInteger& operator=(FPsDataBigInteger&& Other);
+	FPsDataBigInteger& operator=(FPsDataBigInteger&& Other) noexcept;
 	FPsDataBigInteger& operator=(int64 Other);
 	FPsDataBigInteger& operator=(int32 Other);
 

@@ -32,7 +32,7 @@ public:
 		Set(Other.Value);
 	}
 
-	THardObjectPtr(THardObjectPtr&& Other)
+	THardObjectPtr(THardObjectPtr&& Other) noexcept
 		: Value(Other.Value)
 	{
 		Other.Value = nullptr;
