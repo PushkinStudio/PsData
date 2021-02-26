@@ -5,23 +5,23 @@
 DEFINE_FUNCTION(UPsDataInt64Library::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, int64, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TMap<FString, int64>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TMap<FString, int64>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataInt64Library::execGetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, int64, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, int64>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -29,23 +29,23 @@ DEFINE_FUNCTION(UPsDataInt64Library::execGetMapProperty)
 DEFINE_FUNCTION(UPsDataInt64Library::execSetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(int64, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TArray<int64>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TArray<int64>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataInt64Library::execGetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(int64, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<int64>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -53,23 +53,23 @@ DEFINE_FUNCTION(UPsDataInt64Library::execGetArrayProperty)
 DEFINE_FUNCTION(UPsDataInt64Library::execSetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_PROPERTY(FInt64Property, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<int64>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<int64>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataInt64Library::execGetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_PROPERTY_REF(FInt64Property, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	int64* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

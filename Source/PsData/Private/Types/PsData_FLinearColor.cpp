@@ -5,23 +5,23 @@
 DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, FLinearColor, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TMap<FString, FLinearColor>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TMap<FString, FLinearColor>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, FLinearColor, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, FLinearColor>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -29,23 +29,23 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetMapProperty)
 DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execSetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(FLinearColor, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TArray<FLinearColor>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TArray<FLinearColor>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(FLinearColor, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<FLinearColor>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -53,23 +53,23 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetArrayProperty)
 DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execSetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_STRUCT_REF(FLinearColor, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<FLinearColor>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<FLinearColor>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_STRUCT_REF(FLinearColor, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	FLinearColor* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

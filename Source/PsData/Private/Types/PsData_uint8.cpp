@@ -5,23 +5,23 @@
 DEFINE_FUNCTION(UPsDataUint8Library::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, uint8, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TMap<FString, uint8>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TMap<FString, uint8>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataUint8Library::execGetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, uint8, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, uint8>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -29,23 +29,23 @@ DEFINE_FUNCTION(UPsDataUint8Library::execGetMapProperty)
 DEFINE_FUNCTION(UPsDataUint8Library::execSetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(uint8, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TArray<uint8>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TArray<uint8>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataUint8Library::execGetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(uint8, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<uint8>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -53,23 +53,23 @@ DEFINE_FUNCTION(UPsDataUint8Library::execGetArrayProperty)
 DEFINE_FUNCTION(UPsDataUint8Library::execSetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_PROPERTY(FByteProperty, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<uint8>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<uint8>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataUint8Library::execGetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_PROPERTY_REF(FByteProperty, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	uint8* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

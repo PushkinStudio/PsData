@@ -631,11 +631,17 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
  ***********************************/
 
 template <typename T>
-bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue)
+bool UnsafeGetByIndex(UPsData* Instance, int32 Index, T*& OutValue)
 {
-	FDataProperty<T>* Property = static_cast<FDataProperty<T>*>(FPsDataFriend::GetProperties(Instance)[Field->Index]);
+	FDataProperty<T>* Property = static_cast<FDataProperty<T>*>(FPsDataFriend::GetProperties(Instance)[Index]);
 	OutValue = &Property->Get();
 	return true;
+}
+
+template <typename T>
+bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue)
+{
+	return UnsafeGetByIndex<T>(Instance, Field->Index, OutValue);
 }
 
 /***********************************
@@ -643,10 +649,16 @@ bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*&
  ***********************************/
 
 template <typename T>
+void UnsafeSetByIndex(UPsData* Instance, int32 Index, typename TConstRef<T>::Type NewValue)
+{
+	FDataProperty<T>* Property = static_cast<FDataProperty<T>*>(FPsDataFriend::GetProperties(Instance)[Index]);
+	Property->Set(NewValue, Instance);
+}
+
+template <typename T>
 void UnsafeSet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename TConstRef<T>::Type NewValue)
 {
-	FDataProperty<T>* Property = static_cast<FDataProperty<T>*>(FPsDataFriend::GetProperties(Instance)[Field->Index]);
-	Property->Set(NewValue, Instance);
+	UnsafeSetByIndex(Instance, Field->Index, NewValue);
 }
 
 } // namespace PsDataTools

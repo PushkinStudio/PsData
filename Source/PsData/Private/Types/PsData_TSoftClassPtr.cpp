@@ -5,23 +5,23 @@
 DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, TSoftClassPtr<UObject>, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TMap<FString, TSoftClassPtr<UObject>>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TMap<FString, TSoftClassPtr<UObject>>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, TSoftClassPtr<UObject>, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, TSoftClassPtr<UObject>>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -29,23 +29,23 @@ DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetMapProperty)
 DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execSetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(TSoftClassPtr<UObject>, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TArray<TSoftClassPtr<UObject>>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TArray<TSoftClassPtr<UObject>>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(TSoftClassPtr<UObject>, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<TSoftClassPtr<UObject>>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -53,23 +53,23 @@ DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetArrayProperty)
 DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execSetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_SOFTCLASS_REF(TSoftClassPtr<UObject>, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TSoftClassPtr<UObject>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TSoftClassPtr<UObject>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_SOFTCLASS_REF(TSoftClassPtr<UObject>, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TSoftClassPtr<UObject>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

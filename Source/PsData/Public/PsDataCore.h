@@ -137,12 +137,16 @@ FDataTypeContext<T>& GetContext()
 template <typename T>
 bool CheckType(FAbstractDataTypeContext* LeftContext, FAbstractDataTypeContext* RightContext)
 {
+#if !UE_BUILD_SHIPPING
 	if (LeftContext == RightContext)
 	{
 		return true;
 	}
 
 	return LeftContext->IsA(RightContext);
+#else
+	return true;
+#endif // UE_BUILD_SHIPPING
 }
 
 /***********************************

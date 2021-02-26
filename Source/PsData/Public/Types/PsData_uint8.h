@@ -18,28 +18,28 @@ class PSDATA_API UPsDataUint8Library : public UBlueprintFunctionLibrary
 
 public:
 	/** Get property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
-	static void GetProperty(UPsData* Target, int32 Hash, uint8& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetProperty(UPsData* Target, int32 Index, uint8& Out);
 
 	/** Set property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
-	static void SetProperty(UPsData* Target, int32 Hash, uint8 Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
+	static void SetProperty(UPsData* Target, int32 Index, uint8 Value);
 
 	/** Get array property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
-	static void GetArrayProperty(UPsData* Target, int32 Hash, TArray<uint8>& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetArrayProperty(UPsData* Target, int32 Index, TArray<uint8>& Out);
 
 	/** Set array property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
-	static void SetArrayProperty(UPsData* Target, int32 Hash, const TArray<uint8>& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
+	static void SetArrayProperty(UPsData* Target, int32 Index, const TArray<uint8>& Value);
 
 	/** Get map property */
-	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataOut = "Out"))
-	static void GetMapProperty(UPsData* Target, int32 Hash, TMap<FString, uint8>& Out);
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetMapProperty(UPsData* Target, int32 Index, TMap<FString, uint8>& Out);
 
 	/** Set map property */
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataHash = "Hash", PsDataIn = "Value"))
-	static void SetMapProperty(UPsData* Target, int32 Hash, const TMap<FString, uint8>& Value);
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
+	static void SetMapProperty(UPsData* Target, int32 Index, const TMap<FString, uint8>& Value);
 
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);

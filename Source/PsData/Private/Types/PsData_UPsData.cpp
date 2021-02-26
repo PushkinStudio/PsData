@@ -7,23 +7,23 @@
 DEFINE_FUNCTION(UPsDataUPsDataLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, UPsData*, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TMap<FString, UPsData*>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TMap<FString, UPsData*>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, UPsData*, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, UPsData*>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -31,23 +31,23 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetMapProperty)
 DEFINE_FUNCTION(UPsDataUPsDataLibrary::execSetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(UPsData*, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TArray<UPsData*>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TArray<UPsData*>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(UPsData*, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<UPsData*>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -55,23 +55,23 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetArrayProperty)
 DEFINE_FUNCTION(UPsDataUPsDataLibrary::execSetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_OBJECT(UPsData, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<UPsData*>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<UPsData*>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_OBJECT_REF(UPsData, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	UPsData** Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

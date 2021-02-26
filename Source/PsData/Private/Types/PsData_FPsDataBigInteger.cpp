@@ -382,23 +382,23 @@ FPsDataBigInteger UPsDataBigIntegerLibrary::Or_Int64(FPsDataBigInteger A, int64 
 DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, FPsDataBigInteger, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TMap<FString, FPsDataBigInteger>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TMap<FString, FPsDataBigInteger>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TMAP_REF(FString, FPsDataBigInteger, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TMap<FString, FPsDataBigInteger>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -406,23 +406,23 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetMapProperty)
 DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(FPsDataBigInteger, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<TArray<FPsDataBigInteger>>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<TArray<FPsDataBigInteger>>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetArrayProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_TARRAY_REF(FPsDataBigInteger, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	TArray<FPsDataBigInteger>* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }
@@ -430,23 +430,23 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetArrayProperty)
 DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execSetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_STRUCT_REF(FPsDataBigInteger, Value);
 	P_FINISH;
 	P_NATIVE_BEGIN;
-	PsDataTools::SetByHash<FPsDataBigInteger>(Target, Hash, Value);
+	PsDataTools::UnsafeSetByIndex<FPsDataBigInteger>(Target, Index, Value);
 	P_NATIVE_END;
 }
 
 DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
-	P_GET_PROPERTY(FIntProperty, Hash);
+	P_GET_PROPERTY(FIntProperty, Index);
 	P_GET_STRUCT_REF(FPsDataBigInteger, Out);
 	P_FINISH;
 	P_NATIVE_BEGIN;
 	FPsDataBigInteger* Result = nullptr;
-	PsDataTools::GetByHash(Target, Hash, Result);
+	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

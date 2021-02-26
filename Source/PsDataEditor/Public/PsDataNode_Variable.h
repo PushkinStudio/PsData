@@ -13,7 +13,7 @@
 enum class EPsDataVariablePinType : uint8
 {
 	Target,
-	Hash,
+	Index,
 	PropertyIn,
 	OldPropertyOut,
 	PropertyOut,
@@ -29,12 +29,12 @@ class PSDATAEDITOR_API UPsDataNode_Variable : public UK2Node_CallFunction
 
 protected:
 	static const FName MD_PsDataTarget;
-	static const FName MD_PsDataHash;
+	static const FName MD_PsDataIndex;
 	static const FName MD_PsDataOut;
 	static const FName MD_PsDataIn;
 
 	static const FName Default_TargetParam;
-	static const FName Default_HashParam;
+	static const FName Default_IndexParam;
 	static const FName Default_OutParam;
 	static const FName Default_InParam;
 

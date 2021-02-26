@@ -29,11 +29,11 @@ public:
 	static void GetLinkKeys(const UPsData* Target, TSharedPtr<const FDataLink> Link, TArray<FString>& OutKeys);
 
 	/** Get data array property by hash */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
 	static TArray<UPsData*> GetDataArrayByLinkHash(const UPsData* Target, int32 Hash);
 
 	/** Get data property by hash */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
 	static UPsData* GetDataByLinkHash(const UPsData* Target, int32 Hash);
 
 	/** Is link empty? */
