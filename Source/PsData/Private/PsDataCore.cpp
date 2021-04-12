@@ -35,7 +35,7 @@ void FDataReflection::InitField(const char* CharName, int32 Hash, FAbstractDataT
 		}
 #endif
 
-		const int32 Index = Fields.FieldsByName.Num();
+		const int32 Index = Fields.FieldsList.Num();
 
 		if (Field.IsValid())
 		{
@@ -59,6 +59,7 @@ void FDataReflection::InitField(const char* CharName, int32 Hash, FAbstractDataT
 
 		MetaCollection.Reset();
 
+		Fields.FieldsList.Add(Field);
 		Fields.FieldsByName.Add(FieldName, Field);
 		Fields.FieldsByAlias.Add(AliasName, Field);
 		Fields.FieldsByHash.Add(Hash, Field);
@@ -248,6 +249,20 @@ const TSharedPtr<const FDataField>& FDataReflection::GetFieldByHash(UClass* Owne
 		if (const auto FieldPtr = MapPtr->FieldsByHash.Find(Hash))
 		{
 			return *FieldPtr;
+		}
+	}
+
+	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
+	return EmptySharedPtr;
+}
+
+const TSharedPtr<const FDataField>& FDataReflection::GetFieldByIndex(UClass* OwnerClass, int32 Index)
+{
+	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
+	{
+		if (MapPtr->FieldsList.IsValidIndex(Index))
+		{
+			return MapPtr->FieldsList[Index];
 		}
 	}
 

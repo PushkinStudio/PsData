@@ -17,6 +17,7 @@ namespace PsDataTools
 
 struct FClassFields
 {
+	TArray<TSharedPtr<const FDataField>> FieldsList;
 	TMap<FString, const TSharedPtr<const FDataField>> FieldsByName;
 	TMap<FString, const TSharedPtr<const FDataField>> FieldsByAlias;
 	TMap<int32, const TSharedPtr<const FDataField>> FieldsByHash;
@@ -48,6 +49,7 @@ public:
 	static const TSharedPtr<const FDataField>& GetFieldByName(UClass* OwnerClass, const FString& Name);
 	static const TSharedPtr<const FDataField>& GetFieldByAlias(UClass* OwnerClass, const FString& Alias);
 	static const TSharedPtr<const FDataField>& GetFieldByHash(UClass* OwnerClass, int32 Hash);
+	static const TSharedPtr<const FDataField>& GetFieldByIndex(UClass* OwnerClass, int32 Index);
 
 	static const TMap<FString, const TSharedPtr<const FDataField>>& GetFields(const UClass* OwnerClass);
 	static const TMap<FString, const TSharedPtr<const FDataField>>& GetAliasFields(const UClass* OwnerClass);

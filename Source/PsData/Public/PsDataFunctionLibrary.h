@@ -45,10 +45,10 @@ public:
 	 ***********************************/
 
 	/** Get map proxy property */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
 	static UPsDataBlueprintMapProxy* GetMapProxy(UPsData* Target, int32 Hash);
 
 	/** Get map proxy property */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
+	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
 	static UPsDataBlueprintArrayProxy* GetArrayProxy(UPsData* Target, int32 Hash);
 };

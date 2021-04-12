@@ -242,7 +242,7 @@ UPsDataBlueprintMapProxy* UPsDataFunctionLibrary::GetMapProxy(UPsData* Target, i
 {
 	//TODO: Always NewObject?
 	UPsDataBlueprintMapProxy* Result = NewObject<UPsDataBlueprintMapProxy>();
-	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Hash));
+	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByIndex(Target->GetClass(), Hash));
 	return Result;
 }
 
@@ -250,6 +250,6 @@ UPsDataBlueprintArrayProxy* UPsDataFunctionLibrary::GetArrayProxy(UPsData* Targe
 {
 	//TODO: Always NewObject?
 	UPsDataBlueprintArrayProxy* Result = NewObject<UPsDataBlueprintArrayProxy>();
-	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByHash(Target->GetClass(), Hash));
+	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByIndex(Target->GetClass(), Hash));
 	return Result;
 }
