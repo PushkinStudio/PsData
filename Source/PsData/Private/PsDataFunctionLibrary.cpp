@@ -164,7 +164,7 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 
 	if (!Link->Meta.bNullable)
 	{
-		UE_LOG(LogData, Fatal, TEXT("Link without Nullable meta can't be nullptr"))
+		UE_LOG(LogData, Fatal, TEXT("Link without Nullable meta can't be nullptr. Key=\"%s\", Path=\"%s\", Class=\"%s\""), *Keys[0], *LinkPath, *Target->GetClass()->GetName())
 	}
 
 	return nullptr;
@@ -205,7 +205,7 @@ TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* C
 		}
 		else
 		{
-			UE_LOG(LogData, Fatal, TEXT("Link without Nullable meta can't be nullptr"))
+			UE_LOG(LogData, Fatal, TEXT("Link without Nullable meta can't be nullptr. Key=\"%s\", Path=\"%s\", Class=\"%s\""), *Key, *LinkPath, *Target->GetClass()->GetName())
 		}
 	}
 	return Result;
