@@ -30,7 +30,9 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 	TArray<TSharedPtr<FEventPath>> Events;
 
 	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Added, TEXT(""), true)));
+	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::AddedToParent, TEXT(""), true)));
 	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Removed, TEXT(""), true)));
+	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::RemovedFromParent, TEXT(""), true)));
 	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Changed, TEXT(""), true)));
 
 	for (auto& Pair : PsDataTools::FDataReflection::GetFields(TargetClass))

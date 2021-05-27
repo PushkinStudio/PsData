@@ -45,6 +45,11 @@ void FPsDataFriend::AddChild(UPsData* Parent, UPsData* Data)
 	Data->Parent = Parent;
 	Parent->Children.Add(Data);
 
+	if (Data->IsBound(UPsDataEvent::AddedToParent, false))
+	{
+		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::AddedToParent, false));
+	}
+
 	if (Data->IsBound(UPsDataEvent::Added, true))
 	{
 		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
@@ -59,12 +64,21 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 		return;
 	}
 
+	const auto bIsBound = Data->IsBound(UPsDataEvent::Removed, true);
+
 	Parent->Children.Remove(Data);
 	Data->Parent.Reset();
 
-	if (Data->IsBound(UPsDataEvent::Removed, true))
+	if (Data->IsBound(UPsDataEvent::RemovedFromParent, false))
 	{
-		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true));
+		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::RemovedFromParent, false));
+	}
+
+	if (bIsBound)
+	{
+		auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true);
+		Data->Broadcast(Event);
+		Parent->Broadcast(Event, Data);
 	}
 }
 
@@ -285,22 +299,7 @@ bool UPsData::IsBound(const FString& Type, bool bBubbles) const
 
 void UPsData::Broadcast(UPsDataEvent* Event) const
 {
-	const bool bDeferredEventProcessing = FPsDataEventScopeGuard::IsGuarded();
-	if (bDeferredEventProcessing)
-	{
-		Event->AddToRoot();
-		FPsDataEventScopeGuard::AddCallback([WeakThis = MakeWeakObjectPtr(this), Event]() {
-			Event->RemoveFromRoot();
-			if (WeakThis.IsValid())
-			{
-				WeakThis->BroadcastInternal(Event, nullptr);
-			}
-		});
-	}
-	else
-	{
-		BroadcastInternal(Event, nullptr);
-	}
+	Broadcast(Event, nullptr);
 }
 
 FPsDataBind UPsData::Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
@@ -386,14 +385,33 @@ void UPsData::UpdateDelegates() const
 	}
 }
 
-void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) const
+void UPsData::Broadcast(UPsDataEvent* Event, const UPsData* Previous) const
 {
-	++BroadcastInProgress;
-
 	if (Event->Target == nullptr)
 	{
 		Event->Target = const_cast<UPsData*>(this);
 	}
+
+	if (FPsDataEventScopeGuard::IsGuarded())
+	{
+		Event->AddToRoot();
+		FPsDataEventScopeGuard::AddCallback([WeakThis = MakeWeakObjectPtr(this), WeakPrevious = MakeWeakObjectPtr(Previous), Event]() {
+			Event->RemoveFromRoot();
+			if (WeakThis.IsValid())
+			{
+				WeakThis->BroadcastInternal(Event, WeakPrevious.Get());
+			}
+		});
+	}
+	else
+	{
+		BroadcastInternal(Event, Previous);
+	}
+}
+
+void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) const
+{
+	++BroadcastInProgress;
 
 	if (!Event->bStopImmediate)
 	{

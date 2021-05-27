@@ -38,8 +38,14 @@ public:
 	/** Added */
 	static const FString Added;
 
+	/** Added To Parent */
+	static const FString AddedToParent;
+
 	/** Removed */
 	static const FString Removed;
+
+	/** Removed From Parent */
+	static const FString RemovedFromParent;
 
 	/** Changed */
 	static const FString Changed;

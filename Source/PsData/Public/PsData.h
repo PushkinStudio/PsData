@@ -277,8 +277,11 @@ private:
 	/** Update delegates */
 	void UpdateDelegates() const;
 
+	/** Broadcat with previous */
+	void Broadcast(UPsDataEvent* Event, const UPsData* Previous) const;
+
 	/** Broadcast internal */
-	void BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous = nullptr) const;
+	void BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) const;
 
 	/** Bind internal */
 	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
