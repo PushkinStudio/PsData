@@ -34,6 +34,7 @@ protected:
 	friend class UPsDataBlueprintArrayProxy;
 
 	FPsDataBaseArrayProxy()
+		: Property(nullptr)
 	{
 	}
 

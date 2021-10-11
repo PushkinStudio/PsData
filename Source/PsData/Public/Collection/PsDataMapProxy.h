@@ -35,6 +35,7 @@ protected:
 	friend class UPsDataBlueprintMapProxy;
 
 	FPsDataBaseMapProxy()
+		: Property(nullptr)
 	{
 	}
 

@@ -124,13 +124,13 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(FProperty* P
 			FString Key;
 			FTextInspector::GetTableIdAndKey(Text, TableId, Key);
 			TSharedPtr<FJsonObject> JsonObject(new FJsonObject());
-			JsonObject->Values.Add("TableId", TSharedPtr<FJsonValue>(new FJsonValueString(TableId.ToString())));
-			JsonObject->Values.Add("Key", TSharedPtr<FJsonValue>(new FJsonValueString(Key)));
-			return TSharedPtr<FJsonValue>(new FJsonValueObject(JsonObject));
+			JsonObject->Values.Add("TableId", MakeShared<FJsonValueString>(TableId.ToString()));
+			JsonObject->Values.Add("Key", MakeShared<FJsonValueString>(Key));
+			return MakeShared<FJsonValueObject>(JsonObject);
 		}
 		else
 		{
-			return TSharedPtr<FJsonValue>(new FJsonValueString(Text.ToString()));
+			return MakeShared<FJsonValueString>(Text.ToString());
 		}
 	}
 
@@ -139,9 +139,9 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(FProperty* P
 		const FSoftObjectPtr& SoftObjectPtr = SoftObjectProperty->GetPropertyValue(Value);
 		const FSoftObjectPath& SoftObjectPath = SoftObjectPtr.ToSoftObjectPath();
 		TSharedPtr<FJsonObject> JsonObject(new FJsonObject());
-		JsonObject->Values.Add("AssetPathName", TSharedPtr<FJsonValue>(new FJsonValueString(SoftObjectPath.GetAssetPathName().ToString())));
-		JsonObject->Values.Add("SubPathString", TSharedPtr<FJsonValue>(new FJsonValueString(SoftObjectPath.GetSubPathString())));
-		return TSharedPtr<FJsonValue>(new FJsonValueObject(JsonObject));
+		JsonObject->Values.Add("AssetPathName", MakeShared<FJsonValueString>(SoftObjectPath.GetAssetPathName().ToString()));
+		JsonObject->Values.Add("SubPathString", MakeShared<FJsonValueString>(SoftObjectPath.GetSubPathString()));
+		return MakeShared<FJsonValueObject>(JsonObject);
 	}
 
 	return TSharedPtr<FJsonValue>(nullptr);
@@ -173,7 +173,7 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct*
 		JsonObject->Values.Add(GetNormalizedKey(Pair.Key, KeyMap), Pair.Value);
 	}
 
-	return TSharedPtr<FJsonValue>(new FJsonValueObject(JsonObject));
+	return MakeShared<FJsonValueObject>(JsonObject);
 }
 
 const FString& FPsDataStructDeserializer::GetNormalizedKey(const FString& Key, TMap<FString, FString>& KeyMap)
