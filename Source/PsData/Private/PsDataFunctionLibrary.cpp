@@ -18,7 +18,7 @@
 
 const FString& UPsDataFunctionLibrary::GetLinkPath(const UPsData* ConstTarget, TSharedPtr<const FDataLink> Link)
 {
-	//TODO: PS-136
+	// TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
 	if (Link->bPathProperty)
 	{
@@ -37,7 +37,7 @@ const FString& UPsDataFunctionLibrary::GetLinkPath(const UPsData* ConstTarget, T
 
 void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<const FDataLink> Link, TArray<FString>& OutKeys)
 {
-	//TODO: PS-136
+	// TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
 	auto& Field = PsDataTools::FDataReflection::GetFieldByName(Target->GetClass(), Link->Name);
 	check(Field.IsValid());
@@ -137,7 +137,7 @@ void UPsDataFunctionLibrary::GetLinkKeys(const UPsData* ConstTarget, TSharedPtr<
 
 UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, int32 Hash)
 {
-	//TODO: PS-136
+	// TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
 	const TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
 	check(Link.IsValid());
@@ -172,7 +172,7 @@ UPsData* UPsDataFunctionLibrary::GetDataByLinkHash(const UPsData* ConstTarget, i
 
 TArray<UPsData*> UPsDataFunctionLibrary::GetDataArrayByLinkHash(const UPsData* ConstTarget, int32 Hash)
 {
-	//TODO: PS-136
+	// TODO: PS-136
 	UPsData* Target = const_cast<UPsData*>(ConstTarget);
 	const TSharedPtr<const FDataLink> Link = PsDataTools::FDataReflection::GetLinkByHash(Target->GetClass(), Hash);
 	check(Link.IsValid());
@@ -240,7 +240,7 @@ bool UPsDataFunctionLibrary::IsLinkEmpty(const UPsData* ConstTarget, int32 Hash)
 
 UPsDataBlueprintMapProxy* UPsDataFunctionLibrary::GetMapProxy(UPsData* Target, int32 Hash)
 {
-	//TODO: Always NewObject?
+	// TODO: Always NewObject?
 	UPsDataBlueprintMapProxy* Result = NewObject<UPsDataBlueprintMapProxy>();
 	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByIndex(Target->GetClass(), Hash));
 	return Result;
@@ -248,7 +248,7 @@ UPsDataBlueprintMapProxy* UPsDataFunctionLibrary::GetMapProxy(UPsData* Target, i
 
 UPsDataBlueprintArrayProxy* UPsDataFunctionLibrary::GetArrayProxy(UPsData* Target, int32 Hash)
 {
-	//TODO: Always NewObject?
+	// TODO: Always NewObject?
 	UPsDataBlueprintArrayProxy* Result = NewObject<UPsDataBlueprintArrayProxy>();
 	Result->Init(Target, PsDataTools::FDataReflection::GetFieldByIndex(Target->GetClass(), Hash));
 	return Result;

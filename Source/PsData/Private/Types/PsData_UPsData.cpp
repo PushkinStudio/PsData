@@ -97,7 +97,7 @@ void* UPsDataUPsDataLibrary::TypeDeserialize(UPsData* Instance, const TSharedPtr
 bool UPsDataUPsDataLibrary::IsA(const FAbstractDataTypeContext* LeftContext, const FAbstractDataTypeContext* RightContext)
 {
 	UClass* RClass = Cast<UClass>(RightContext->GetUE4Type());
-	//if (RClass != nullptr && RClass->IsChildOf(T::StaticClass()))
+	// if (RClass != nullptr && RClass->IsChildOf(T::StaticClass()))
 	if (RClass != nullptr && RClass->IsChildOf(UPsData::StaticClass()))
 		return true;
 	return false;

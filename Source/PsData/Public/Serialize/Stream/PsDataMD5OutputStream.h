@@ -9,8 +9,8 @@
 #include "CoreMinimal.h"
 
 /***********************************
-* FPsDataMD5Hash
-***********************************/
+ * FPsDataMD5Hash
+ ***********************************/
 
 struct PSDATA_API FPsDataMD5Hash
 {

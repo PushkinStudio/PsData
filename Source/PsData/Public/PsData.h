@@ -33,8 +33,8 @@ private:
 };
 
 /***********************************
-* Abstract property
-***********************************/
+ * Abstract property
+ ***********************************/
 
 struct PSDATA_API FAbstractDataProperty
 {
@@ -49,8 +49,8 @@ struct PSDATA_API FAbstractDataProperty
 };
 
 /***********************************
-* PsData friend
-***********************************/
+ * PsData friend
+ ***********************************/
 
 namespace PsDataTools
 {
@@ -167,8 +167,8 @@ struct PSDATA_API FPsDataReport
 };
 
 /***********************************
-* PSDATA!
-***********************************/
+ * PSDATA!
+ ***********************************/
 
 UCLASS(BlueprintType, Blueprintable)
 class PSDATA_API UPsData : public UObject
@@ -348,8 +348,8 @@ public:
 
 public:
 	/***********************************
-     * Utility
-     ***********************************/
+	 * Utility
+	 ***********************************/
 
 	/** Reset */
 	void Reset();

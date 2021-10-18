@@ -73,7 +73,8 @@ struct TStringView
 private:
 	static constexpr int Clamp(const int x, const int min, const int max)
 	{
-		return x < min ? min : x < max ? x : max;
+		return x < min ? min : x < max ? x
+									   : max;
 	}
 
 public:

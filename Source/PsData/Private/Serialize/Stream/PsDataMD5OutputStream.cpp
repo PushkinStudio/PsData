@@ -8,8 +8,8 @@ void Write(FMD5& Md5Gen, const TArray<uint8>& Buffer)
 }
 
 /***********************************
-* FPsDataMD5Hash
-***********************************/
+ * FPsDataMD5Hash
+ ***********************************/
 
 FPsDataMD5Hash::FPsDataMD5Hash(FMD5 Md5Gen)
 {

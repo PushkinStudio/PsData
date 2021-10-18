@@ -27,14 +27,14 @@ UPsData* CastToPsData(T* Value)
 #if !UE_BUILD_SHIPPING
 	const auto Class = GetPsDataClass<T>();
 	check(Class && Class->IsChildOf(UPsData::StaticClass()));
-#endif //UE_BUILD_SHIPPING
+#endif // UE_BUILD_SHIPPING
 
 	return static_cast<UPsData*>(static_cast<void*>(Value));
 }
 
 /***********************************
-* Comparison
-***********************************/
+ * Comparison
+ ***********************************/
 
 template <typename T>
 struct FTypeComparator
@@ -240,8 +240,8 @@ struct FTypeDeserializer<TMap<FString, T>>
 };
 
 /***********************************
-* Property
-***********************************/
+ * Property
+ ***********************************/
 
 template <typename T>
 struct FDataProperty : public FAbstractDataProperty
@@ -293,8 +293,8 @@ struct FDataProperty : public FAbstractDataProperty
 };
 
 /***********************************
-* Property for array
-***********************************/
+ * Property for array
+ ***********************************/
 
 template <typename T>
 struct FDataProperty<TArray<T>> : public FAbstractDataProperty
@@ -342,8 +342,8 @@ struct FDataProperty<TArray<T>> : public FAbstractDataProperty
 };
 
 /***********************************
-* Property for basic type in map
-***********************************/
+ * Property for basic type in map
+ ***********************************/
 
 template <typename T>
 struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
@@ -394,8 +394,8 @@ struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 };
 
 /***********************************
-* Property for UPsData*
-***********************************/
+ * Property for UPsData*
+ ***********************************/
 
 template <typename T>
 struct FDataProperty<T*> : public FAbstractDataProperty
@@ -477,8 +477,8 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 };
 
 /***********************************
-* Property for TArray<UPsData*>
-***********************************/
+ * Property for TArray<UPsData*>
+ ***********************************/
 
 template <typename T>
 struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
@@ -531,7 +531,7 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 		for (int32 i = 0; i < Value.Num(); ++i)
 		{
-			if (!NewValue.Contains(Value[i])) //TODO: optimization
+			if (!NewValue.Contains(Value[i])) // TODO: optimization
 			{
 				FPsDataFriend::RemoveChild(Instance, CastToPsData(Value[i]));
 				bChange = true;
@@ -550,8 +550,8 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 };
 
 /***********************************
-* Property for TMap<FString, UPsData*>
-***********************************/
+ * Property for TMap<FString, UPsData*>
+ ***********************************/
 
 template <typename T>
 struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty

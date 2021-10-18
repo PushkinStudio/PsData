@@ -16,8 +16,8 @@ FSimpleMulticastDelegate FDataDelegates::OnPostDataModuleInit;
 TPsDataSimplePromise FDataDelegates::PostDataModuleInitPromise;
 
 /***********************************
-* PsData friend
-***********************************/
+ * PsData friend
+ ***********************************/
 
 namespace PsDataTools
 {
@@ -197,8 +197,8 @@ FPsDataReport::FPsDataReport(EPsDataReportType InType, const FString& InSourcePa
 }
 
 /***********************************
-* PSDATA!
-***********************************/
+ * PSDATA!
+ ***********************************/
 
 UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -668,7 +668,8 @@ FString UPsData::GetPathFromRoot() const
 				Path = CollectionName + TEXT(".") + Current->GetDataKey() + TEXT(".") + Path;
 			}
 		}
-	} while ((Current = Current->GetParent()) != nullptr);
+	}
+	while ((Current = Current->GetParent()) != nullptr);
 	return Path;
 }
 
@@ -703,7 +704,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 {
 	TArray<FPsDataReport> Result;
 
-	//TODO: PS-136
+	// TODO: PS-136
 	UPsData* Data = const_cast<UPsData*>(this);
 	UPsData* RootData = Data->GetRoot();
 	const FString Path = GetPathFromRoot();

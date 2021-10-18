@@ -151,8 +151,8 @@ struct TConstValue<TMap<F, T*>, bConst>
 };
 
 /***********************************
-* Is collection trait
-***********************************/
+ * Is collection trait
+ ***********************************/
 
 template <typename T>
 struct TIsContainer

@@ -230,8 +230,8 @@ public:
 	}
 
 	/***********************************
-     * TProxyIterator
-     ***********************************/
+	 * TProxyIterator
+	 ***********************************/
 
 public:
 	template <bool bIteratorConst>
