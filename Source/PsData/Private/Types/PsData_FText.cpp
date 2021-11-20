@@ -74,7 +74,7 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataFTextLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FText& Value)
+void UPsDataFTextLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FText& Value)
 {
 	static const FString TableIdParam(TEXT("TableId"));
 	static const FString KeyParam(TEXT("Key"));
@@ -100,7 +100,7 @@ void UPsDataFTextLibrary::TypeSerialize(const UPsData* const Instance, const TSh
 	}
 }
 
-FText UPsDataFTextLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FText& Value)
+FText UPsDataFTextLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FText& Value)
 {
 	static const FString TableIdParam(TEXT("TableId"));
 	static const FString KeyParam(TEXT("Key"));

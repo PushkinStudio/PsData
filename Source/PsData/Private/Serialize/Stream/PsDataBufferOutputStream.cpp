@@ -10,7 +10,7 @@ FPsDataBufferOutputStream::FPsDataBufferOutputStream()
 {
 }
 
-const TArray<uint8>& FPsDataBufferOutputStream::GetBuffer()
+TArray<uint8>& FPsDataBufferOutputStream::GetBuffer()
 {
 	return Buffer;
 }
@@ -18,6 +18,11 @@ const TArray<uint8>& FPsDataBufferOutputStream::GetBuffer()
 void FPsDataBufferOutputStream::Reset()
 {
 	Buffer.Reset();
+}
+
+void FPsDataBufferOutputStream::Reserve(int32 NumBytes)
+{
+	Buffer.Reserve(NumBytes);
 }
 
 void FPsDataBufferOutputStream::WriteUint32(uint32 Value)
@@ -96,4 +101,24 @@ void FPsDataBufferOutputStream::WriteString(const FString& Value)
 			WriteTCHAR(Value[i]);
 		}
 	}
+}
+
+void FPsDataBufferOutputStream::WriteBuffer(const TArray<uint8>& Value)
+{
+	Buffer.Append(Value);
+}
+
+void FPsDataBufferOutputStream::WriteBuffer(const uint8* Value, int32 Count)
+{
+	Buffer.Append(Value, Count);
+}
+
+void FPsDataBufferOutputStream::WriteBuffer(TArray<uint8>&& Value)
+{
+	Buffer.Append(std::move(Value));
+}
+
+int32 FPsDataBufferOutputStream::Size() const
+{
+	return Buffer.Num();
 }

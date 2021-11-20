@@ -20,24 +20,6 @@ struct TAlwaysFalse : std::false_type
 };
 
 /***********************************
- * TRemovePointer trait
- ***********************************/
-
-template <typename T>
-struct TRemovePointer
-{
-	typedef T Type;
-	static T& Get(T& Value) { return Value; }
-};
-
-template <typename T>
-struct TRemovePointer<T*>
-{
-	typedef T Type;
-	static T& Get(T*& Value) { return *Value; }
-};
-
-/***********************************
  * TSelector trait
  ***********************************/
 

@@ -21,4 +21,6 @@ struct PSDATA_API FPsDataInputStream
 	virtual FString ReadString() = 0;
 	virtual bool HasData() = 0;
 	virtual void ShiftBack() = 0;
+	virtual void SetPosition(int32 Value) = 0;
+	virtual int32 GetPosition() const = 0;
 };

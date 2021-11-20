@@ -74,7 +74,7 @@ DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataTSoftClassPtrLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FSoftObjectPath& SoftObjectPath)
+void UPsDataTSoftClassPtrLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FSoftObjectPath& SoftObjectPath)
 {
 	static const FString AssetPathNameParam(TEXT("AssetPathName"));
 	static const FString SubPathStringParam(TEXT("SubPathString"));
@@ -89,7 +89,7 @@ void UPsDataTSoftClassPtrLibrary::TypeSerialize(const UPsData* const Instance, c
 	Serializer->PopObject();
 }
 
-FSoftObjectPath UPsDataTSoftClassPtrLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& SoftObjectPath)
+FSoftObjectPath UPsDataTSoftClassPtrLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& SoftObjectPath)
 {
 	static const FString AssetPathNameParam(TEXT("AssetPathName"));
 	static const FString SubPathStringParam(TEXT("SubPathString"));

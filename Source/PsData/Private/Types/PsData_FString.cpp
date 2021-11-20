@@ -74,12 +74,12 @@ DEFINE_FUNCTION(UPsDataFStringLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataFStringLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FString& Value)
+void UPsDataFStringLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FString& Value)
 {
 	Serializer->WriteValue(Value);
 }
 
-FString UPsDataFStringLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FString& Value)
+FString UPsDataFStringLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FString& Value)
 {
 	FString Result = Value;
 	if (Deserializer->ReadValue(Result))

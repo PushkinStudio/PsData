@@ -118,19 +118,19 @@ struct FTypeDefault
 template <typename T>
 struct FTypeSerializer
 {
-	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const T& Value) = 0;
+	static void Serialize(const UPsData* Instance, const FDataField* Field, FPsDataSerializer* Serializer, const T& Value) = 0;
 };
 
 template <typename T>
 struct FTypeDeserializer
 {
-	static T Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const T& Value) = 0;
+	static T Deserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const T& Value) = 0;
 };
 
 template <typename T, typename L>
 struct FTypeSerializerExtended
 {
-	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const T& Value)
+	static void Serialize(const UPsData* Instance, const FDataField* Field, FPsDataSerializer* Serializer, const T& Value)
 	{
 		L::TypeSerialize(Instance, Field, Serializer, Value);
 	}
@@ -139,7 +139,7 @@ struct FTypeSerializerExtended
 template <typename T, typename L>
 struct FTypeDeserializerExtended
 {
-	static T Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const T& Value)
+	static T Deserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const T& Value)
 	{
 		return L::TypeDeserialize(Instance, Field, Deserializer, Value);
 	}
@@ -148,7 +148,7 @@ struct FTypeDeserializerExtended
 template <typename T>
 struct FTypeSerializer<TArray<T>>
 {
-	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TArray<T>& Value)
+	static void Serialize(const UPsData* Instance, const FDataField* Field, FPsDataSerializer* Serializer, const TArray<T>& Value)
 	{
 		Serializer->WriteArray();
 		for (const T& Element : Value)
@@ -162,7 +162,7 @@ struct FTypeSerializer<TArray<T>>
 template <typename T>
 struct FTypeDeserializer<TArray<T>>
 {
-	static TArray<T> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TArray<T>& Value)
+	static TArray<T> Deserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const TArray<T>& Value)
 	{
 		TArray<T> NewValue;
 		if (Deserializer->ReadArray())
@@ -195,7 +195,7 @@ struct FTypeDeserializer<TArray<T>>
 template <typename T>
 struct FTypeSerializer<TMap<FString, T>>
 {
-	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value)
+	static void Serialize(const UPsData* Instance, const FDataField* Field, FPsDataSerializer* Serializer, const TMap<FString, T>& Value)
 	{
 		Serializer->WriteObject();
 		for (auto& Pair : Value)
@@ -211,7 +211,7 @@ struct FTypeSerializer<TMap<FString, T>>
 template <typename T>
 struct FTypeDeserializer<TMap<FString, T>>
 {
-	static TMap<FString, T> Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TMap<FString, T>& Value)
+	static TMap<FString, T> Deserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const TMap<FString, T>& Value)
 	{
 		TMap<FString, T> NewValue;
 		if (Deserializer->ReadObject())
@@ -290,6 +290,11 @@ struct FDataProperty : public FAbstractDataProperty
 
 		FPsDataFriend::Changed(Instance, GetField());
 	}
+
+	virtual bool IsDefault() const override
+	{
+		return FTypeComparator<T>::Compare(Value, FTypeDefault<T>::GetDefaultValue());
+	}
 };
 
 /***********************************
@@ -303,7 +308,6 @@ struct FDataProperty<TArray<T>> : public FAbstractDataProperty
 
 	FDataProperty()
 	{
-		Value.Shrink();
 	}
 
 	virtual ~FDataProperty() {}
@@ -339,6 +343,11 @@ struct FDataProperty<TArray<T>> : public FAbstractDataProperty
 
 		FPsDataFriend::Changed(Instance, GetField());
 	}
+
+	virtual bool IsDefault() const override
+	{
+		return Value.Num() == 0;
+	}
 };
 
 /***********************************
@@ -349,10 +358,11 @@ template <typename T>
 struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 {
 	TMap<FString, T> Value;
+	bool bSorted;
 
 	FDataProperty()
+		: bSorted(true)
 	{
-		Value.Shrink();
 	}
 
 	virtual ~FDataProperty() {}
@@ -374,6 +384,7 @@ struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 
 	TMap<FString, T>& Get()
 	{
+		Sort();
 		return Value;
 	}
 
@@ -385,11 +396,25 @@ struct FDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 		}
 
 		Value = NewValue;
-		Value.KeyStableSort([](const FString& A, const FString& B) {
-			return A < B;
-		});
+		bSorted = false;
 
 		FPsDataFriend::Changed(Instance, GetField());
+	}
+
+	virtual bool IsDefault() const override
+	{
+		return Value.Num() == 0;
+	}
+
+	void Sort()
+	{
+		if (!bSorted)
+		{
+			bSorted = true;
+			Value.KeyStableSort([](const FString& A, const FString& B) {
+				return A < B;
+			});
+		}
 	}
 };
 
@@ -474,6 +499,11 @@ struct FDataProperty<T*> : public FAbstractDataProperty
 
 		FPsDataFriend::Changed(Instance, Field);
 	}
+
+	virtual bool IsDefault() const override
+	{
+		return Value == nullptr;
+	}
 };
 
 /***********************************
@@ -487,7 +517,6 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 	FDataProperty()
 	{
-		Value.Shrink();
 	}
 
 	virtual ~FDataProperty() {}
@@ -521,10 +550,12 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 		for (int32 i = 0; i < NewValue.Num(); ++i)
 		{
-			if (CastToPsData(NewValue[i])->GetParent() != Instance)
+			auto NewData = CastToPsData(NewValue[i]);
+			FPsDataFriend::ChangeDataName(NewData, FString::FromInt(i), Field->Name);
+
+			if (NewData->GetParent() != Instance)
 			{
-				FPsDataFriend::ChangeDataName(CastToPsData(NewValue[i]), FString::FromInt(i), Field->Name);
-				FPsDataFriend::AddChild(Instance, CastToPsData(NewValue[i]));
+				FPsDataFriend::AddChild(Instance, NewData);
 				bChange = true;
 			}
 		}
@@ -547,6 +578,11 @@ struct FDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 		FPsDataFriend::Changed(Instance, Field);
 	}
+
+	virtual bool IsDefault() const override
+	{
+		return Value.Num() == 0;
+	}
 };
 
 /***********************************
@@ -557,10 +593,11 @@ template <typename T>
 struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 {
 	TMap<FString, T*> Value;
+	bool bSorted;
 
 	FDataProperty()
+		: bSorted(true)
 	{
-		Value.Shrink();
 	}
 
 	virtual ~FDataProperty() {}
@@ -582,6 +619,7 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 
 	TMap<FString, T*>& Get()
 	{
+		Sort();
 		return Value;
 	}
 
@@ -594,10 +632,11 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 
 		for (auto& Pair : NewValue)
 		{
-			if (CastToPsData(Pair.Value)->GetParent() != Instance)
+			auto NewData = CastToPsData(Pair.Value);
+			if (NewData->GetParent() != Instance)
 			{
-				FPsDataFriend::ChangeDataName(CastToPsData(Pair.Value), Pair.Key, Field->Name);
-				FPsDataFriend::AddChild(Instance, CastToPsData(Pair.Value));
+				FPsDataFriend::ChangeDataName(NewData, Pair.Key, Field->Name);
+				FPsDataFriend::AddChild(Instance, NewData);
 				bChange = true;
 			}
 		}
@@ -618,11 +657,25 @@ struct FDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 		}
 
 		Value = NewValue;
-		Value.KeyStableSort([](const FString& A, const FString& B) {
-			return A < B;
-		});
+		bSorted = false;
 
 		FPsDataFriend::Changed(Instance, Field);
+	}
+
+	virtual bool IsDefault() const override
+	{
+		return Value.Num() == 0;
+	}
+
+	void Sort()
+	{
+		if (!bSorted)
+		{
+			bSorted = true;
+			Value.KeyStableSort([](const FString& A, const FString& B) {
+				return A < B;
+			});
+		}
 	}
 };
 
@@ -639,7 +692,7 @@ bool UnsafeGetByIndex(UPsData* Instance, int32 Index, T*& OutValue)
 }
 
 template <typename T>
-bool UnsafeGet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue)
+bool UnsafeGet(UPsData* Instance, const FDataField* Field, T*& OutValue)
 {
 	return UnsafeGetByIndex<T>(Instance, Field->Index, OutValue);
 }
@@ -656,7 +709,7 @@ void UnsafeSetByIndex(UPsData* Instance, int32 Index, typename TConstRef<T>::Typ
 }
 
 template <typename T>
-void UnsafeSet(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename TConstRef<T>::Type NewValue)
+void UnsafeSet(UPsData* Instance, const FDataField* Field, typename TConstRef<T>::Type NewValue)
 {
 	UnsafeSetByIndex(Instance, Field->Index, NewValue);
 }

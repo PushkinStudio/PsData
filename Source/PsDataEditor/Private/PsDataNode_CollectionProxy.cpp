@@ -56,7 +56,7 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 {
 	struct GetMenuActions_Utils
 	{
-		static UBlueprintNodeSpawner* MakeAction(TSubclassOf<UEdGraphNode> NodeClass, UClass* TargetClass, const FDataField& Field)
+		static UBlueprintNodeSpawner* MakeAction(TSubclassOf<UEdGraphNode> NodeClass, UClass* TargetClass, const FDataField* Field)
 		{
 			UBlueprintNodeSpawner* NodeSpawner = UBlueprintNodeSpawner::Create(NodeClass);
 			check(NodeSpawner != nullptr);
@@ -64,7 +64,7 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 			NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateLambda([Field, TargetClass](UEdGraphNode* EvaluatorNode, bool) {
 				UPsDataNode_CollectionProxy* Node = CastChecked<UPsDataNode_CollectionProxy>(EvaluatorNode);
 				Node->TargetClass = TargetClass;
-				Node->PropertyName = Field.Name;
+				Node->PropertyName = Field->Name;
 				Node->UpdateFunctionReference();
 			});
 
@@ -76,11 +76,11 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 
 	for (UClass* Class : TObjectRange<UClass>())
 	{
-		for (auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
+		for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(Class)->GetFieldsList())
 		{
-			if (Pair.Value->Context->IsData() && Pair.Value->Context->IsContainer())
+			if (Field->Context->IsData() && Field->Context->IsContainer())
 			{
-				if (UBlueprintNodeSpawner* NodeSpawner = GetMenuActions_Utils::MakeAction(GetClass(), Class, *Pair.Value.Get()))
+				if (UBlueprintNodeSpawner* NodeSpawner = GetMenuActions_Utils::MakeAction(GetClass(), Class, Field))
 				{
 					ActionRegistrar.AddBlueprintAction(Class, NodeSpawner);
 				}
@@ -101,7 +101,7 @@ void UPsDataNode_CollectionProxy::UpdatePin(EPsDataVariablePinType PinType, UEdG
 UFunction* UPsDataNode_CollectionProxy::GetFunction() const
 {
 	const auto Field = GetProperty();
-	if (!Field.IsValid())
+	if (!Field)
 	{
 		return nullptr;
 	}

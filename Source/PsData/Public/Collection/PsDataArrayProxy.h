@@ -21,7 +21,7 @@ private:
 	THardObjectPtr<UPsData> Instance;
 	PsDataTools::FDataProperty<TArray<T>>* Property;
 
-	static PsDataTools::FDataProperty<TArray<T>>* GetProperty(UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	static PsDataTools::FDataProperty<TArray<T>>* GetProperty(UPsData* Instance, const FDataField* Field)
 	{
 		TArray<T>* Output = nullptr;
 		PsDataTools::GetByField(Instance, Field, Output);
@@ -39,7 +39,7 @@ protected:
 	}
 
 public:
-	FPsDataBaseArrayProxy(UPsData* InInstance, const TSharedPtr<const FDataField>& InField)
+	FPsDataBaseArrayProxy(UPsData* InInstance, const FDataField* InField)
 		: Instance(InInstance)
 		, Property(GetProperty(InInstance, InField))
 	{
@@ -48,7 +48,7 @@ public:
 
 	FPsDataBaseArrayProxy(UPsData* InInstance, int32 Hash)
 		: Instance(InInstance)
-		, Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldByHash(InInstance->GetClass(), Hash)))
+		, Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHash(Hash)))
 	{
 		check(IsValid());
 	}
@@ -86,7 +86,7 @@ public:
 		Property = ArrayProxy.Property;
 	}
 
-	TSharedPtr<const FDataField> GetField() const
+	const FDataField* GetField() const
 	{
 		return Property->GetField();
 	}

@@ -28,6 +28,7 @@ FDataFieldMeta::FDataFieldMeta()
 	, bDeprecated(false)
 	, bReadOnly(false)
 	, bAlias(false)
+	, bDefault(true)
 {
 }
 
@@ -427,6 +428,16 @@ FDataField::FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbst
 const FString& FDataField::GetChangedEventName() const
 {
 	return Meta.EventType;
+}
+
+const FString& FDataField::GetAliasName() const
+{
+	return Meta.bAlias ? Meta.Alias : Name;
+}
+
+const FString& FDataField::GetNameForSerialize() const
+{
+	return GetAliasName();
 }
 
 /***********************************

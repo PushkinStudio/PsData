@@ -74,7 +74,7 @@ DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataFLinearColorLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FLinearColor& Value)
+void UPsDataFLinearColorLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FLinearColor& Value)
 {
 	static const FString RParam(TEXT("r"));
 	static const FString GParam(TEXT("g"));
@@ -97,7 +97,7 @@ void UPsDataFLinearColorLibrary::TypeSerialize(const UPsData* const Instance, co
 	Serializer->PopObject();
 }
 
-FLinearColor UPsDataFLinearColorLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FLinearColor& Value)
+FLinearColor UPsDataFLinearColorLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FLinearColor& Value)
 {
 	static const FString RParam(TEXT("r"));
 	static const FString GParam(TEXT("g"));

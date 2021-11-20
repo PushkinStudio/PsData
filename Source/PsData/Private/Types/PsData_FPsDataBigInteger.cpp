@@ -451,12 +451,12 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataBigIntegerLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FPsDataBigInteger& Value)
+void UPsDataBigIntegerLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FPsDataBigInteger& Value)
 {
 	Serializer->WriteValue(Value.ToString());
 }
 
-FPsDataBigInteger UPsDataBigIntegerLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FPsDataBigInteger& Value)
+FPsDataBigInteger UPsDataBigIntegerLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FPsDataBigInteger& Value)
 {
 	FString StringValue;
 	if (Deserializer->ReadValue(StringValue))

@@ -48,8 +48,8 @@ public:
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
 
-	static void TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const uint8& Value);
-	static uint8 TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const uint8& Value);
+	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const uint8& Value);
+	static uint8 TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const uint8& Value);
 };
 
 namespace PsDataTools

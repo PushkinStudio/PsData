@@ -76,12 +76,12 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataUPsDataLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const void* Value)
+void UPsDataUPsDataLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const void* Value)
 {
 	Serializer->WriteValue(static_cast<const UPsData*>(Value));
 }
 
-void* UPsDataUPsDataLibrary::TypeDeserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, void* Value)
+void* UPsDataUPsDataLibrary::TypeDeserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, void* Value)
 {
 	const FPsDataAllocator Allocator(CastChecked<UClass>(Field->Context->GetUE4Type()), Instance);
 

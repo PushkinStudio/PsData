@@ -74,12 +74,12 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataFNameLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FName& Value)
+void UPsDataFNameLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FName& Value)
 {
 	Serializer->WriteValue(Value.ToString().ToLower());
 }
 
-FName UPsDataFNameLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FName& Value)
+FName UPsDataFNameLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FName& Value)
 {
 	FString String;
 	if (!Deserializer->ReadValue(String))

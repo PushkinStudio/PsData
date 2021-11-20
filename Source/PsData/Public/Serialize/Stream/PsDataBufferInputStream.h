@@ -15,7 +15,7 @@ struct PSDATA_API FPsDataBufferInputStream : public FPsDataInputStream
 public:
 	FPsDataBufferInputStream(const TArray<uint8>& InBuffer);
 
-private:
+protected:
 	const TArray<uint8>& Buffer;
 	int32 Index;
 	int32 PrevIndex;
@@ -32,6 +32,8 @@ public:
 	virtual FString ReadString() override;
 	virtual bool HasData() override;
 	virtual void ShiftBack() override;
+	virtual void SetPosition(int32 Value) override;
+	virtual int32 GetPosition() const override;
 
 protected:
 	void CheckRange();

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "PsData.h"
-#include "PsDataEvent.h"
 #include "PsDataField.h"
 #include "PsDataFunctionLibrary.h"
 #include "PsDataProperty.h"
@@ -15,15 +14,59 @@
 namespace PsDataTools
 {
 
-struct FClassFields
+struct PSDATA_API FClassFields
 {
-	TArray<TSharedPtr<const FDataField>> FieldsList;
-	TMap<FString, const TSharedPtr<const FDataField>> FieldsByName;
-	TMap<FString, const TSharedPtr<const FDataField>> FieldsByAlias;
-	TMap<int32, const TSharedPtr<const FDataField>> FieldsByHash;
+	FClassFields();
+	~FClassFields();
 
-	TMap<FString, const TSharedPtr<const FDataLink>> LinksByName;
-	TMap<int32, const TSharedPtr<const FDataLink>> LinksByHash;
+	void AddField(FDataField* Field);
+	void AddLink(FDataLink* Link);
+	void Sort();
+
+	const TArray<FDataField*>& GetFieldsList();
+	const TArray<const FDataField*>& GetFieldsList() const;
+
+	FDataField* GetMutableField(const FDataField* Field);
+
+	const TArray<FDataLink*>& GetLinksList();
+	const TArray<const FDataLink*>& GetLinksList() const;
+
+	const FDataField* GetFieldByHash(int32 Hash) const;
+	const FDataField* GetFieldByName(const FString& Name) const;
+	const FDataField* GetFieldByAlias(const FString& Alias) const;
+	const FDataField* GetFieldByIndex(int32 Index) const;
+
+	const FDataField* GetFieldByHashChecked(int32 Hash) const;
+	const FDataField* GetFieldByNameChecked(const FString& Name) const;
+	const FDataField* GetFieldByAliasChecked(const FString& Alias) const;
+	const FDataField* GetFieldByIndexChecked(int32 Index) const;
+
+	bool HasFieldWithHash(int32 Hash) const;
+	bool HasFieldWithName(const FString& Name) const;
+	bool HasFieldWithAlias(const FString& Alias) const;
+	bool HasFieldWithIndex(int32 Index) const;
+
+	int32 GetNumFields() const;
+
+	const FDataLink* GetLinkByHash(int32 Hash) const;
+	const FDataLink* GetLinkByName(const FString& Name) const;
+
+	const FDataLink* GetLinkByHashChecked(int32 Hash) const;
+	const FDataLink* GetLinkByNameChecked(const FString& Name) const;
+
+	int32 GetNumLinks() const;
+
+private:
+	TArray<FDataField*> FieldsList;
+	TArray<const FDataField*> ConstFieldsList;
+	TMap<FString, const FDataField*> FieldsByName;
+	TMap<FString, const FDataField*> FieldsByAlias;
+	TMap<int32, const FDataField*> FieldsByHash;
+
+	TArray<FDataLink*> LinkList;
+	TArray<const FDataLink*> ConstLinkList;
+	TMap<FString, const FDataLink*> LinksByName;
+	TMap<int32, const FDataLink*> LinksByHash;
 };
 
 struct PSDATA_API FDataReflection
@@ -36,29 +79,14 @@ private:
 	static bool bCompiled;
 
 public:
-	static void InitField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context, TSharedPtr<FDataField>& Field, UPsData* Instance, FAbstractDataProperty* Property);
+	static void InitField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context, FDataField*& Field, UPsData* Instance, FAbstractDataProperty* Property);
 	static void InitLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection, UPsData* Instance);
 	static void InitMeta(const char* Meta);
 
 	static void PreConstruct(UPsData* Instance);
 	static void PostConstruct(UPsData* Instance);
 
-	static void Fill(UPsData* Instance);
-
-public:
-	static const TSharedPtr<const FDataField>& GetFieldByName(UClass* OwnerClass, const FString& Name);
-	static const TSharedPtr<const FDataField>& GetFieldByAlias(UClass* OwnerClass, const FString& Alias);
-	static const TSharedPtr<const FDataField>& GetFieldByHash(UClass* OwnerClass, int32 Hash);
-	static const TSharedPtr<const FDataField>& GetFieldByIndex(UClass* OwnerClass, int32 Index);
-
-	static const TMap<FString, const TSharedPtr<const FDataField>>& GetFields(const UClass* OwnerClass);
-	static const TMap<FString, const TSharedPtr<const FDataField>>& GetAliasFields(const UClass* OwnerClass);
-
-	static const TSharedPtr<const FDataLink>& GetLinkByName(UClass* OwnerClass, const FString& Name);
-	static const TSharedPtr<const FDataLink>& GetLinkByHash(UClass* OwnerClass, int32 Hash);
-
-	static const TMap<FString, const TSharedPtr<const FDataLink>>& GetLinks(UClass* OwnerClass);
-
+	static const FClassFields* GetFieldsByClass(const UClass* Class);
 	static bool HasClass(const UClass* OwnerClass);
 
 	static void Compile();
@@ -111,7 +139,9 @@ struct FDataTypeContextExtended : public FAbstractDataTypeContext
 		return Hash;
 	}
 
-	virtual ~FDataTypeContextExtended() {}
+	virtual ~FDataTypeContextExtended()
+	{
+	}
 };
 
 template <typename T>
@@ -156,7 +186,7 @@ bool CheckType(FAbstractDataTypeContext* LeftContext, FAbstractDataTypeContext* 
  ***********************************/
 
 template <typename T>
-bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*& OutValue)
+bool GetByField(UPsData* Instance, const FDataField* Field, T*& OutValue)
 {
 	if (CheckType<T>(&GetContext<T>(), Field->Context))
 	{
@@ -175,7 +205,7 @@ bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, T*
  ***********************************/
 
 template <typename T>
-bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<TArray<T>>*& OutValue)
+bool GetByField(UPsData* Instance, const FDataField* Field, TArray<TArray<T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -183,7 +213,7 @@ bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TA
 }
 
 template <typename T>
-bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TArray<TMap<FString, T>>*& OutValue)
+bool GetByField(UPsData* Instance, const FDataField* Field, TArray<TMap<FString, T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -191,7 +221,7 @@ bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TA
 }
 
 template <typename T>
-bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, TArray<T>>*& OutValue)
+bool GetByField(UPsData* Instance, const FDataField* Field, TMap<FString, TArray<T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -199,7 +229,7 @@ bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TM
 }
 
 template <typename T>
-bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TMap<FString, TMap<FString, T>>*& OutValue)
+bool GetByField(UPsData* Instance, const FDataField* Field, TMap<FString, TMap<FString, T>>*& OutValue)
 {
 	checkNoEntry();
 	OutValue = nullptr;
@@ -213,8 +243,8 @@ bool GetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, TM
 template <typename T>
 bool GetByHash(UPsData* Instance, int32 Hash, T*& OutValue)
 {
-	auto& Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
-	if (Field.IsValid())
+	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByHash(Hash);
+	if (Field)
 	{
 		return GetByField(Instance, Field, OutValue);
 	}
@@ -236,8 +266,8 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 	check(PathLength <= Path.Num());
 	check(Delta > 0);
 
-	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Path[PathOffset]);
-	if (Field.IsValid())
+	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Path[PathOffset]);
+	if (Field)
 	{
 		if (Delta == 1)
 		{
@@ -420,8 +450,8 @@ bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset,
 template <typename T>
 bool GetByPath(UPsData* Instance, const FString& Path, T*& OutValue)
 {
-	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Path);
-	if (Field.IsValid())
+	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Path);
+	if (Field)
 	{
 		return GetByField(Instance, Field, OutValue);
 	}
@@ -446,8 +476,8 @@ bool GetByPath(UPsData* Instance, const FString& Path, T*& OutValue)
 template <typename T>
 bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
 {
-	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Name);
-	if (Field.IsValid())
+	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Name);
+	if (Field)
 	{
 		return GetByField(Instance, Field, OutValue);
 	}
@@ -471,7 +501,7 @@ bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
  ***********************************/
 
 template <typename T>
-void SetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, typename TConstRef<T>::Type NewValue)
+void SetByField(UPsData* Instance, const FDataField* Field, typename TConstRef<T>::Type NewValue)
 {
 	if (CheckType<T>(Field->Context, &GetContext<T>()))
 	{
@@ -490,8 +520,8 @@ void SetByField(UPsData* Instance, const TSharedPtr<const FDataField>& Field, ty
 template <typename T>
 void SetByHash(UPsData* Instance, int32 Hash, typename TConstRef<T>::Type NewValue)
 {
-	auto& Field = FDataReflection::GetFieldByHash(Instance->GetClass(), Hash);
-	if (Field.IsValid())
+	auto Field = PsDataTools::FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByHash(Hash);
+	if (Field)
 	{
 		SetByField<T>(Instance, Field, NewValue);
 		return;
@@ -507,8 +537,8 @@ void SetByHash(UPsData* Instance, int32 Hash, typename TConstRef<T>::Type NewVal
 template <typename T>
 void SetByName(UPsData* Instance, const FString& Name, typename TConstRef<T>::Type NewValue)
 {
-	auto& Field = FDataReflection::GetFieldByName(Instance->GetClass(), Name);
-	if (Field.IsValid())
+	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Name);
+	if (Field)
 	{
 		SetByField<T>(Instance, Field, NewValue);
 	}
@@ -619,5 +649,4 @@ public:
 		return UPsDataFunctionLibrary::IsLinkEmpty(Instance, Hash);
 	}
 };
-
 } // namespace PsDataTools

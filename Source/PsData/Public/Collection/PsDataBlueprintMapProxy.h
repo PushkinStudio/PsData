@@ -20,7 +20,7 @@ private:
 
 public:
 	/** Initialize */
-	void Init(UPsData* Instance, const TSharedPtr<const FDataField> Field);
+	void Init(UPsData* Instance, const FDataField* Field);
 
 	/** Is valid */
 	UFUNCTION(BlueprintPure, meta = (Category = "PsData|Collection"))

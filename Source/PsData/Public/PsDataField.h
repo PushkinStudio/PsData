@@ -36,6 +36,7 @@ struct FDataFieldMeta
 	bool bDeprecated;
 	bool bReadOnly;
 	bool bAlias;
+	bool bDefault;
 	FString Alias;
 	FString EventType;
 
@@ -114,6 +115,8 @@ public:
 
 	FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, const TArray<const char*>& MetaCollection);
 	const FString& GetChangedEventName() const;
+	const FString& GetAliasName() const;
+	const FString& GetNameForSerialize() const;
 };
 
 /***********************************

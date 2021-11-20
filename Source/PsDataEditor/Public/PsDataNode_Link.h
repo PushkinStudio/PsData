@@ -12,7 +12,6 @@ UCLASS()
 class PSDATAEDITOR_API UPsDataNode_Link : public UPsDataNode_Variable
 {
 	GENERATED_UCLASS_BODY()
-
 public:
 	// Begin UEdGraphNode interface.
 	virtual void AllocateDefaultPins() override;
@@ -28,10 +27,10 @@ public:
 	// End UK2Node interface.
 
 	/** Get link */
-	TSharedPtr<const FDataLink> GetLink() const;
+	const FDataLink* GetLink() const;
 
 	/** Get return type */
-	UClass* GetReturnType(TSharedPtr<const FDataLink> Link) const;
+	UClass* GetReturnType(const FDataLink* Link) const;
 
 	/** Update link path */
 	void UpdateLink();

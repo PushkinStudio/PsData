@@ -74,12 +74,12 @@ DEFINE_FUNCTION(UPsDataBoolLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataBoolLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const bool& Value)
+void UPsDataBoolLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const bool& Value)
 {
 	Serializer->WriteValue(Value);
 }
 
-bool UPsDataBoolLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const bool& Value)
+bool UPsDataBoolLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const bool& Value)
 {
 	bool Result = Value;
 	if (Deserializer->ReadValue(Result))

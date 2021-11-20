@@ -9,7 +9,7 @@ UPsDataBlueprintMapProxy::UPsDataBlueprintMapProxy(const class FObjectInitialize
 {
 }
 
-void UPsDataBlueprintMapProxy::Init(UPsData* Instance, const TSharedPtr<const FDataField> Field)
+void UPsDataBlueprintMapProxy::Init(UPsData* Instance, const FDataField* Field)
 {
 	check(!Proxy.IsValid());
 	Proxy = FPsDataMapProxy<UPsData*>(Instance, Field);

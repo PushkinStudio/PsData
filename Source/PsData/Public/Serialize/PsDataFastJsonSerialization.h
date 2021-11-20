@@ -17,12 +17,16 @@ class UPsData;
 struct PSDATA_API FPsDataFastJsonSerializer : public FPsDataSerializer
 {
 public:
-	FPsDataFastJsonSerializer(bool bPretty = false);
+	FPsDataFastJsonSerializer(bool bPretty = false, int32 BufferSize = 1024 * 1024);
+
 	virtual ~FPsDataFastJsonSerializer(){};
 
-	FString JsonString;
+	FString& GetJsonString();
 
 private:
+	TArray<TCHAR> Buffer;
+	FString JsonString;
+
 	bool bPretty;
 	int32 Depth;
 
@@ -33,6 +37,8 @@ private:
 	void AppendValueSpace();
 
 public:
+	bool bSupportEscapedCharactersForKey;
+
 	virtual void WriteKey(const FString& Key) override;
 	virtual void WriteArray() override;
 	virtual void WriteObject() override;
@@ -92,6 +98,7 @@ struct PSDATA_API FPsDataFastJsonDeserializer : public FPsDataDeserializer
 {
 public:
 	FPsDataFastJsonDeserializer(const FString& InJsonString);
+
 	virtual ~FPsDataFastJsonDeserializer(){};
 
 private:

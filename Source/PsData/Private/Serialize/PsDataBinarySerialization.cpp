@@ -20,59 +20,59 @@ TSharedRef<FPsDataOutputStream> FPsDataBinarySerializer::GetOutputStream() const
 
 void FPsDataBinarySerializer::WriteKey(const FString& Key)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Key));
+	OutputStream->WriteUint8(EBinaryTokens::KeyBegin);
 	OutputStream->WriteString(Key);
 }
 
 void FPsDataBinarySerializer::WriteArray()
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::ArrayBegin));
+	OutputStream->WriteUint8(EBinaryTokens::ArrayBegin);
 }
 
 void FPsDataBinarySerializer::WriteObject()
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::ObjectBegin));
+	OutputStream->WriteUint8(EBinaryTokens::ObjectBegin);
 }
 
 void FPsDataBinarySerializer::WriteValue(int32 Value)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_int32));
+	OutputStream->WriteUint8(EBinaryTokens::Value_int32);
 	OutputStream->WriteInt32(Value);
 }
 
 void FPsDataBinarySerializer::WriteValue(int64 Value)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_int64));
+	OutputStream->WriteUint8(EBinaryTokens::Value_int64);
 	OutputStream->WriteInt64(Value);
 }
 
 void FPsDataBinarySerializer::WriteValue(uint8 Value)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_uint8));
+	OutputStream->WriteUint8(EBinaryTokens::Value_uint8);
 	OutputStream->WriteUint8(Value);
 }
 
 void FPsDataBinarySerializer::WriteValue(float Value)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_float));
+	OutputStream->WriteUint8(EBinaryTokens::Value_float);
 	OutputStream->WriteFloat(Value);
 }
 
 void FPsDataBinarySerializer::WriteValue(bool Value)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_bool));
+	OutputStream->WriteUint8(EBinaryTokens::Value_bool);
 	OutputStream->WriteBool(Value);
 }
 
 void FPsDataBinarySerializer::WriteValue(const FString& Value)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_FString));
+	OutputStream->WriteUint8(EBinaryTokens::Value_FString);
 	OutputStream->WriteString(Value);
 }
 
 void FPsDataBinarySerializer::WriteValue(const FName& Value)
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_FName));
+	OutputStream->WriteUint8(EBinaryTokens::Value_FName);
 	OutputStream->WriteString(Value.ToString());
 }
 
@@ -80,7 +80,7 @@ void FPsDataBinarySerializer::WriteValue(const UPsData* Value)
 {
 	if (Value == nullptr)
 	{
-		OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_null));
+		OutputStream->WriteUint8(EBinaryTokens::Value_null);
 	}
 	else
 	{
@@ -92,16 +92,17 @@ void FPsDataBinarySerializer::WriteValue(const UPsData* Value)
 
 void FPsDataBinarySerializer::PopKey(const FString& Key)
 {
+	OutputStream->WriteUint8(EBinaryTokens::KeyEnd);
 }
 
 void FPsDataBinarySerializer::PopArray()
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::ArrayEnd));
+	OutputStream->WriteUint8(EBinaryTokens::ArrayEnd);
 }
 
 void FPsDataBinarySerializer::PopObject()
 {
-	OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::ObjectEnd));
+	OutputStream->WriteUint8(EBinaryTokens::ObjectEnd);
 }
 
 /***********************************
@@ -114,27 +115,35 @@ FPsDataBinaryDeserializer::FPsDataBinaryDeserializer(TSharedRef<FPsDataInputStre
 {
 }
 
-bool FPsDataBinaryDeserializer::ReadToken(EBinaryTokens Token)
+TSharedRef<FPsDataInputStream> FPsDataBinaryDeserializer::GetInputStream() const
+{
+	return InputStream;
+}
+
+uint8 FPsDataBinaryDeserializer::ReadToken()
 {
 	if (!InputStream->HasData())
 	{
-		return false;
+		return EBinaryTokens::Null;
 	}
 
-	if (InputStream->ReadUint8() == static_cast<uint8>(Token))
+	return InputStream->ReadUint8();
+}
+
+bool FPsDataBinaryDeserializer::CheckToken(uint8 Token)
+{
+	if (Token == ReadToken())
 	{
 		return true;
 	}
-	else
-	{
-		InputStream->ShiftBack();
-		return false;
-	}
+
+	InputStream->ShiftBack();
+	return false;
 }
 
 bool FPsDataBinaryDeserializer::ReadKey(FString& OutKey)
 {
-	if (ReadToken(EBinaryTokens::Key))
+	if (CheckToken(EBinaryTokens::KeyBegin))
 	{
 		OutKey = InputStream->ReadString();
 		return true;
@@ -144,7 +153,7 @@ bool FPsDataBinaryDeserializer::ReadKey(FString& OutKey)
 
 bool FPsDataBinaryDeserializer::ReadIndex()
 {
-	if (ReadToken(EBinaryTokens::ArrayEnd))
+	if (CheckToken(EBinaryTokens::ArrayEnd))
 	{
 		InputStream->ShiftBack();
 		return false;
@@ -154,7 +163,7 @@ bool FPsDataBinaryDeserializer::ReadIndex()
 
 bool FPsDataBinaryDeserializer::ReadArray()
 {
-	if (ReadToken(EBinaryTokens::ArrayBegin))
+	if (CheckToken(EBinaryTokens::ArrayBegin))
 	{
 		return true;
 	}
@@ -163,7 +172,7 @@ bool FPsDataBinaryDeserializer::ReadArray()
 
 bool FPsDataBinaryDeserializer::ReadObject()
 {
-	if (ReadToken(EBinaryTokens::ObjectBegin))
+	if (CheckToken(EBinaryTokens::ObjectBegin))
 	{
 		return true;
 	}
@@ -172,7 +181,7 @@ bool FPsDataBinaryDeserializer::ReadObject()
 
 bool FPsDataBinaryDeserializer::ReadValue(int32& OutValue)
 {
-	if (ReadToken(EBinaryTokens::Value_int32))
+	if (CheckToken(EBinaryTokens::Value_int32))
 	{
 		OutValue = InputStream->ReadInt32();
 		return true;
@@ -182,7 +191,7 @@ bool FPsDataBinaryDeserializer::ReadValue(int32& OutValue)
 
 bool FPsDataBinaryDeserializer::ReadValue(int64& OutValue)
 {
-	if (ReadToken(EBinaryTokens::Value_int64))
+	if (CheckToken(EBinaryTokens::Value_int64))
 	{
 		OutValue = InputStream->ReadInt64();
 		return true;
@@ -192,7 +201,7 @@ bool FPsDataBinaryDeserializer::ReadValue(int64& OutValue)
 
 bool FPsDataBinaryDeserializer::ReadValue(uint8& OutValue)
 {
-	if (ReadToken(EBinaryTokens::Value_uint8))
+	if (CheckToken(EBinaryTokens::Value_uint8))
 	{
 		OutValue = InputStream->ReadUint8();
 		return true;
@@ -202,7 +211,7 @@ bool FPsDataBinaryDeserializer::ReadValue(uint8& OutValue)
 
 bool FPsDataBinaryDeserializer::ReadValue(float& OutValue)
 {
-	if (ReadToken(EBinaryTokens::Value_float))
+	if (CheckToken(EBinaryTokens::Value_float))
 	{
 		OutValue = InputStream->ReadFloat();
 		return true;
@@ -212,7 +221,7 @@ bool FPsDataBinaryDeserializer::ReadValue(float& OutValue)
 
 bool FPsDataBinaryDeserializer::ReadValue(bool& OutValue)
 {
-	if (ReadToken(EBinaryTokens::Value_bool))
+	if (CheckToken(EBinaryTokens::Value_bool))
 	{
 		OutValue = InputStream->ReadBool();
 		return true;
@@ -222,7 +231,7 @@ bool FPsDataBinaryDeserializer::ReadValue(bool& OutValue)
 
 bool FPsDataBinaryDeserializer::ReadValue(FString& OutValue)
 {
-	if (ReadToken(EBinaryTokens::Value_FString))
+	if (CheckToken(EBinaryTokens::Value_FString))
 	{
 		OutValue = InputStream->ReadString();
 		return true;
@@ -232,7 +241,7 @@ bool FPsDataBinaryDeserializer::ReadValue(FString& OutValue)
 
 bool FPsDataBinaryDeserializer::ReadValue(FName& OutValue)
 {
-	if (ReadToken(EBinaryTokens::Value_FName))
+	if (CheckToken(EBinaryTokens::Value_FName))
 	{
 		const FString String = InputStream->ReadString();
 		OutValue = *String;
@@ -243,7 +252,7 @@ bool FPsDataBinaryDeserializer::ReadValue(FName& OutValue)
 
 bool FPsDataBinaryDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator)
 {
-	if (ReadToken(EBinaryTokens::Value_null))
+	if (CheckToken(EBinaryTokens::Value_null))
 	{
 		OutValue = nullptr;
 		return true;
@@ -266,6 +275,8 @@ bool FPsDataBinaryDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator A
 
 void FPsDataBinaryDeserializer::PopKey(const FString& Key)
 {
+	const bool bSuccess = CheckToken(EBinaryTokens::KeyEnd);
+	check(bSuccess);
 }
 
 void FPsDataBinaryDeserializer::PopIndex()
@@ -274,12 +285,12 @@ void FPsDataBinaryDeserializer::PopIndex()
 
 void FPsDataBinaryDeserializer::PopArray()
 {
-	const bool bSuccess = ReadToken(EBinaryTokens::ArrayEnd);
+	const bool bSuccess = CheckToken(EBinaryTokens::ArrayEnd);
 	check(bSuccess);
 }
 
 void FPsDataBinaryDeserializer::PopObject()
 {
-	const bool bSuccess = ReadToken(EBinaryTokens::ObjectEnd);
+	const bool bSuccess = CheckToken(EBinaryTokens::ObjectEnd);
 	check(bSuccess);
 }

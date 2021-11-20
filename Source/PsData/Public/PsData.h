@@ -5,6 +5,7 @@
 #include "PsDataEvent.h"
 #include "PsDataField.h"
 #include "PsDataPromise.h"
+#include "Serialize/FPsDataImprintSerializer.h"
 #include "Serialize/PsDataSerialization.h"
 #include "Serialize/Stream/PsDataMD5OutputStream.h"
 
@@ -15,11 +16,18 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogData, VeryVerbose, All);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FPsDataDynamicDelegate, UPsDataEvent*, Event); // TBaseDynamicDelegate
-DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsDataEvent*);                       // TBaseDelegate
+DECLARE_DYNAMIC_DELEGATE_OneParam(FPsDataDynamicDelegate, UPsDataEvent*, Event);
+DECLARE_DELEGATE_OneParam(FPsDataDelegate, UPsDataEvent*);
+
+DECLARE_DELEGATE(FPsDataAsyncSerializeDelegate);
 
 class UPsData;
 class UPsDataRoot;
+
+namespace PsDataTools
+{
+struct FClassFields;
+}
 
 class PSDATA_API FDataDelegates
 {
@@ -40,12 +48,12 @@ struct PSDATA_API FAbstractDataProperty
 {
 	FAbstractDataProperty() {}
 	virtual ~FAbstractDataProperty() {}
-
 	virtual void Serialize(const UPsData* Instance, FPsDataSerializer* Serializer) = 0;
 	virtual void Deserialize(UPsData* Instance, FPsDataDeserializer* Deserializer) = 0;
 	virtual void Reset(UPsData* Instance) = 0;
-	virtual void Allocate(UPsData* Instance){};
-	virtual TSharedPtr<const FDataField> GetField() const = 0;
+	virtual bool IsDefault() const = 0;
+	virtual void Allocate(UPsData* Instance) {}
+	virtual const FDataField* GetField() const = 0;
 };
 
 /***********************************
@@ -59,11 +67,12 @@ struct PSDATA_API FPsDataFriend
 	static void ChangeDataName(UPsData* Data, const FString& Name, const FString& CollectionName);
 	static void AddChild(UPsData* Parent, UPsData* Data);
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
-	static void Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field);
+	static void Changed(UPsData* Data, const FDataField* Field);
 	static void InitProperties(UPsData* Data);
 	static TArray<FAbstractDataProperty*>& GetProperties(UPsData* Data);
 	static void Serialize(const UPsData* Data, FPsDataSerializer* Serializer);
 	static void Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer);
+	static const FPsDataImprint& GetImprint(const UPsData* Data);
 };
 } // namespace PsDataTools
 
@@ -75,15 +84,15 @@ struct FDelegateWrapper
 {
 	FPsDataDynamicDelegate DynamicDelegate;
 	FPsDataDelegate Delegate;
-	TSharedPtr<const FDataField> Field;
+	const FDataField* Field;
 
-	FDelegateWrapper(const FPsDataDynamicDelegate& InDynamicDelegate, TSharedPtr<const FDataField> InField = nullptr)
+	FDelegateWrapper(const FPsDataDynamicDelegate& InDynamicDelegate, const FDataField* InField = nullptr)
 		: DynamicDelegate(InDynamicDelegate)
 		, Field(InField)
 	{
 	}
 
-	FDelegateWrapper(const FPsDataDelegate& InDelegate, TSharedPtr<const FDataField> InField = nullptr)
+	FDelegateWrapper(const FPsDataDelegate& InDelegate, const FDataField* InField = nullptr)
 		: Delegate(InDelegate)
 		, Field(InField)
 	{
@@ -174,17 +183,19 @@ UCLASS(BlueprintType, Blueprintable)
 class PSDATA_API UPsData : public UObject
 {
 	GENERATED_UCLASS_BODY()
-
 private:
 	friend struct PsDataTools::FPsDataFriend;
 
 	/** Properties */
 	TArray<FAbstractDataProperty*> Properties;
 
-	/** Data name */
+	/** Data full key */
+	FString FullKey;
+
+	/** Data key */
 	FString DataKey;
 
-	/** Data collection name */
+	/** Data collection key */
 	FString CollectionKey;
 
 	/** Parent */
@@ -207,14 +218,29 @@ private:
 	/** Data hash */
 	mutable TOptional<FPsDataMD5Hash> Hash;
 
+	/** Data imprint */
+	mutable FPsDataImprint Imprint;
+
+	/** Async serialize buffer size after concatenation */
+	mutable int32 SerializeBufferSize;
+
+	/** Class fields */
+	const PsDataTools::FClassFields* ClassFields;
+
 private:
 	/** Post init properties */
 	virtual void PostInitProperties() override;
 
-	/** Drop hash */
-	void DropHash();
+	/** Drop imprint */
+	void DropImprint() const;
 
-	/** Calculate hash */
+	/** Drop hash */
+	void DropHash() const;
+
+	/** Calculate cache */
+	void CalculateImprint() const;
+
+	/** Calculate cache */
 	void CalculateHash() const;
 
 protected:
@@ -284,16 +310,16 @@ private:
 	void BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) const;
 
 	/** Bind internal */
-	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
+	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field = nullptr) const;
 
 	/** Bind internal */
-	FPsDataBind BindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
+	FPsDataBind BindInternal(const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field = nullptr) const;
 
 	/** Unbind internal */
-	void UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
+	void UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field = nullptr) const;
 
 	/** Unbind internal */
-	void UnbindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field = nullptr) const;
+	void UnbindInternal(const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field = nullptr) const;
 
 public:
 	/***********************************
@@ -302,6 +328,9 @@ public:
 
 	/** Serialize */
 	void DataSerialize(FPsDataSerializer* Serializer) const;
+
+	/** Async Serialize */
+	void DataSerializeAsync(FPsDataSerializer* Serializer, FPsDataAsyncSerializeDelegate CallbackDelegate) const;
 
 	/** Deserialize */
 	void DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch = false);
@@ -325,6 +354,10 @@ public:
 	/** Get collection key */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	const FString& GetCollectionKey() const;
+
+	/** Get full key */
+	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
+	const FString& GetFullKey() const;
 
 	/** Get parent */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")

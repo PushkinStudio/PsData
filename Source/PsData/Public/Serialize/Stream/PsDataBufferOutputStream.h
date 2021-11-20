@@ -16,12 +16,14 @@ public:
 	FPsDataBufferOutputStream();
 	virtual ~FPsDataBufferOutputStream(){};
 
-private:
+protected:
 	TArray<uint8> Buffer;
 
 public:
-	const TArray<uint8>& GetBuffer();
+	TArray<uint8>& GetBuffer();
+
 	void Reset();
+	void Reserve(int32 NumBytes);
 
 	virtual void WriteUint32(uint32 Value) override;
 	virtual void WriteInt32(int32 Value) override;
@@ -32,4 +34,8 @@ public:
 	virtual void WriteBool(bool Value) override;
 	virtual void WriteTCHAR(TCHAR Value) override;
 	virtual void WriteString(const FString& Value) override;
+	virtual void WriteBuffer(const TArray<uint8>& Value) override;
+	virtual void WriteBuffer(const uint8* Value, int32 Count) override;
+	virtual void WriteBuffer(TArray<uint8>&& Value) override;
+	virtual int32 Size() const override;
 };

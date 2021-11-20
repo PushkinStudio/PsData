@@ -48,8 +48,8 @@ public:
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
 
-	static void TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const void* Value);
-	static void* TypeDeserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, void* Value);
+	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const void* Value);
+	static void* TypeDeserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, void* Value);
 	static bool IsA(const FAbstractDataTypeContext* LeftContext, const FAbstractDataTypeContext* RightContext);
 };
 
@@ -134,7 +134,7 @@ struct FDataTypeContext<TMap<FString, T*>> : public FDataTypeContextExtended<TMa
 template <typename T>
 struct FTypeSerializer<T*>
 {
-	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const T* Value)
+	static void Serialize(const UPsData* Instance, const FDataField* Field, FPsDataSerializer* Serializer, const T* Value)
 	{
 		UPsDataUPsDataLibrary::TypeSerialize(Instance, Field, Serializer, Value);
 	}
@@ -143,7 +143,7 @@ struct FTypeSerializer<T*>
 template <typename T>
 struct FTypeDeserializer<T*>
 {
-	static T* Deserialize(UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, T* Value)
+	static T* Deserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, T* Value)
 	{
 		return static_cast<T*>(UPsDataUPsDataLibrary::TypeDeserialize(Instance, Field, Deserializer, Value));
 	}

@@ -4,13 +4,14 @@
 
 #include "PsDataCore.h"
 #include "PsDataDeferredTask.h"
-#include "PsDataProperty.h"
 #include "PsDataRoot.h"
 #include "Serialize/PsDataBinarySerialization.h"
 #include "Serialize/Stream/PsDataBufferInputStream.h"
 #include "Serialize/Stream/PsDataBufferOutputStream.h"
 #include "Serialize/Stream/PsDataMD5OutputStream.h"
 #include "Types/PsData_UPsData.h"
+
+#include "Async/Async.h"
 
 FSimpleMulticastDelegate FDataDelegates::OnPostDataModuleInit;
 TPsDataSimplePromise FDataDelegates::PostDataModuleInitPromise;
@@ -25,6 +26,7 @@ void FPsDataFriend::ChangeDataName(UPsData* Data, const FString& Name, const FSt
 {
 	if (Data->DataKey != Name || Data->CollectionKey != CollectionName)
 	{
+		Data->FullKey = CollectionName.IsEmpty() ? Name : (CollectionName + TEXT(".") + Name);
 		Data->DataKey = Name;
 		Data->CollectionKey = CollectionName;
 		if (Data->IsBound(UPsDataEvent::NameChanged, false))
@@ -44,6 +46,8 @@ void FPsDataFriend::AddChild(UPsData* Parent, UPsData* Data)
 
 	Data->Parent = Parent;
 	Parent->Children.Add(Data);
+
+	Data->DropImprint();
 
 	if (Data->IsBound(UPsDataEvent::AddedToParent, false))
 	{
@@ -76,15 +80,15 @@ void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 
 	if (bIsBound)
 	{
-		auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true);
+		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true);
 		Data->Broadcast(Event);
 		Parent->Broadcast(Event, Data);
 	}
 }
 
-void FPsDataFriend::Changed(UPsData* Data, const TSharedPtr<const FDataField>& Field)
+void FPsDataFriend::Changed(UPsData* Data, const FDataField* Field)
 {
-	Data->DropHash();
+	Data->DropImprint();
 
 	if (Field->Meta.bEvent && Data->IsBound(Field->GetChangedEventName(), Field->Meta.bBubbles))
 	{
@@ -123,6 +127,12 @@ void FPsDataFriend::Serialize(const UPsData* Data, FPsDataSerializer* Serializer
 void FPsDataFriend::Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer)
 {
 	Data->DataDeserializeInternal(Deserializer);
+}
+
+const FPsDataImprint& FPsDataFriend::GetImprint(const UPsData* Data)
+{
+	Data->CalculateImprint();
+	return Data->Imprint;
 }
 } // namespace PsDataTools
 
@@ -205,6 +215,8 @@ UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 	, Parent(nullptr)
 	, BroadcastInProgress(0)
 	, bChanged(false)
+	, SerializeBufferSize(1024)
+	, ClassFields(nullptr)
 {
 	PsDataTools::FDataReflection::PreConstruct(this);
 }
@@ -213,54 +225,72 @@ void UPsData::PostInitProperties()
 {
 	Super::PostInitProperties();
 
+	ClassFields = PsDataTools::FDataReflection::GetFieldsByClass(GetClass());
+
 	PsDataTools::FDataReflection::PostConstruct(this);
-	PsDataTools::FDataReflection::Fill(this);
 }
 
-void UPsData::DropHash()
+void UPsData::DropImprint() const
+{
+	Imprint.Reset();
+	DropHash();
+}
+
+void UPsData::DropHash() const
 {
 	Hash.Reset();
-	if (Parent.IsValid())
+	if (Parent.IsValid() && Parent->Hash.IsSet())
 	{
 		Parent->DropHash();
 	}
 }
 
+void UPsData::CalculateImprint() const
+{
+	if (!Imprint.IsSet())
+	{
+		FPsDataImprintBinarySerializer Serializer(&Imprint);
+		Serializer.WriteObject();
+		DataSerializeInternal(&Serializer);
+		Serializer.PopObject();
+
+		Imprint.Prepare();
+	}
+}
+
 void UPsData::CalculateHash() const
 {
-	struct HashBinarySerializer : public FPsDataBinarySerializer
+	if (!Hash.IsSet())
 	{
-		HashBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream)
-			: FPsDataBinarySerializer(InOutputStream)
+		CalculateImprint();
+		if (Imprint.HasChildren())
 		{
-		}
+			for (const auto& Child : Imprint.GetChildren())
+			{
+				Child.GetData()->CalculateHash();
+			}
 
-		void WriteValue(const UPsData* Value) override
+			FPsDataMD5OutputStream OutputStream;
+
+			uint64 A, B;
+			Imprint.GetHash().GetDigest(A, B);
+			OutputStream.WriteUint64(A);
+			OutputStream.WriteUint64(B);
+
+			for (const auto& Child : Imprint.GetChildren())
+			{
+				Child.GetData()->Hash->GetDigest(A, B);
+				OutputStream.WriteUint64(A);
+				OutputStream.WriteUint64(B);
+			}
+
+			Hash = OutputStream.GetHash();
+		}
+		else
 		{
-			if (Value == nullptr)
-			{
-				OutputStream->WriteUint8(static_cast<uint8>(EBinaryTokens::Value_null));
-			}
-			else
-			{
-				if (!Value->Hash.IsSet())
-				{
-					Value->CalculateHash();
-				}
-
-				const auto& Digest = Value->Hash->GetDigest();
-				for (auto Byte : Digest)
-				{
-					OutputStream->WriteUint8(Byte);
-				}
-			}
+			Hash = Imprint.GetHash();
 		}
-	};
-
-	auto OutputStream = MakeShared<FPsDataMD5OutputStream>();
-	HashBinarySerializer Serializer(OutputStream);
-	DataSerializeInternal(&Serializer);
-	Hash = OutputStream->GetHash();
+	}
 }
 
 void UPsData::InitProperties()
@@ -324,29 +354,29 @@ void UPsData::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 
 FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
-	check(Field.IsValid());
+	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
+	check(Field);
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
-	check(Field.IsValid());
+	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
+	check(Field);
 	return BindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
 {
-	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
-	check(Field.IsValid());
+	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
+	check(Field);
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
 
 void UPsData::Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const
 {
-	const TSharedPtr<const FDataField> Field = PsDataTools::FDataReflection::GetFieldByHash(GetClass(), FieldHash);
-	check(Field.IsValid());
+	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
+	check(Field);
 	UnbindInternal(Field->GetChangedEventName(), Delegate);
 }
 
@@ -422,7 +452,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 			for (auto& Wrapper : Copy)
 			{
 				bool bExecute = true;
-				if (Wrapper->Field.IsValid())
+				if (Wrapper->Field)
 				{
 					bExecute = false;
 					if (Previous == nullptr)
@@ -466,7 +496,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 	UpdateDelegates();
 }
 
-FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field) const
+FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field) const
 {
 	if (!Delegate.IsBound())
 	{
@@ -480,7 +510,7 @@ FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDynamicDeleg
 	return FPsDataBind(Ref);
 }
 
-FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field) const
+FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field) const
 {
 	if (!Delegate.IsBound())
 	{
@@ -494,7 +524,7 @@ FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDelegate& De
 	return FPsDataBind(Ref);
 }
 
-void UPsData::UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, TSharedPtr<const FDataField> Field) const
+void UPsData::UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field) const
 {
 	if (Delegate.IsBound())
 	{
@@ -514,7 +544,7 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& 
 	UpdateDelegates();
 }
 
-void UPsData::UnbindInternal(const FString& Type, const FPsDataDelegate& Delegate, TSharedPtr<const FDataField> Field) const
+void UPsData::UnbindInternal(const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field) const
 {
 	if (Delegate.IsBound())
 	{
@@ -543,6 +573,29 @@ void UPsData::DataSerialize(FPsDataSerializer* Serializer) const
 	Serializer->WriteValue(this);
 }
 
+void UPsData::DataSerializeAsync(FPsDataSerializer* Serializer, FPsDataAsyncSerializeDelegate CallbackDelegate) const
+{
+	auto OutputStream = MakeShared<FPsDataBufferOutputStream>();
+	OutputStream->Reserve(SerializeBufferSize * 2);
+
+	const auto StartOffset = FPsDataImprintBinarySerializer::Concatenate(OutputStream, this);
+	SerializeBufferSize = FMath::Max(SerializeBufferSize, OutputStream->Size());
+
+	auto WeakThis = MakeWeakObjectPtr(this);
+	AsyncTask(ENamedThreads::AnyHiPriThreadHiPriTask, [WeakThis, OutputStream, StartOffset, Serializer, CallbackDelegate]() {
+		const auto InputStream = MakeShared<FPsDataBufferInputStream>(OutputStream->GetBuffer());
+		FPsDataImprintBinaryDeserializer ImprintDeserializer(InputStream, StartOffset);
+		FPsDataImprintBinaryConvertor Convertor(&ImprintDeserializer);
+		Convertor.Convert(Serializer);
+		AsyncTask(ENamedThreads::GameThread, [WeakThis, CallbackDelegate]() {
+			if (WeakThis.IsValid())
+			{
+				CallbackDelegate.ExecuteIfBound();
+			}
+		});
+	});
+}
+
 void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch)
 {
 	if (!bPatch)
@@ -557,23 +610,28 @@ void UPsData::DataDeserialize(FPsDataDeserializer* Deserializer, bool bPatch)
 
 void UPsData::DataSerializeInternal(FPsDataSerializer* Serializer) const
 {
-	for (auto& Pair : PsDataTools::FDataReflection::GetAliasFields(this->GetClass()))
+	for (const auto Property : Properties)
 	{
-		Serializer->WriteKey(Pair.Key);
-		Properties[Pair.Value->Index]->Serialize(this, Serializer);
-		Serializer->PopKey(Pair.Key);
+		const auto Field = Property->GetField();
+		if (Property->IsDefault() && Field->Meta.bDefault)
+		{
+			continue;
+		}
+
+		const auto& Key = Field->GetNameForSerialize();
+		Serializer->WriteKey(Key);
+		Property->Serialize(this, Serializer);
+		Serializer->PopKey(Key);
 	}
 }
 
 void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
 {
-	const auto& Fields = PsDataTools::FDataReflection::GetAliasFields(this->GetClass());
 	FString Key;
 	while (Deserializer->ReadKey(Key))
 	{
-		if (const auto Find = Fields.Find(Key))
+		if (const auto Field = ClassFields->GetFieldByAlias(Key))
 		{
-			auto& Field = *Find;
 			Properties[Field->Index]->Deserialize(this, Deserializer);
 		}
 		else
@@ -601,6 +659,11 @@ const FString& UPsData::GetDataKey() const
 const FString& UPsData::GetCollectionKey() const
 {
 	return CollectionKey;
+}
+
+const FString& UPsData::GetFullKey() const
+{
+	return FullKey;
 }
 
 UPsData* UPsData::GetParent() const
@@ -631,45 +694,19 @@ bool UPsData::HasRoot() const
 
 FString UPsData::GetHash() const
 {
-	if (!Hash.IsSet())
-	{
-		CalculateHash();
-	}
-
+	CalculateHash();
 	return Hash.GetValue().ToString();
 }
 
 FString UPsData::GetPathFromRoot() const
 {
 	const UPsData* Current = this;
-	FString Path;
-	do
+	FString Path = Current->GetFullKey();
+	while (Current->GetParent())
 	{
-		const FString& CollectionName = Current->GetCollectionKey();
-		if (CollectionName.IsEmpty())
-		{
-			if (Path.IsEmpty())
-			{
-				Path = Current->GetDataKey();
-			}
-			else
-			{
-				Path = Current->GetDataKey() + TEXT(".") + Path;
-			}
-		}
-		else
-		{
-			if (Path.IsEmpty())
-			{
-				Path = CollectionName + TEXT(".") + Current->GetDataKey();
-			}
-			else
-			{
-				Path = CollectionName + TEXT(".") + Current->GetDataKey() + TEXT(".") + Path;
-			}
-		}
+		Current = Current->GetParent();
+		Path = Current->GetFullKey() + TEXT(".") + Path;
 	}
-	while ((Current = Current->GetParent()) != nullptr);
 	return Path;
 }
 
@@ -679,10 +716,9 @@ FString UPsData::GetPathFromRoot() const
 
 void UPsData::Reset()
 {
-	for (const auto& Pair : PsDataTools::FDataReflection::GetFields(GetClass()))
+	for (auto& Property : Properties)
 	{
-		const auto& Field = Pair.Value;
-		Properties[Field->Index]->Reset(this);
+		Property->Reset(this);
 	}
 
 	InitProperties();
@@ -692,10 +728,13 @@ void UPsData::Reset()
 UPsData* UPsData::Copy() const
 {
 	auto OutputStream = MakeShared<FPsDataBufferOutputStream>();
-	FPsDataBinarySerializer Serializer(OutputStream);
-	DataSerialize(&Serializer);
+	OutputStream->Reserve(SerializeBufferSize * 2);
+
+	const auto StartOffset = FPsDataImprintBinarySerializer::Concatenate(OutputStream, this);
+	SerializeBufferSize = FMath::Max(SerializeBufferSize, OutputStream->Size());
+
 	UPsData* Copy = NewObject<UPsData>(GetTransientPackage(), GetClass());
-	FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(OutputStream->GetBuffer()));
+	FPsDataImprintBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(OutputStream->GetBuffer()), StartOffset);
 	Copy->DataDeserialize(&Deserializer);
 	return Copy;
 }
@@ -709,20 +748,20 @@ TArray<FPsDataReport> UPsData::Validation() const
 	UPsData* RootData = Data->GetRoot();
 	const FString Path = GetPathFromRoot();
 
-	for (auto& Pair : PsDataTools::FDataReflection::GetLinks(GetClass()))
+	for (const auto Link : PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetLinksList())
 	{
-		const FString FieldPath = Path + TEXT(".") + Pair.Value->Name;
+		const FString FieldPath = Path + TEXT(".") + Link->Name;
 
-		if (Pair.Value->bAbstract)
+		if (Link->bAbstract)
 		{
 			Result.Add(FPsDataReport(EPsDataReportType::Logic, FieldPath, TEXT("Used abstract property")));
 		}
 		else
 		{
 			TArray<FString> Keys;
-			UPsDataFunctionLibrary::GetLinkKeys(Data, Pair.Value, Keys);
+			UPsDataFunctionLibrary::GetLinkKeys(Data, Link, Keys);
 			TMap<FString, UPsData*>* MapPtr = nullptr;
-			const FString& LinkPath = UPsDataFunctionLibrary::GetLinkPath(Data, Pair.Value);
+			const FString& LinkPath = UPsDataFunctionLibrary::GetLinkPath(Data, Link);
 			if (PsDataTools::GetByPath(RootData, LinkPath, MapPtr))
 			{
 				TMap<FString, UPsData*> Map = *MapPtr;
@@ -736,7 +775,7 @@ TArray<FPsDataReport> UPsData::Validation() const
 							Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property not found"), LinkPath + TEXT(".") + Key));
 						}
 					}
-					else if (!Pair.Value->Meta.bNullable)
+					else if (!Link->Meta.bNullable)
 					{
 						Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property is empty"), LinkPath + TEXT(".?")));
 					}
@@ -749,14 +788,14 @@ TArray<FPsDataReport> UPsData::Validation() const
 		}
 	}
 
-	for (auto& Pair : PsDataTools::FDataReflection::GetFields(this->GetClass()))
+	for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(this->GetClass())->GetFieldsList())
 	{
-		if (Pair.Value->Context->IsData())
+		if (Field->Context->IsData())
 		{
-			if (Pair.Value->Context->IsArray())
+			if (Field->Context->IsArray())
 			{
 				TArray<UPsData*>* Value = nullptr;
-				if (PsDataTools::GetByField(Data, Pair.Value, Value))
+				if (PsDataTools::GetByField(Data, Field, Value))
 				{
 					for (UPsData* Element : *Value)
 					{
@@ -767,10 +806,10 @@ TArray<FPsDataReport> UPsData::Validation() const
 					}
 				}
 			}
-			else if (Pair.Value->Context->IsMap())
+			else if (Field->Context->IsMap())
 			{
 				TMap<FString, UPsData*>* Value = nullptr;
-				if (PsDataTools::GetByField(Data, Pair.Value, Value))
+				if (PsDataTools::GetByField(Data, Field, Value))
 				{
 					for (const auto& ElementPair : *Value)
 					{
@@ -784,9 +823,9 @@ TArray<FPsDataReport> UPsData::Validation() const
 			else
 			{
 				UPsData** Value = nullptr;
-				if (PsDataTools::GetByField(Data, Pair.Value, Value))
+				if (PsDataTools::GetByField(Data, Field, Value))
 				{
-					if ((*Value))
+					if (*Value)
 					{
 						Result.Append((*Value)->Validation());
 					}

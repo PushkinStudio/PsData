@@ -61,7 +61,7 @@ public:
 	// End UK2Node interface.
 
 	/** Get property */
-	TSharedPtr<const FDataField> GetProperty() const;
+	const FDataField* GetProperty() const;
 
 	/** Update allocated pin */
 	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const;

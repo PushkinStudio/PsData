@@ -9,60 +9,267 @@
 
 namespace PsDataTools
 {
+FClassFields::FClassFields()
+{
+}
+
+FClassFields::~FClassFields()
+{
+	for (int32 i = 0; i < FieldsList.Num(); ++i)
+	{
+		auto Field = FieldsList[i];
+		delete Field;
+	}
+
+	FieldsList.Empty();
+	ConstFieldsList.Empty();
+
+	for (int32 i = 0; i < LinkList.Num(); ++i)
+	{
+		auto Link = LinkList[i];
+		delete Link;
+	}
+
+	LinkList.Empty();
+	ConstLinkList.Empty();
+
+	FieldsByName.Empty();
+	FieldsByAlias.Empty();
+	FieldsByHash.Empty();
+
+	LinksByName.Empty();
+	LinksByHash.Empty();
+}
+
+void FClassFields::AddField(FDataField* Field)
+{
+	FieldsList.Add(Field);
+	ConstFieldsList.Add(Field);
+
+	FieldsByName.Add(Field->Name, Field);
+	FieldsByAlias.Add(Field->GetAliasName(), Field);
+	FieldsByHash.Add(Field->Hash, Field);
+}
+
+void FClassFields::AddLink(FDataLink* Link)
+{
+	LinkList.RemoveAll([Link](const FDataLink* Item) {
+		return Item->Hash == Link->Hash;
+	});
+
+	ConstLinkList.RemoveAll([Link](const FDataLink* Item) {
+		return Item->Hash == Link->Hash;
+	});
+
+	LinkList.Add(Link);
+	ConstLinkList.Add(Link);
+
+	LinksByName.Add(Link->Name, Link);
+	LinksByHash.Add(Link->Hash, Link);
+}
+
+void FClassFields::Sort()
+{
+	FieldsList.StableSort([](const FDataField& A, const FDataField& B) {
+		return A.GetNameForSerialize() < B.GetNameForSerialize();
+	});
+
+	ConstFieldsList.StableSort([](const FDataField& A, const FDataField& B) {
+		return A.GetNameForSerialize() < B.GetNameForSerialize();
+	});
+
+	FieldsByHash.ValueStableSort([](const FDataField& A, const FDataField& B) -> bool {
+		return A.GetNameForSerialize() < B.GetNameForSerialize();
+	});
+
+	FieldsByName.ValueStableSort([](const FDataField& A, const FDataField& B) -> bool {
+		return A.GetNameForSerialize() < B.GetNameForSerialize();
+	});
+
+	FieldsByAlias.ValueStableSort([](const FDataField& A, const FDataField& B) -> bool {
+		return A.GetNameForSerialize() < B.GetNameForSerialize();
+	});
+}
+
+const TArray<FDataField*>& FClassFields::GetFieldsList()
+{
+	return FieldsList;
+}
+
+const TArray<const FDataField*>& FClassFields::GetFieldsList() const
+{
+	return ConstFieldsList;
+}
+
+FDataField* FClassFields::GetMutableField(const FDataField* Field)
+{
+	for (FDataField* MutableField : FieldsList)
+	{
+		if (MutableField == Field)
+		{
+			return MutableField;
+		}
+	}
+
+	checkNoEntry();
+	return nullptr;
+}
+
+const TArray<FDataLink*>& FClassFields::GetLinksList()
+{
+	return LinkList;
+}
+
+const TArray<const FDataLink*>& FClassFields::GetLinksList() const
+{
+	return ConstLinkList;
+}
+
+const FDataField* FClassFields::GetFieldByHash(int32 Hash) const
+{
+	const auto FieldPtr = FieldsByHash.Find(Hash);
+	return FieldPtr ? *FieldPtr : nullptr;
+}
+
+const FDataField* FClassFields::GetFieldByName(const FString& Name) const
+{
+	const auto FieldPtr = FieldsByName.Find(Name);
+	return FieldPtr ? *FieldPtr : nullptr;
+}
+
+const FDataField* FClassFields::GetFieldByAlias(const FString& Alias) const
+{
+	const auto FieldPtr = FieldsByAlias.Find(Alias);
+	return FieldPtr ? *FieldPtr : nullptr;
+}
+
+const FDataField* FClassFields::GetFieldByIndex(int32 Index) const
+{
+	return FieldsList.IsValidIndex(Index) ? FieldsList[Index] : nullptr;
+}
+
+const FDataField* FClassFields::GetFieldByHashChecked(int32 Hash) const
+{
+	return FieldsByHash.FindChecked(Hash);
+}
+
+const FDataField* FClassFields::GetFieldByNameChecked(const FString& Name) const
+{
+	return FieldsByName.FindChecked(Name);
+}
+
+const FDataField* FClassFields::GetFieldByAliasChecked(const FString& Alias) const
+{
+	return FieldsByAlias.FindChecked(Alias);
+}
+
+const FDataField* FClassFields::GetFieldByIndexChecked(int32 Index) const
+{
+	return FieldsList[Index];
+}
+
+bool FClassFields::HasFieldWithHash(int32 Hash) const
+{
+	return FieldsByHash.Contains(Hash);
+}
+
+bool FClassFields::HasFieldWithName(const FString& Name) const
+{
+	return FieldsByName.Contains(Name);
+}
+
+bool FClassFields::HasFieldWithAlias(const FString& Alias) const
+{
+	return HasFieldWithName(Alias) || FieldsByAlias.Contains(Alias);
+}
+
+bool FClassFields::HasFieldWithIndex(int32 Index) const
+{
+	return FieldsList.IsValidIndex(Index);
+}
+
+int32 FClassFields::GetNumFields() const
+{
+	return FieldsList.Num();
+}
+
+const FDataLink* FClassFields::GetLinkByHash(int32 Hash) const
+{
+	const auto LinkPtr = LinksByHash.Find(Hash);
+	return LinkPtr ? *LinkPtr : nullptr;
+}
+
+const FDataLink* FClassFields::GetLinkByName(const FString& Name) const
+{
+	const auto LinkPtr = LinksByName.Find(Name);
+	return LinkPtr ? *LinkPtr : nullptr;
+}
+
+const FDataLink* FClassFields::GetLinkByHashChecked(int32 Hash) const
+{
+	return LinksByHash.FindChecked(Hash);
+}
+
+const FDataLink* FClassFields::GetLinkByNameChecked(const FString& Name) const
+{
+	return LinksByName.FindChecked(Name);
+}
+
+int32 FClassFields::GetNumLinks() const
+{
+	return LinkList.Num();
+}
 
 TMap<UClass*, FClassFields> FDataReflection::FieldsByClass;
 TMap<FString, const TArray<FString>> FDataReflection::SplittedPath;
 TArray<const char*> FDataReflection::MetaCollection;
 bool FDataReflection::bCompiled = false;
 
-void FDataReflection::InitField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context, TSharedPtr<FDataField>& Field, UPsData* Instance, FAbstractDataProperty* Property)
+void FDataReflection::InitField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context, FDataField*& Field, UPsData* Instance, FAbstractDataProperty* Property)
 {
 	if (!bCompiled)
 	{
 		const FString FieldName(CharName);
 
 		UClass* OwnerClass = Instance->GetClass();
-		auto& Fields = FieldsByClass.FindOrAdd(OwnerClass);
+		auto& ClassFields = FieldsByClass.FindOrAdd(OwnerClass);
 
 #if !UE_BUILD_SHIPPING
-		if (Fields.FieldsByHash.Contains(Hash))
+		if (Field)
+		{
+			const auto SuperClassFields = FieldsByClass.Find(OwnerClass->GetSuperClass());
+			if (!SuperClassFields || SuperClassFields->GetFieldByName(FieldName) != Field)
+			{
+				UE_LOG(LogData, Fatal, TEXT("Attempting to recreate field %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
+			}
+		}
+		else if (ClassFields.HasFieldWithHash(Hash))
 		{
 			UE_LOG(LogData, Fatal, TEXT("Can't generate unique hash for property %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
 		}
-		else if (Fields.FieldsByName.Contains(CharName))
+		else if (ClassFields.HasFieldWithName(FieldName))
 		{
 			UE_LOG(LogData, Fatal, TEXT("Duplicate name for property %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
 		}
-#endif
+#endif // !UE_BUILD_SHIPPING
 
-		const int32 Index = Fields.FieldsList.Num();
+		const int32 Index = ClassFields.GetNumFields();
 
-		if (Field.IsValid())
+		if (!Field)
 		{
-#if !UE_BUILD_SHIPPING
-			check(FieldsByClass.FindChecked(OwnerClass->GetSuperClass()).FieldsByHash.FindChecked(Hash) == Field);
-#endif
+			Field = new FDataField(FieldName, Index, Hash, Context, MetaCollection);
 		}
-		else
-		{
-			Field = MakeShared<FDataField>(FieldName, Index, Hash, Context, MetaCollection);
-		}
-
-		const FString& AliasName = Field->Meta.bAlias ? Field->Meta.Alias : FieldName;
-
-#if !UE_BUILD_SHIPPING
-		if (Fields.FieldsByAlias.Contains(AliasName) || Fields.FieldsByName.Contains(AliasName))
-		{
-			UE_LOG(LogData, Fatal, TEXT("Duplicate alias for property %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
-		}
-#endif
 
 		MetaCollection.Reset();
 
-		Fields.FieldsList.Add(Field);
-		Fields.FieldsByName.Add(FieldName, Field);
-		Fields.FieldsByAlias.Add(AliasName, Field);
-		Fields.FieldsByHash.Add(Hash, Field);
+#if !UE_BUILD_SHIPPING
+		if (ClassFields.HasFieldWithAlias(Field->GetAliasName()))
+		{
+			UE_LOG(LogData, Fatal, TEXT("Duplicate alias for property %s::%s %d"), *OwnerClass->GetName(), *FieldName, Hash);
+		}
+#endif // !UE_BUILD_SHIPPING
+
+		ClassFields.AddField(Field);
 
 		UE_LOG(LogData, VeryVerbose, TEXT(" %02d %s %s::%s (%d)"), Index + 1, *Context->GetCppType(), *OwnerClass->GetName(), *FieldName, Hash);
 	}
@@ -79,12 +286,13 @@ void FDataReflection::InitLink(const char* CharName, const char* CharPath, const
 		const FString ReturnType(CharReturnType);
 
 		UClass* OwnerClass = Instance->GetClass();
+		auto& ClassFields = FieldsByClass.FindOrAdd(OwnerClass);
 
 		bool bPathProperty = false;
 		if (!bAbstract)
 		{
-			auto& PathField = GetFieldByName(OwnerClass, Path);
-			if (PathField.IsValid())
+			const auto PathField = ClassFields.GetFieldByName(Path);
+			if (PathField)
 			{
 				if (PathField->Context->IsA(&PsDataTools::GetContext<FString>()))
 				{
@@ -97,22 +305,18 @@ void FDataReflection::InitLink(const char* CharName, const char* CharPath, const
 			}
 		}
 
-		auto& Fields = FieldsByClass.FindOrAdd(OwnerClass);
-
-		if (const auto Find = Fields.LinksByHash.Find(Hash))
+		if (const auto ExistingLink = ClassFields.GetLinkByHash(Hash))
 		{
-			const auto Link = *Find;
-			if (!Link->bAbstract)
+			if (!ExistingLink->bAbstract || (ExistingLink->bAbstract && bAbstract))
 			{
-				UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s %d"), *OwnerClass->GetName(), *Link->Name, Hash);
+				UE_LOG(LogData, Fatal, TEXT("Can't override link for %s::%s %d"), *OwnerClass->GetName(), *ExistingLink->Name, Hash);
 			}
 		}
 
-		const TSharedPtr<const FDataLink> Link = MakeShared<FDataLink>(Name, Path, bPathProperty, ReturnType, Hash, bAbstract, bCollection, MetaCollection);
+		FDataLink* Link = new FDataLink(Name, Path, bPathProperty, ReturnType, Hash, bAbstract, bCollection, MetaCollection);
 		MetaCollection.Reset();
 
-		Fields.LinksByName.Add(Name, Link);
-		Fields.LinksByHash.Add(Hash, Link);
+		ClassFields.AddLink(Link);
 	}
 }
 
@@ -159,179 +363,61 @@ void FDataReflection::PostConstruct(UPsData* Instance)
 			MetaCollection.Reset();
 		}
 
-		auto& Fields = FieldsByClass.FindOrAdd(Class);
-		Fields.FieldsByHash.KeySort([](const int32& a, const int32& b) -> bool {
-			return a < b;
-		});
-
-		Fields.FieldsByName.KeySort([](const FString& a, const FString& b) -> bool {
-			return a < b;
-		});
-
-		Fields.FieldsByAlias.KeySort([](const FString& a, const FString& b) -> bool {
-			return a < b;
-		});
+		auto& ClassFields = FieldsByClass.FindOrAdd(Class);
+		ClassFields.Sort();
 
 		UE_LOG(LogData, VeryVerbose, TEXT("%s complete!"), *Class->GetName())
 	}
-}
 
-void FDataReflection::Fill(UPsData* Instance)
-{
 	const bool bDefaultObject = Instance->HasAnyFlags(EObjectFlags::RF_ClassDefaultObject | EObjectFlags::RF_DefaultSubObject);
 	if (bDefaultObject)
 	{
-		return;
-	}
-
-	auto& Properties = PsDataTools::FPsDataFriend::GetProperties(Instance);
-	for (const auto& Pair : FDataReflection::GetFields(Instance->GetClass()))
-	{
-		const auto& Field = Pair.Value;
-		if (Field->Meta.bStrict)
+		if (!bCompiled)
 		{
-			Properties[Field->Index]->Allocate(Instance);
+			UClass* Class = Instance->GetClass();
+			auto& ClassFields = FieldsByClass.FindOrAdd(Class);
+
+			FPsDataFriend::InitProperties(Instance);
+
+			for (const auto Property : FPsDataFriend::GetProperties(Instance))
+			{
+				auto ConstField = Property->GetField();
+				if (!Property->IsDefault() || ConstField->Meta.bStrict)
+				{
+					auto Field = ClassFields.GetMutableField(Property->GetField());
+					Field->Meta.bDefault = false;
+				}
+			}
 		}
 	}
-
-	Properties.Shrink();
-
-	if (!bDefaultObject)
+	else
 	{
-		PsDataTools::FPsDataFriend::InitProperties(Instance);
-	}
-}
+		auto& Properties = PsDataTools::FPsDataFriend::GetProperties(Instance);
+		Properties.Shrink();
 
-const TArray<FString>& FDataReflection::SplitPath(const FString& Path)
-{
-	if (const auto Find = SplittedPath.Find(Path))
-	{
-		return *Find;
-	}
-
-	TArray<FString> PathArray;
-	Path.ParseIntoArray(PathArray, TEXT("."));
-	return SplittedPath.Add(Path, std::move(PathArray));
-}
-
-const TSharedPtr<const FDataField>& FDataReflection::GetFieldByName(UClass* OwnerClass, const FString& Name)
-{
-	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
-	{
-		if (const auto FieldPtr = MapPtr->FieldsByName.Find(Name))
+		for (const auto Property : Properties)
 		{
-			return *FieldPtr;
+			const auto Field = Property->GetField();
+			if (Field->Meta.bStrict)
+			{
+				Properties[Field->Index]->Allocate(Instance);
+			}
 		}
-	}
 
-	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
-	return EmptySharedPtr;
+		FPsDataFriend::InitProperties(Instance);
+	}
 }
 
-const TSharedPtr<const FDataField>& FDataReflection::GetFieldByAlias(UClass* OwnerClass, const FString& Alias)
+const FClassFields* FDataReflection::GetFieldsByClass(const UClass* Class)
 {
-	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
+	auto ClassFields = FieldsByClass.Find(Class);
+	if (ClassFields)
 	{
-		if (const auto FieldPtr = MapPtr->FieldsByAlias.Find(Alias))
-		{
-			return *FieldPtr;
-		}
+		return ClassFields;
 	}
 
-	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
-	return EmptySharedPtr;
-}
-
-const TSharedPtr<const FDataField>& FDataReflection::GetFieldByHash(UClass* OwnerClass, int32 Hash)
-{
-	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
-	{
-		if (const auto FieldPtr = MapPtr->FieldsByHash.Find(Hash))
-		{
-			return *FieldPtr;
-		}
-	}
-
-	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
-	return EmptySharedPtr;
-}
-
-const TSharedPtr<const FDataField>& FDataReflection::GetFieldByIndex(UClass* OwnerClass, int32 Index)
-{
-	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
-	{
-		if (MapPtr->FieldsList.IsValidIndex(Index))
-		{
-			return MapPtr->FieldsList[Index];
-		}
-	}
-
-	static const TSharedPtr<const FDataField> EmptySharedPtr(nullptr);
-	return EmptySharedPtr;
-}
-
-const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetFields(const UClass* OwnerClass)
-{
-	const auto Find = FieldsByClass.Find(OwnerClass);
-	if (Find)
-	{
-		return Find->FieldsByName;
-	}
-
-	static TMap<FString, const TSharedPtr<const FDataField>> Empty;
-	return Empty;
-}
-
-const TMap<FString, const TSharedPtr<const FDataField>>& FDataReflection::GetAliasFields(const UClass* OwnerClass)
-{
-	const auto Find = FieldsByClass.Find(OwnerClass);
-	if (Find)
-	{
-		return Find->FieldsByAlias;
-	}
-
-	static TMap<FString, const TSharedPtr<const FDataField>> Empty;
-	return Empty;
-}
-
-const TSharedPtr<const FDataLink>& FDataReflection::GetLinkByName(UClass* OwnerClass, const FString& Name)
-{
-	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
-	{
-		if (const auto FieldPtr = MapPtr->LinksByName.Find(Name))
-		{
-			return *FieldPtr;
-		}
-	}
-
-	static const TSharedPtr<const FDataLink> EmptySharedPtr(nullptr);
-	return EmptySharedPtr;
-}
-
-const TSharedPtr<const FDataLink>& FDataReflection::GetLinkByHash(UClass* OwnerClass, int32 Hash)
-{
-	if (auto MapPtr = FieldsByClass.Find(OwnerClass))
-	{
-		if (const auto FieldPtr = MapPtr->LinksByHash.Find(Hash))
-		{
-			return *FieldPtr;
-		}
-	}
-
-	static const TSharedPtr<const FDataLink> EmptySharedPtr(nullptr);
-	return EmptySharedPtr;
-}
-
-const TMap<FString, const TSharedPtr<const FDataLink>>& FDataReflection::GetLinks(UClass* OwnerClass)
-{
-	const auto Find = FieldsByClass.Find(OwnerClass);
-	if (Find)
-	{
-		return Find->LinksByName;
-	}
-
-	static TMap<FString, const TSharedPtr<const FDataLink>> Empty;
-	return Empty;
+	static const FClassFields StaticClassFields;
+	return &StaticClassFields;
 }
 
 bool FDataReflection::HasClass(const UClass* OwnerClass)
@@ -347,13 +433,13 @@ void FDataReflection::Compile()
 	MetaCollection.Shrink();
 
 	TArray<UField*> ReadOnlyFields;
-	for (auto& MapPair : FieldsByClass)
+	for (auto& Pair : FieldsByClass)
 	{
-		for (auto& Pair : MapPair.Value.FieldsByHash)
+		for (auto Field : Pair.Value.GetFieldsList())
 		{
-			if (Pair.Value->Meta.bReadOnly)
+			if (Field->Meta.bReadOnly)
 			{
-				ReadOnlyFields.Add(Pair.Value->Context->GetUE4Type());
+				ReadOnlyFields.Add(Field->Context->GetUE4Type());
 			}
 		}
 	}
@@ -363,17 +449,16 @@ void FDataReflection::Compile()
 		UField* UEField = ReadOnlyFields.Pop();
 		if (UClass* Class = Cast<UClass>(UEField))
 		{
-			if (auto Find = FieldsByClass.Find(Class))
+			if (auto ClassFields = FieldsByClass.Find(Class))
 			{
-				for (auto& Pair : Find->FieldsByHash)
+				for (auto Field : ClassFields->GetFieldsList())
 				{
-					if (!Pair.Value->Meta.bReadOnly)
+					if (!Field->Meta.bReadOnly)
 					{
-						FDataField* Field = const_cast<FDataField*>(Pair.Value.Get());
 						Field->Meta.bReadOnly = true;
-						if (Pair.Value->Context->IsData())
+						if (Field->Context->IsData())
 						{
-							ReadOnlyFields.AddUnique(Pair.Value->Context->GetUE4Type());
+							ReadOnlyFields.AddUnique(Field->Context->GetUE4Type());
 						}
 					}
 				}
@@ -382,4 +467,15 @@ void FDataReflection::Compile()
 	}
 }
 
+const TArray<FString>& FDataReflection::SplitPath(const FString& Path)
+{
+	if (const auto Find = SplittedPath.Find(Path))
+	{
+		return *Find;
+	}
+
+	TArray<FString> PathArray;
+	Path.ParseIntoArray(PathArray, TEXT("."));
+	return SplittedPath.Add(Path, std::move(PathArray));
+}
 } // namespace PsDataTools

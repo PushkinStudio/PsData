@@ -49,8 +49,12 @@ public:
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
 
-	static void TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const uint8& Value);
-	static uint8 TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const uint8& Value);
+	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const uint8& Value);
+	static uint8 TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const uint8& Value);
+
+private:
+	static TMap<UEnum*, TMap<uint8, FString>> EnumValueToString;
+	static TMap<UEnum*, TMap<FString, uint8>> EnumStringToValue;
 };
 
 /***********************************
@@ -58,6 +62,12 @@ public:
  ***********************************/
 namespace PsDataTools
 {
+template <typename T>
+UEnum* FindUEnum()
+{
+	static auto Enum = FindObject<UEnum>(ANY_PACKAGE, *FType<T>::ContentType());
+	return Enum;
+}
 
 template <typename T>
 struct FEnumDataTypeContext : public FDataTypeContextExtended<T, UPsDataEnumLibrary>
@@ -66,7 +76,7 @@ struct FEnumDataTypeContext : public FDataTypeContextExtended<T, UPsDataEnumLibr
 
 	virtual UField* GetUE4Type() const override
 	{
-		return FindObject<UEnum>(ANY_PACKAGE, *FType<T>::ContentType());
+		return FindUEnum<T>();
 	}
 
 	bool HasExtendedTypeCheck() const override
@@ -95,7 +105,7 @@ struct FEnumDataTypeContext<TArray<T>> : public FDataTypeContextExtended<TArray<
 
 	virtual UField* GetUE4Type() const override
 	{
-		return FindObject<UEnum>(ANY_PACKAGE, *FType<T>::ContentType());
+		return FindUEnum<T>();
 	}
 
 	bool HasExtendedTypeCheck() const override
@@ -124,7 +134,7 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 
 	virtual UField* GetUE4Type() const override
 	{
-		return FindObject<UEnum>(ANY_PACKAGE, *FType<T>::ContentType());
+		return FindUEnum<T>();
 	}
 
 	bool HasExtendedTypeCheck() const override
@@ -145,56 +155,55 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 		return Hash0 == RContextHash || Hash1 == RContextHash;
 	}
 };
-
 } // namespace PsDataTools
 
 /***********************************
  * Macro DESCRIBE_ENUM
  ***********************************/
 
-#define DESCRIBE_ENUM(__Type__)                                                                                                                                  \
-	namespace PsDataTools                                                                                                                                        \
-	{                                                                                                                                                            \
-                                                                                                                                                                 \
-	template <>                                                                                                                                                  \
-	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                                                    \
-	{                                                                                                                                                            \
-		virtual ~FDataTypeContext() {}                                                                                                                           \
-	};                                                                                                                                                           \
-                                                                                                                                                                 \
-	template <>                                                                                                                                                  \
-	struct FDataTypeContext<TArray<__Type__>> : public FEnumDataTypeContext<TArray<__Type__>>                                                                    \
-	{                                                                                                                                                            \
-		virtual ~FDataTypeContext() {}                                                                                                                           \
-	};                                                                                                                                                           \
-                                                                                                                                                                 \
-	template <>                                                                                                                                                  \
-	struct FDataTypeContext<TMap<FString, __Type__>> : public FEnumDataTypeContext<TMap<FString, __Type__>>                                                      \
-	{                                                                                                                                                            \
-		virtual ~FDataTypeContext() {}                                                                                                                           \
-	};                                                                                                                                                           \
-                                                                                                                                                                 \
-	template <>                                                                                                                                                  \
-	struct FTypeDefault<__Type__>                                                                                                                                \
-	{                                                                                                                                                            \
-		static const __Type__ GetDefaultValue() { return static_cast<__Type__>(0); }                                                                             \
-	};                                                                                                                                                           \
-                                                                                                                                                                 \
-	template <>                                                                                                                                                  \
-	struct FTypeSerializer<__Type__>                                                                                                                             \
-	{                                                                                                                                                            \
-		static void Serialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const __Type__ Value)     \
-		{                                                                                                                                                        \
-			UPsDataEnumLibrary::TypeSerialize(Instance, Field, Serializer, static_cast<uint8>(Value));                                                           \
-		}                                                                                                                                                        \
-	};                                                                                                                                                           \
-                                                                                                                                                                 \
-	template <>                                                                                                                                                  \
-	struct FTypeDeserializer<__Type__>                                                                                                                           \
-	{                                                                                                                                                            \
-		static __Type__ Deserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, __Type__ Value) \
-		{                                                                                                                                                        \
-			return static_cast<__Type__>(UPsDataEnumLibrary::TypeDeserialize(Instance, Field, Deserializer, static_cast<uint8>(Value)));                         \
-		}                                                                                                                                                        \
-	};                                                                                                                                                           \
+#define DESCRIBE_ENUM(__Type__)                                                                                                                \
+	namespace PsDataTools                                                                                                                      \
+	{                                                                                                                                          \
+                                                                                                                                               \
+	template <>                                                                                                                                \
+	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                                  \
+	{                                                                                                                                          \
+		virtual ~FDataTypeContext() {}                                                                                                         \
+	};                                                                                                                                         \
+                                                                                                                                               \
+	template <>                                                                                                                                \
+	struct FDataTypeContext<TArray<__Type__>> : public FEnumDataTypeContext<TArray<__Type__>>                                                  \
+	{                                                                                                                                          \
+		virtual ~FDataTypeContext() {}                                                                                                         \
+	};                                                                                                                                         \
+                                                                                                                                               \
+	template <>                                                                                                                                \
+	struct FDataTypeContext<TMap<FString, __Type__>> : public FEnumDataTypeContext<TMap<FString, __Type__>>                                    \
+	{                                                                                                                                          \
+		virtual ~FDataTypeContext() {}                                                                                                         \
+	};                                                                                                                                         \
+                                                                                                                                               \
+	template <>                                                                                                                                \
+	struct FTypeDefault<__Type__>                                                                                                              \
+	{                                                                                                                                          \
+		static const __Type__ GetDefaultValue() { return static_cast<__Type__>(0); }                                                           \
+	};                                                                                                                                         \
+                                                                                                                                               \
+	template <>                                                                                                                                \
+	struct FTypeSerializer<__Type__>                                                                                                           \
+	{                                                                                                                                          \
+		static void Serialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const __Type__ Value)     \
+		{                                                                                                                                      \
+			UPsDataEnumLibrary::TypeSerialize(Instance, Field, Serializer, static_cast<uint8>(Value));                                         \
+		}                                                                                                                                      \
+	};                                                                                                                                         \
+                                                                                                                                               \
+	template <>                                                                                                                                \
+	struct FTypeDeserializer<__Type__>                                                                                                         \
+	{                                                                                                                                          \
+		static __Type__ Deserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, __Type__ Value) \
+		{                                                                                                                                      \
+			return static_cast<__Type__>(UPsDataEnumLibrary::TypeDeserialize(Instance, Field, Deserializer, static_cast<uint8>(Value)));       \
+		}                                                                                                                                      \
+	};                                                                                                                                         \
 	} // namespace PsDataTools

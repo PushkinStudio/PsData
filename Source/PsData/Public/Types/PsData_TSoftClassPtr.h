@@ -48,8 +48,8 @@ public:
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
 
-	static void TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const FSoftObjectPath& Value);
-	static FSoftObjectPath TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& Value);
+	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FSoftObjectPath& Value);
+	static FSoftObjectPath TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& Value);
 };
 
 namespace PsDataTools
@@ -100,7 +100,7 @@ struct FDataTypeContext<TMap<FString, TSoftClassPtr<T>>> : public FDataTypeConte
 template <typename T>
 struct FTypeSerializer<TSoftClassPtr<T>>
 {
-	static void Serialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const TSoftClassPtr<T>& Value)
+	static void Serialize(const UPsData* Instance, const FDataField* Field, FPsDataSerializer* Serializer, const TSoftClassPtr<T>& Value)
 	{
 		UPsDataTSoftClassPtrLibrary::TypeSerialize(Instance, Field, Serializer, Value.GetUniqueID());
 	}
@@ -109,7 +109,7 @@ struct FTypeSerializer<TSoftClassPtr<T>>
 template <typename T>
 struct FTypeDeserializer<TSoftClassPtr<T>>
 {
-	static TSoftClassPtr<T> Deserialize(const UPsData* Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const TSoftClassPtr<T>& Value)
+	static TSoftClassPtr<T> Deserialize(const UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const TSoftClassPtr<T>& Value)
 	{
 		return TSoftClassPtr<T>(UPsDataTSoftClassPtrLibrary::TypeDeserialize(Instance, Field, Deserializer, Value.GetUniqueID()));
 	}

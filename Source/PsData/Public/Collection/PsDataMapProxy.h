@@ -22,7 +22,7 @@ private:
 	THardObjectPtr<UPsData> Instance;
 	PsDataTools::FDataProperty<TMap<FString, T>>* Property;
 
-	static PsDataTools::FDataProperty<TMap<FString, T>>* GetProperty(UPsData* Instance, const TSharedPtr<const FDataField>& Field)
+	static PsDataTools::FDataProperty<TMap<FString, T>>* GetProperty(UPsData* Instance, const FDataField* Field)
 	{
 		TMap<FString, T>* Output = nullptr;
 		PsDataTools::GetByField(Instance, Field, Output);
@@ -40,7 +40,7 @@ protected:
 	}
 
 public:
-	FPsDataBaseMapProxy(UPsData* InInstance, const TSharedPtr<const FDataField>& InField)
+	FPsDataBaseMapProxy(UPsData* InInstance, const FDataField* InField)
 		: Instance(InInstance)
 		, Property(GetProperty(InInstance, InField))
 	{
@@ -49,7 +49,7 @@ public:
 
 	FPsDataBaseMapProxy(UPsData* InInstance, int32 Hash)
 		: Instance(InInstance)
-		, Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldByHash(InInstance->GetClass(), Hash)))
+		, Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHash(Hash)))
 	{
 		check(IsValid());
 	}
@@ -87,7 +87,7 @@ public:
 		Property = MapProxy.Property;
 	}
 
-	TSharedPtr<const FDataField> GetField() const
+	const FDataField* GetField() const
 	{
 		return Property->GetField();
 	}

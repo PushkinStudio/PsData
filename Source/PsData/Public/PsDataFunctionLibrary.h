@@ -23,10 +23,10 @@ public:
 	 ***********************************/
 
 	/** Get path by link hash */
-	static const FString& GetLinkPath(const UPsData* Target, TSharedPtr<const FDataLink> Link);
+	static const FString& GetLinkPath(const UPsData* Target, const FDataLink* Link);
 
 	/** Get keys by link hash */
-	static void GetLinkKeys(const UPsData* Target, TSharedPtr<const FDataLink> Link, TArray<FString>& OutKeys);
+	static void GetLinkKeys(const UPsData* Target, const FDataLink* Link, TArray<FString>& OutKeys);
 
 	/** Get data array property by hash */
 	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))

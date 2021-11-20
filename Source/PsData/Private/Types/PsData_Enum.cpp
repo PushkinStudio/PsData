@@ -2,6 +2,9 @@
 
 #include "Types/PsData_Enum.h"
 
+TMap<UEnum*, TMap<uint8, FString>> UPsDataEnumLibrary::EnumValueToString;
+TMap<UEnum*, TMap<FString, uint8>> UPsDataEnumLibrary::EnumStringToValue;
+
 DEFINE_FUNCTION(UPsDataEnumLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
@@ -74,29 +77,63 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataEnumLibrary::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const uint8& Value)
+void UPsDataEnumLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const uint8& Value)
 {
 	UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());
 	if (Enum)
 	{
-		Serializer->WriteValue(Enum->GetNameStringByValue(static_cast<int64>(Value)));
+		auto Map = EnumValueToString.Find(Enum);
+		if (!Map)
+		{
+			Map = &EnumValueToString.Add(Enum);
+			for (int32 i = 0; i < Enum->NumEnums(); ++i)
+			{
+				Map->Add(static_cast<uint8>(Enum->GetValueByIndex(i)), Enum->GetNameStringByIndex(i));
+			}
+		}
+
+		if (auto StringValue = Map->Find(Value))
+		{
+			Serializer->WriteValue(*StringValue);
+		}
+		else
+		{
+			Serializer->WriteValue(Value);
+		}
 	}
 	else
 	{
-		Serializer->WriteValue(static_cast<uint8>(Value));
+		Serializer->WriteValue(Value);
 	}
 }
 
-uint8 UPsDataEnumLibrary::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const uint8& Value)
+uint8 UPsDataEnumLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const uint8& Value)
 {
 	UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());
 	uint8 Result = 0;
 	if (Enum)
 	{
+		auto Map = EnumStringToValue.Find(Enum);
+		if (!Map)
+		{
+			Map = &EnumStringToValue.Add(Enum);
+			for (int32 i = 0; i < Enum->NumEnums(); ++i)
+			{
+				Map->Add(Enum->GetNameStringByIndex(i), static_cast<uint8>(Enum->GetValueByIndex(i)));
+			}
+		}
+
 		FString String;
 		if (Deserializer->ReadValue(String))
 		{
-			Result = static_cast<uint8>(Enum->GetValueByNameString(String, EGetByNameFlags::None));
+			if (auto UintValue = Map->Find(String))
+			{
+				Result = *UintValue;
+			}
+			else
+			{
+				UE_LOG(LogData, Warning, TEXT("Can't deserialize key \"%s\" for \"%s\""), *Field->Name, *Instance->GetPathFromRoot());
+			}
 		}
 		else
 		{

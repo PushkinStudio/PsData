@@ -7,44 +7,45 @@ void Write(FMD5& Md5Gen, const TArray<uint8>& Buffer)
 	Md5Gen.Update(Buffer.GetData(), Buffer.Num());
 }
 
+void Write(FMD5& Md5Gen, const uint8* Buffer, int32 Count)
+{
+	Md5Gen.Update(Buffer, Count);
+}
+
 /***********************************
  * FPsDataMD5Hash
  ***********************************/
 
 FPsDataMD5Hash::FPsDataMD5Hash(FMD5 Md5Gen)
 {
-	Digest.AddUninitialized(16);
-	Md5Gen.Final(Digest.GetData());
+	uint8 Data[16];
+	Md5Gen.Final(Data);
+
+	A = (static_cast<uint64>(Data[0]) << 56) | (static_cast<uint64>(Data[1]) << 48) | (static_cast<uint64>(Data[2]) << 40) | (static_cast<uint64>(Data[3]) << 32) |
+		(static_cast<uint64>(Data[4]) << 24) | (static_cast<uint64>(Data[5]) << 16) | (static_cast<uint64>(Data[6]) << 8) | (static_cast<uint64>(Data[7]));
+	B = (static_cast<uint64>(Data[8]) << 56) | (static_cast<uint64>(Data[9]) << 48) | (static_cast<uint64>(Data[10]) << 40) | (static_cast<uint64>(Data[11]) << 32) |
+		(static_cast<uint64>(Data[12]) << 24) | (static_cast<uint64>(Data[13]) << 16) | (static_cast<uint64>(Data[14]) << 8) | (static_cast<uint64>(Data[15]));
 }
 
-const TArray<uint8>& FPsDataMD5Hash::GetDigest()
+FString FPsDataMD5Hash::ToString() const
 {
-	return Digest;
+	return FString::Printf(TEXT("%016llx%016llx"), A, B);
 }
 
-FString FPsDataMD5Hash::ToString()
+uint32 FPsDataMD5Hash::ToUint32() const
 {
-	uint8* Data = Digest.GetData();
-	const uint32 i0 = (static_cast<uint32>(Data[0]) << 24) | (static_cast<uint32>(Data[1]) << 16) | (static_cast<uint32>(Data[2]) << 8) | static_cast<uint32>(Data[3]);
-	const uint32 i1 = (static_cast<uint32>(Data[4]) << 24) | (static_cast<uint32>(Data[5]) << 16) | (static_cast<uint32>(Data[6]) << 8) | static_cast<uint32>(Data[7]);
-	const uint32 i2 = (static_cast<uint32>(Data[8]) << 24) | (static_cast<uint32>(Data[9]) << 16) | (static_cast<uint32>(Data[10]) << 8) | static_cast<uint32>(Data[11]);
-	const uint32 i3 = (static_cast<uint32>(Data[12]) << 24) | (static_cast<uint32>(Data[13]) << 16) | (static_cast<uint32>(Data[14]) << 8) | static_cast<uint32>(Data[15]);
-	return FString::Printf(TEXT("%08x%08x%08x%08x"), i0, i1, i2, i3);
+	return static_cast<uint32>(A);
 }
 
-uint32 FPsDataMD5Hash::ToUint32()
+uint64 FPsDataMD5Hash::ToUint64() const
 {
-	uint8* Data = Digest.GetData();
-	const uint32 i0 = (static_cast<uint32>(Data[0]) << 24) | (static_cast<uint32>(Data[1]) << 16) | (static_cast<uint32>(Data[2]) << 8) | static_cast<uint32>(Data[3]);
-	return i0;
+	return A;
 }
 
-uint64 FPsDataMD5Hash::ToUint64()
+void FPsDataMD5Hash::GetDigest(uint64& OutA, uint64& OutB) const
 {
-	uint8* Data = Digest.GetData();
-	const uint32 i0 = (static_cast<uint32>(Data[0]) << 24) | (static_cast<uint32>(Data[1]) << 16) | (static_cast<uint32>(Data[2]) << 8) | static_cast<uint32>(Data[3]);
-	const uint32 i1 = (static_cast<uint32>(Data[4]) << 24) | (static_cast<uint32>(Data[5]) << 16) | (static_cast<uint32>(Data[6]) << 8) | static_cast<uint32>(Data[7]);
-	return (static_cast<uint64>(i0) << 32) | static_cast<uint64>(i1);
+	OutA = A;
+	OutB = B;
 }
 
 /***********************************
@@ -121,4 +122,24 @@ void FPsDataMD5OutputStream::WriteString(const FString& Value)
 	OutputSteram.WriteString(Value);
 	Write(Md5Gen, OutputSteram.GetBuffer());
 	OutputSteram.Reset();
+}
+
+void FPsDataMD5OutputStream::WriteBuffer(const TArray<uint8>& Value)
+{
+	Write(Md5Gen, Value);
+}
+
+void FPsDataMD5OutputStream::WriteBuffer(const uint8* Buffer, int32 Count)
+{
+	Write(Md5Gen, Buffer, Count);
+}
+
+void FPsDataMD5OutputStream::WriteBuffer(TArray<uint8>&& Value)
+{
+	Write(Md5Gen, Value);
+}
+
+int32 FPsDataMD5OutputStream::Size() const
+{
+	return 0;
 }

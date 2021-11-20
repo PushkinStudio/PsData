@@ -74,12 +74,12 @@ DEFINE_FUNCTION(UPsDataInt64Library::execGetProperty)
 	P_NATIVE_END;
 }
 
-void UPsDataInt64Library::TypeSerialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataSerializer* Serializer, const int64& Value)
+void UPsDataInt64Library::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const int64& Value)
 {
 	Serializer->WriteValue(Value);
 }
 
-int64 UPsDataInt64Library::TypeDeserialize(const UPsData* const Instance, const TSharedPtr<const FDataField>& Field, FPsDataDeserializer* Deserializer, const int64& Value)
+int64 UPsDataInt64Library::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const int64& Value)
 {
 	int64 Result = Value;
 	if (Deserializer->ReadValue(Result))

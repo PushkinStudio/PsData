@@ -6,7 +6,6 @@
 #include "PsDataAPI.h"
 
 #include "EdGraphSchema_K2.h"
-#include "Engine/CurveTable.h"
 #include "K2Node_CallFunction.h"
 #include "SGraphPin.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
@@ -35,16 +34,16 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::RemovedFromParent, TEXT(""), true)));
 	Events.Add(MakeShareable(new FEventPath(UPsDataEvent::Changed, TEXT(""), true)));
 
-	for (auto& Pair : PsDataTools::FDataReflection::GetFields(TargetClass))
+	for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(TargetClass)->GetFieldsList())
 	{
-		if (Pair.Value->Meta.bEvent)
+		if (Field->Meta.bEvent)
 		{
-			Events.Add(MakeShareable(new FEventPath(Pair.Value->GetChangedEventName(), TEXT(""), true)));
+			Events.Add(MakeShareable(new FEventPath(Field->GetChangedEventName(), TEXT(""), true)));
 		}
 
-		if (Pair.Value->Context->IsData())
+		if (Field->Context->IsData())
 		{
-			Children.Add(FHelperStruct(Pair.Value->Context->GetUE4Type(), Pair.Value->Name));
+			Children.Add(FHelperStruct(Field->Context->GetUE4Type(), Field->Name));
 		}
 	}
 
@@ -59,17 +58,17 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 			continue;
 		}
 
-		for (auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
+		for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(Class)->GetFieldsList())
 		{
-			FString Path = Child.Path + TEXT(".") + Pair.Value->Name;
-			if (Pair.Value->Meta.bEvent && Pair.Value->Meta.bBubbles)
+			FString Path = Child.Path + TEXT(".") + Field->Name;
+			if (Field->Meta.bEvent && Field->Meta.bBubbles)
 			{
-				Events.Add(MakeShareable(new FEventPath(Pair.Value->GetChangedEventName(), Path, false)));
+				Events.Add(MakeShareable(new FEventPath(Field->GetChangedEventName(), Path, false)));
 			}
 
-			if (Pair.Value->Context->IsData())
+			if (Field->Context->IsData())
 			{
-				Children.Add(FHelperStruct(Pair.Value->Context->GetUE4Type(), Path));
+				Children.Add(FHelperStruct(Field->Context->GetUE4Type(), Path));
 			}
 		}
 	}

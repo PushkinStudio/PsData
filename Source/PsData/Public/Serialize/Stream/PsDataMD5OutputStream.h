@@ -16,13 +16,14 @@ struct PSDATA_API FPsDataMD5Hash
 {
 	FPsDataMD5Hash(FMD5 Md5Gen);
 
-	const TArray<uint8>& GetDigest();
-	FString ToString();
-	uint32 ToUint32();
-	uint64 ToUint64();
+	FString ToString() const;
+	uint32 ToUint32() const;
+	uint64 ToUint64() const;
+	void GetDigest(uint64& OutA, uint64& OutB) const;
 
 private:
-	TArray<uint8> Digest;
+	uint64 A;
+	uint64 B;
 };
 
 /***********************************
@@ -51,4 +52,8 @@ public:
 	virtual void WriteBool(bool Value) override;
 	virtual void WriteTCHAR(TCHAR Value) override;
 	virtual void WriteString(const FString& Value) override;
+	virtual void WriteBuffer(const TArray<uint8>& Value) override;
+	virtual void WriteBuffer(const uint8* Buffer, int32 Count) override;
+	virtual void WriteBuffer(TArray<uint8>&& Value) override;
+	virtual int32 Size() const override;
 };

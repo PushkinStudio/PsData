@@ -7,8 +7,6 @@
 #include "Serialize/Stream/PsDataOutputStream.h"
 
 #include "CoreMinimal.h"
-#include "Dom/JsonObject.h"
-#include "Dom/JsonValue.h"
 
 class UPsData;
 
@@ -16,22 +14,38 @@ class UPsData;
  * Tokens for binary serializer/deserializer
  ***********************************/
 
-enum class EBinaryTokens : uint8
+namespace EBinaryTokens
 {
-	Key = 1,
-	ArrayBegin = 2,
-	ArrayEnd = 3,
-	ObjectBegin = 4,
-	ObjectEnd = 5,
-	Value_int32 = 6,
-	Value_int64 = 7,
-	Value_uint8 = 8,
-	Value_float = 9,
-	Value_bool = 10,
-	Value_FString = 11,
-	Value_FName = 12,
-	Value_null = 13,
-};
+constexpr uint8 Null = 0; // 0
+
+constexpr uint8 KeyBegin = '$'; // 36
+constexpr uint8 KeyEnd = '%';   // 37
+
+constexpr uint8 ArrayBegin = '['; // 91
+constexpr uint8 ArrayEnd = ']';   // 93
+
+constexpr uint8 ObjectBegin = '{'; // 123
+constexpr uint8 ObjectEnd = '}';   // 125
+
+constexpr uint8 Value_uint8 = 'A';  // 65
+constexpr uint8 Value_int8 = 'B';   // 66
+constexpr uint8 Value_uint16 = 'C'; // 67
+constexpr uint8 Value_int16 = 'D';  // 68
+constexpr uint8 Value_uint32 = 'E'; // 69
+constexpr uint8 Value_int32 = 'F';  // 70
+constexpr uint8 Value_uint64 = 'G'; // 71
+constexpr uint8 Value_int64 = 'H';  // 72
+constexpr uint8 Value_float = 'I';  // 73
+constexpr uint8 Value_double = 'J'; // 74
+
+constexpr uint8 Value_null = 'a';    // 97
+constexpr uint8 Value_bool = 'b';    // 98
+constexpr uint8 Value_FString = 'c'; // 99
+constexpr uint8 Value_FName = 'd';   // 100
+
+constexpr uint8 Redirect = 26;    // 26
+constexpr uint8 RedirectEnd = 10; // 10
+} // namespace EBinaryTokens
 
 /***********************************
  * FPsDataBinarySerializer
@@ -44,7 +58,7 @@ protected:
 
 public:
 	FPsDataBinarySerializer(TSharedRef<FPsDataOutputStream> InOutputStream);
-	virtual ~FPsDataBinarySerializer(){};
+	virtual ~FPsDataBinarySerializer() {}
 
 	TSharedRef<FPsDataOutputStream> GetOutputStream() const;
 
@@ -76,12 +90,13 @@ protected:
 
 public:
 	FPsDataBinaryDeserializer(TSharedRef<FPsDataInputStream> InInputStream);
-	virtual ~FPsDataBinaryDeserializer(){};
+	virtual ~FPsDataBinaryDeserializer() {}
 
-private:
-	bool ReadToken(EBinaryTokens Token);
+	TSharedRef<FPsDataInputStream> GetInputStream() const;
 
-public:
+	virtual uint8 ReadToken();
+	bool CheckToken(uint8 Token);
+
 	virtual bool ReadKey(FString& OutKey) override;
 	virtual bool ReadIndex() override;
 	virtual bool ReadArray() override;

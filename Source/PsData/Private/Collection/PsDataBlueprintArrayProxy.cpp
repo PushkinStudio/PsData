@@ -9,7 +9,7 @@ UPsDataBlueprintArrayProxy::UPsDataBlueprintArrayProxy(const class FObjectInitia
 {
 }
 
-void UPsDataBlueprintArrayProxy::Init(UPsData* Instance, const TSharedPtr<const FDataField> Field)
+void UPsDataBlueprintArrayProxy::Init(UPsData* Instance, const FDataField* Field)
 {
 	check(!Proxy.IsValid());
 	Proxy = FPsDataArrayProxy<UPsData*>(Instance, Field);

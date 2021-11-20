@@ -39,34 +39,41 @@
 
 #define _UNIQ(name) _TOKENPASTE_TwoParams(__d##name, __LINE__)
 
-#define _DPROP_DECLARE(__Type__, __Name__)                                                                                                        \
-	static_assert(!PsDataTools::TStringView::Equal(#__Name__, "Name"), "Bad property name");                                                      \
-                                                                                                                                                  \
-protected:                                                                                                                                        \
-	struct DPropType##__Name__                                                                                                                    \
-		: public PsDataTools::FDataProperty<__Type__>,                                                                                            \
-		  public FNoncopyable                                                                                                                     \
-	{                                                                                                                                             \
-		using PropertyType = __Type__;                                                                                                            \
-		static constexpr int32 PropertyHash = PsDataTools::TStringView(#__Name__).GetHash();                                                      \
-                                                                                                                                                  \
-		static TSharedPtr<FDataField>& StaticField()                                                                                              \
-		{                                                                                                                                         \
-			static TSharedPtr<FDataField> Field;                                                                                                  \
-			return Field;                                                                                                                         \
-		}                                                                                                                                         \
-                                                                                                                                                  \
-		DPropType##__Name__(const char* Name, UPsData* Instance)                                                                                  \
-		{                                                                                                                                         \
-			PsDataTools::FDataReflection::InitField(Name, PropertyHash, &PsDataTools::GetContext<PropertyType>(), StaticField(), Instance, this); \
-		}                                                                                                                                         \
-                                                                                                                                                  \
-		virtual TSharedPtr<const FDataField> GetField() const override                                                                            \
-		{                                                                                                                                         \
-			return StaticField();                                                                                                                 \
-		}                                                                                                                                         \
-	};                                                                                                                                            \
-                                                                                                                                                  \
+#define _DPROP_DECLARE(__Type__, __Name__)                                                                                                               \
+	static_assert(!PsDataTools::TStringView::Equal(#__Name__, "Name"), "Bad property name");                                                             \
+                                                                                                                                                         \
+protected:                                                                                                                                               \
+	struct DPropType##__Name__                                                                                                                           \
+		: public PsDataTools::FDataProperty<__Type__>,                                                                                                   \
+		  public FNoncopyable                                                                                                                            \
+	{                                                                                                                                                    \
+		using PropertyType = __Type__;                                                                                                                   \
+		static constexpr int32 PropertyHash = PsDataTools::TStringView(#__Name__).GetHash();                                                             \
+                                                                                                                                                         \
+	private:                                                                                                                                             \
+		static FDataField*& PrivateStaticField()                                                                                                         \
+		{                                                                                                                                                \
+			static FDataField* Field = nullptr;                                                                                                          \
+			return Field;                                                                                                                                \
+		}                                                                                                                                                \
+                                                                                                                                                         \
+	public:                                                                                                                                              \
+		static const FDataField* StaticField()                                                                                                           \
+		{                                                                                                                                                \
+			return PrivateStaticField();                                                                                                                 \
+		}                                                                                                                                                \
+                                                                                                                                                         \
+		DPropType##__Name__(const char* Name, UPsData* Instance)                                                                                         \
+		{                                                                                                                                                \
+			PsDataTools::FDataReflection::InitField(Name, PropertyHash, &PsDataTools::GetContext<PropertyType>(), PrivateStaticField(), Instance, this); \
+		}                                                                                                                                                \
+                                                                                                                                                         \
+		virtual const FDataField* GetField() const override                                                                                              \
+		{                                                                                                                                                \
+			return StaticField();                                                                                                                        \
+		}                                                                                                                                                \
+	};                                                                                                                                                   \
+                                                                                                                                                         \
 	DPropType##__Name__ __dprop_##__Name__{#__Name__, this};
 
 #define _DPROP_DEPRECATE(__Name__) DEPRECATED(0, "Property " __Name__ " was marked as deprecated")

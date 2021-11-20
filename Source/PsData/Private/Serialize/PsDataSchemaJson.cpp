@@ -33,9 +33,9 @@ TSharedPtr<FJsonObject> MakePsDataClassJson(const UClass* Class)
 	PsDataPtr->SetStringField(TEXT("CppType"), TEXT("U") + Class->GetName());
 
 	TArray<TSharedPtr<FJsonValue>> Children;
-	for (const auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
+	for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(Class)->GetFieldsList())
 	{
-		auto ChildPtr = MakePsDataChildJson(Pair.Value->Name, Pair.Value->Context);
+		auto ChildPtr = MakePsDataChildJson(Field->Name, Field->Context);
 		Children.Add(MakeShared<FJsonValueObject>(ChildPtr));
 	}
 	PsDataPtr->SetArrayField(TEXT("Children"), Children);
@@ -47,9 +47,9 @@ TArray<UEnum*> CollectEnums(const UClass* Class)
 {
 	TArray<UEnum*> Result;
 
-	for (const auto& Pair : PsDataTools::FDataReflection::GetFields(Class))
+	for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(Class)->GetFieldsList())
 	{
-		const auto& Context = Pair.Value->Context;
+		const auto& Context = Field->Context;
 		if (UField* FieldUE4Type = Context->GetUE4Type())
 		{
 			if (UEnum* FieldEnum = Cast<UEnum>(FieldUE4Type))

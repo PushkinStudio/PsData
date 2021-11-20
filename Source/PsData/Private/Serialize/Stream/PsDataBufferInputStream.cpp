@@ -123,6 +123,18 @@ void FPsDataBufferInputStream::ShiftBack()
 	PrevIndex = -1;
 }
 
+void FPsDataBufferInputStream::SetPosition(int32 Value)
+{
+	Index = Value;
+	PrevIndex = -1;
+	CheckRange();
+}
+
+int32 FPsDataBufferInputStream::GetPosition() const
+{
+	return Index;
+}
+
 void FPsDataBufferInputStream::CheckRange()
 {
 	check(Index < Buffer.Num());
