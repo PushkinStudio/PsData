@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
+
 namespace PsDataTools
 {
 
@@ -42,46 +44,71 @@ constexpr unsigned int crc32_table[] = {
 	0xBDBDF21C, 0xCABAC28A, 0x53B39330, 0x24B4A3A6, 0xBAD03605, 0xCDD70693, 0x54DE5729, 0x23D967BF,
 	0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D};
 
-constexpr unsigned int Compute(const char* data, int len, unsigned int crc = 0)
+constexpr unsigned int Compute(const char* Data, int32 Len, uint32 CRC)
 {
-	crc = crc ^ 0xFFFFFFFFU;
-	for (int i = 0; i < len; i++)
+	CRC = CRC ^ 0xFFFFFFFFU;
+	for (int i = 0; i < Len; i++)
 	{
-		crc = crc32_table[*data ^ (crc & 0xFF)] ^ (crc >> 8);
-		data++;
+		CRC = crc32_table[*Data ^ (CRC & 0xFF)] ^ (CRC >> 8);
+		Data++;
 	}
-	crc = crc ^ 0xFFFFFFFFU;
-	return crc;
+	CRC = CRC ^ 0xFFFFFFFFU;
+	return CRC;
 }
 
-constexpr unsigned int Compute(const char* data, unsigned int crc = 0)
+constexpr unsigned int Compute(const char* Data, uint32 CRC)
 {
-	crc = crc ^ 0xFFFFFFFFU;
-	while (*data)
+	CRC = CRC ^ 0xFFFFFFFFU;
+	while (*Data)
 	{
-		crc = crc32_table[*data ^ (crc & 0xFF)] ^ (crc >> 8);
-		data++;
+		CRC = crc32_table[*Data ^ (CRC & 0xFF)] ^ (CRC >> 8);
+		Data++;
 	}
-	crc = crc ^ 0xFFFFFFFFU;
-	return crc;
+	CRC = CRC ^ 0xFFFFFFFFU;
+	return CRC;
+}
+
+constexpr unsigned int Compute(const TCHAR* Data, int32 Len, uint32 CRC)
+{
+	CRC = CRC ^ 0xFFFFFFFFU;
+	for (int i = 0; i < Len; i++)
+	{
+		CRC = crc32_table[(*Data & 0xFF) ^ (CRC & 0xFF)] ^ (CRC >> 8);
+		Data++;
+	}
+	CRC = CRC ^ 0xFFFFFFFFU;
+	return CRC;
+}
+
+constexpr unsigned int Compute(const TCHAR* Data, uint32 CRC)
+{
+	CRC = CRC ^ 0xFFFFFFFFU;
+	while (*Data)
+	{
+		CRC = crc32_table[(*Data & 0xFF) ^ (CRC & 0xFF)] ^ (CRC >> 8);
+		Data++;
+	}
+	CRC = CRC ^ 0xFFFFFFFFU;
+	return CRC;
 }
 
 } // namespace CRC32
 
-struct TStringView
+template <typename T>
+struct TDataStringView
 {
 private:
-	static constexpr int Clamp(const int x, const int min, const int max)
+	static constexpr int Clamp(const int Value, const int Min, const int Max)
 	{
-		return x < min ? min : x < max ? x
-									   : max;
+		return (Value < Min) ? Min : (Value > Max) ? Max
+												   : Value;
 	}
 
 public:
-	static constexpr int GetSize(const char* data)
+	static constexpr int GetSize(const T* Data)
 	{
 		int i = 0;
-		while (*data++)
+		while (*Data++)
 		{
 			i++;
 		}
@@ -89,165 +116,478 @@ public:
 		return i;
 	}
 
-	static constexpr bool Equal(const char* lhs, const char* rhs)
+	static constexpr T ToLowerCase(T C)
 	{
-		while (*lhs || *rhs)
+		const T Delta = 'Z' - 'z';
+		if (C >= 'A' && C <= 'Z')
 		{
-			if (*lhs++ != *rhs++)
+			return C - Delta;
+		}
+		return C;
+	}
+
+	template <bool bIgnoreCase = false>
+	static constexpr bool Equal(const T* A, const T* B)
+	{
+		while (*A || *B)
+		{
+			if (bIgnoreCase)
 			{
-				return false;
+				if (ToLowerCase(*A) != ToLowerCase(*B))
+				{
+					return false;
+				}
+
+				++A;
+				++B;
+			}
+			else
+			{
+				if (*A++ != *B++)
+				{
+					return false;
+				}
 			}
 		}
 		return true;
 	}
 
-	static constexpr bool Equal(const char* lhs, int lhs_size, const char* rhs, int rhs_size)
+	template <bool bIgnoreCase = false>
+	static constexpr bool Equal(const T* A, int32 ASize, const T* B, int32 BSize)
 	{
-		if (lhs_size != rhs_size)
+		if (ASize != BSize)
 		{
 			return false;
 		}
 
-		while (lhs_size > 0)
+		while (ASize > 0)
 		{
-			if (*lhs++ != *rhs++)
+			if (bIgnoreCase)
 			{
-				return false;
+				if (ToLowerCase(*A) != ToLowerCase(*B))
+				{
+					return false;
+				}
+
+				++A;
+				++B;
+			}
+			else
+			{
+				if (*A++ != *B++)
+				{
+					return false;
+				}
 			}
 
-			--lhs_size;
+			--ASize;
 		}
 
 		return true;
 	}
 
-	static constexpr int Find(const char* lhs, int lhs_size, const char* rhs, int rhs_size)
+	static constexpr int32 Find(const T* A, int32 ASize, const T* B, int32 BSize)
 	{
-		int index = 0;
-		while (lhs_size >= rhs_size)
+		int32 Index = 0;
+		while (ASize >= BSize)
 		{
-			if (Equal(lhs++, rhs_size, rhs, rhs_size))
+			if (Equal(A++, BSize, B, BSize))
 			{
-				return index;
+				return Index;
 			}
 
-			++index;
-			--lhs_size;
+			++Index;
+			--ASize;
 		}
 
-		return -1;
+		return INDEX_NONE;
 	}
 
-	constexpr TStringView(const char* Data)
+	static constexpr int32 Find(const T* A, int32 ASize, const T C)
+	{
+		int32 Index = 0;
+		while (Index < ASize)
+		{
+			if (A[Index] == C)
+			{
+				return Index;
+			}
+
+			++Index;
+		}
+
+		return INDEX_NONE;
+	}
+
+	constexpr TDataStringView()
+		: Source(nullptr)
+		, Size(0)
+	{
+	}
+
+	constexpr TDataStringView(const T* Data)
 		: Source(Data)
 		, Size(GetSize(Data))
 	{
 	}
 
-	constexpr TStringView(const char* Data, int Len)
+	constexpr TDataStringView(const T* Data, int Len)
 		: Source(Data)
 		, Size(Len)
 	{
 	}
 
-	constexpr void operator=(const TStringView& Other)
+	template <bool bIgnoreCase = false>
+	constexpr bool Equal(const TDataStringView& Other) const
+	{
+		return Equal<bIgnoreCase>(Source, Size, Other.Source, Other.Size);
+	}
+
+	constexpr int Find(const TDataStringView& Other) const
+	{
+		return Find(Source, Size, Other.Source, Other.Size);
+	}
+
+	constexpr int Find(const T Char) const
+	{
+		return Find(Source, Size, Char);
+	}
+
+	constexpr TDataStringView Left(int32 CharCount) const
+	{
+		return TDataStringView(Source, Clamp(CharCount, 0, Size));
+	}
+
+	constexpr void LeftInline(int32 CharCount)
+	{
+		*this = Left(CharCount);
+	}
+
+	constexpr TDataStringView LeftChop(int32 CharCount) const
+	{
+		return TDataStringView(Source, Clamp(Size - CharCount, 0, Size));
+	}
+
+	constexpr void LeftChopInline(int32 CharCount)
+	{
+		*this = LeftChop(CharCount);
+	}
+
+	constexpr TDataStringView Right(int32 CharCount) const
+	{
+		const int NewLen = Clamp(CharCount, 0, Size);
+		return TDataStringView(Source + (Size - NewLen), NewLen);
+	}
+
+	constexpr void RightInline(int32 CharCount)
+	{
+		*this = Right(CharCount);
+	}
+
+	constexpr TDataStringView RightChop(int32 CharCount) const
+	{
+		const int NewLen = Clamp(Size - CharCount, 0, Size);
+		return TDataStringView(Source + (Size - NewLen), NewLen);
+	}
+
+	constexpr void RightChopInline(int32 CharCount)
+	{
+		*this = RightChop(CharCount);
+	}
+
+	constexpr TDataStringView Mid(int32 Position, int32 CharCount) const
+	{
+		Position = Clamp(Position, 0, Size);
+		CharCount = Clamp(CharCount, 0, Size - Position);
+		return TDataStringView(Source + Position, CharCount);
+	}
+
+	constexpr void MidInline(int32 Position, int32 CharCount)
+	{
+		*this = Mid(Position, CharCount);
+	}
+
+	constexpr TDataStringView LeftByChar(T Char) const
+	{
+		const auto CharIndex = Find(Char);
+		if (CharIndex == INDEX_NONE)
+		{
+			return TDataStringView(Source, Size);
+		}
+
+		return Left(CharIndex);
+	}
+
+	constexpr void LeftByCharInline(T Char)
+	{
+		*this = LeftByChar(Char);
+	}
+
+	constexpr TDataStringView RightByChar(T Char) const
+	{
+		const auto CharIndex = Find(Char);
+		if (CharIndex == INDEX_NONE)
+		{
+			return TDataStringView();
+		}
+
+		return RightChop(CharIndex);
+	}
+
+	constexpr void RightByCharInline(T Char)
+	{
+		*this = RightByChar(Char);
+	}
+
+	constexpr TDataStringView TrimLeft() const
+	{
+		int32 Count = 0;
+		while (Size > Count && Source[Count] == ' ')
+		{
+			Count++;
+		}
+		return TDataStringView(Source + Count, Size - Count);
+	}
+
+	constexpr void TrimLeftInline()
+	{
+		*this = TrimLeft();
+	}
+
+	constexpr TDataStringView TrimRight() const
+	{
+		int32 Count = 0;
+		while (Size > Count && Source[Size - Count - 1] == ' ')
+		{
+			Count++;
+		}
+		return TDataStringView(Source, Size - Count);
+	}
+
+	constexpr void TrimRightInline()
+	{
+		*this = TrimRight();
+	}
+
+	constexpr TDataStringView Trim() const
+	{
+		return TrimLeft().TrimRight();
+	}
+
+	constexpr void TrimInline()
+	{
+		*this = Trim();
+	}
+
+	constexpr TDataStringView TrimQuotes() const
+	{
+		if (Size >= 2)
+		{
+			auto Quote = Source[0];
+			if (Quote == '\'' || Quote == '"')
+			{
+				if (Source[Size - 1] == Quote)
+				{
+					return TDataStringView(Source + 1, Size - 2);
+				}
+			}
+		}
+
+		return TDataStringView(Source, Size);
+	}
+
+	constexpr void TrimQuotesInline()
+	{
+		*this = TrimQuotes();
+	}
+
+	constexpr const T* GetData() const
+	{
+		return Source;
+	}
+
+	constexpr int32 Len() const
+	{
+		return Size;
+	}
+
+	constexpr int32 GetHash() const
+	{
+		return CRC32::Compute(Source, Size, 0);
+	}
+
+	constexpr bool IsEmpty() const
+	{
+		return Size == 0;
+	}
+
+	constexpr void operator=(const TDataStringView& Other)
 	{
 		Source = Other.Source;
 		Size = Other.Size;
 	}
 
-	constexpr bool Equal(const TStringView& Other) const
+	constexpr T operator[](int32 Index) const
 	{
-		return Equal(Source, Size, Other.Source, Other.Size);
+		return Source[Index];
 	}
 
-	constexpr int Find(const TStringView& Other) const
+	constexpr bool operator==(const TDataStringView& Other) const
 	{
-		return Find(Source, Size, Other.Source, Other.Size);
+		return Equal(Other);
 	}
 
-	/** Returns the left-most part of the view by taking the given number of characters from the left. */
-	constexpr TStringView Left(int CharCount) const
+	constexpr bool operator==(const T* Other) const
 	{
-		return TStringView(Source, Clamp(CharCount, 0, Size));
+		return Equal(TDataStringView(Other));
 	}
 
-	/** Returns the left-most part of the view by taking the given number of characters from the left. */
-	constexpr void LeftInline(int CharCount)
+	constexpr bool operator!=(const T* Other) const
 	{
-		*this = Left(CharCount);
-	}
-
-	/** Returns the left-most part of the view by chopping the given number of characters from the right. */
-	constexpr TStringView LeftChop(int CharCount) const
-	{
-		return TStringView(Source, Clamp(Size - CharCount, 0, Size));
-	}
-
-	/** Returns the left-most part of the view by chopping the given number of characters from the right. */
-	constexpr void LeftChopInline(int CharCount)
-	{
-		*this = LeftChop(CharCount);
-	}
-
-	/** Returns the right-most part of the view by taking the given number of characters from the right. */
-	constexpr TStringView Right(int CharCount) const
-	{
-		const int OutLen = Clamp(CharCount, 0, Size);
-		return TStringView(Source + Size - OutLen, OutLen);
-	}
-
-	/** Returns the right-most part of the view by taking the given number of characters from the right. */
-	constexpr void RightInline(int CharCount)
-	{
-		*this = Right(CharCount);
-	}
-
-	/** Returns the right-most part of the view by chopping the given number of characters from the left. */
-	constexpr TStringView RightChop(int CharCount) const
-	{
-		const int OutLen = Clamp(Size - CharCount, 0, Size);
-		return TStringView(Source + Size - OutLen, OutLen);
-	}
-
-	/** Returns the right-most part of the view by chopping the given number of characters from the left. */
-	constexpr void RightChopInline(int CharCount)
-	{
-		*this = RightChop(CharCount);
-	}
-
-	/** Returns the middle part of the view by taking up to the given number of characters from the given position. */
-	constexpr TStringView Mid(int Position, int CharCount) const
-	{
-		Position = Clamp(Position, 0, Size);
-		CharCount = Clamp(CharCount, 0, Size - Position);
-		return TStringView(Source + Position, CharCount);
-	}
-
-	/** Returns the middle part of the view by taking up to the given number of characters from the given position. */
-	constexpr void MidInline(int Position, int CharCount)
-	{
-		*this = Mid(Position, CharCount);
-	}
-
-	constexpr const char* GetData() const
-	{
-		return Source;
-	}
-
-	constexpr int Len() const
-	{
-		return Size;
-	}
-
-	constexpr unsigned int GetHash() const
-	{
-		return CRC32::Compute(Source);
+		return !Equal(TDataStringView(Other));
 	}
 
 private:
-	const char* Source;
+	const T* Source;
 	int Size;
 };
 
+using FDataStringViewChar = TDataStringView<char>;
+using FDataStringViewTCHAR = TDataStringView<TCHAR>;
+
+constexpr FDataStringViewChar ToStringView(const char* Data)
+{
+	return FDataStringViewChar(Data);
+}
+
+FORCEINLINE FDataStringViewTCHAR ToStringView(const FString& String)
+{
+	return FDataStringViewTCHAR(String.GetCharArray().GetData(), String.Len());
+}
+
+FORCEINLINE FString ToFString(const FDataStringViewChar& StringView)
+{
+	return FString(StringView.Len(), StringView.GetData());
+}
+
+FORCEINLINE FString ToFString(const FDataStringViewTCHAR& StringView)
+{
+	return FString(StringView.Len(), StringView.GetData());
+}
+
+template <typename T>
+constexpr bool IsUnsignedInteger(const TDataStringView<T>& Str)
+{
+	const T* Data = Str.GetData();
+	const auto Len = Str.Len();
+
+	if (Len > 0)
+	{
+		for (int32 i = 0; i < Len; ++i)
+		{
+			const auto c = Data[i];
+			if (c < '0' && c > '9')
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+template <typename T>
+constexpr uint32 ToUnsignedInteger(const TDataStringView<T>& Str)
+{
+	const T* Data = Str.GetData();
+	const auto Len = Str.Len();
+
+	uint32 Result = 0;
+	if (Len > 0)
+	{
+		for (int32 i = Len - 1; i >= 0; --i)
+		{
+			Result *= 10;
+			const auto c = Data[i];
+			if (c >= '0' && c <= '9')
+			{
+				Result += static_cast<uint32>(c - '0');
+			}
+		}
+	}
+	return Result;
+}
+
+template <typename T>
+constexpr bool IsInteger(const TDataStringView<T>& Str)
+{
+	const T* Data = Str.GetData();
+	const auto Len = Str.Len();
+
+	if (Len > 0)
+	{
+		const bool bNegative = Data[0] == '-';
+		for (int32 i = bNegative ? 1 : 0; i < Len; ++i)
+		{
+			const auto c = Str.GetData()[i];
+			if (c < '0' && c > '9')
+			{
+				return false;
+			}
+		}
+
+		return bNegative ? Len > 1 : true;
+	}
+
+	return false;
+}
+
+template <typename T>
+constexpr int32 ToInteger(const TDataStringView<T>& Str)
+{
+	const T* Data = Str.GetData();
+	const auto Len = Str.Len();
+
+	int32 Result = 0;
+	if (Len > 0)
+	{
+		const bool bNegative = (Data[0] == '-');
+		const int32 Last = bNegative ? 1 : 0;
+
+		for (int32 i = Len - 1; i >= Last; --i)
+		{
+			Result *= 10;
+			const auto c = Data[i];
+			if (c >= '0' && c <= '9')
+			{
+				Result += static_cast<int32>(c - '0');
+			}
+		}
+
+		if (bNegative)
+		{
+			Result *= -1;
+		}
+	}
+	return Result;
+}
+
 } // namespace PsDataTools
+
+inline bool operator==(const PsDataTools::FDataStringViewTCHAR& StringView, const FString& String)
+{
+	return StringView.Equal(PsDataTools::ToStringView(String));
+}
+
+inline bool operator==(const FString& String, const PsDataTools::FDataStringViewTCHAR& StringView)
+{
+	return StringView.Equal(PsDataTools::ToStringView(String));
+}
+
+inline uint32 GetTypeHash(const PsDataTools::FDataStringViewTCHAR& StringView)
+{
+	// @see GetTypeHash(const FString&)
+	return FCrc::Strihash_DEPRECATED(StringView.Len(), StringView.GetData());
+}

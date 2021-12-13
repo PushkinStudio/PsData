@@ -89,9 +89,9 @@ void UPsDataNode_CollectionProxy::GetMenuActions(FBlueprintActionDatabaseRegistr
 	}
 }
 
-void UPsDataNode_CollectionProxy::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
+void UPsDataNode_CollectionProxy::UpdatePinByContext(EPsDataVariablePinType PinType, UEdGraphPin* Pin, int32 Index, FAbstractDataTypeContext* Context) const
 {
-	Super::UpdatePin(PinType, Pin);
+	Super::UpdatePinByContext(PinType, Pin, Index, Context);
 	if (PinType == EPsDataVariablePinType::PropertyOut || PinType == EPsDataVariablePinType::OldPropertyOut)
 	{
 		Pin->PinFriendlyName = FText::FromString(FString::Printf(TEXT("%s Proxy"), *PropertyName));

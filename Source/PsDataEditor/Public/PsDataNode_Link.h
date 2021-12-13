@@ -29,18 +29,12 @@ public:
 	/** Get link */
 	const FDataLink* GetLink() const;
 
-	/** Get return type */
-	UClass* GetReturnType(const FDataLink* Link) const;
-
-	/** Update link path */
-	void UpdateLink();
-
 	/** Update allocated pin */
 	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const override;
 
+	/** Update allocated pin */
+	virtual void UpdatePinByContext(EPsDataVariablePinType PinType, UEdGraphPin* Pin, int32 Index, FAbstractDataTypeContext* Context) const override;
+
 	/** Get function to call */
 	virtual UFunction* GetFunction() const override;
-
-	/** Node is link */
-	virtual bool IsLink() const override { return true; }
 };

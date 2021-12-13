@@ -49,8 +49,10 @@ bool FPsDataEventScopeGuard::IsGuarded()
 
 const FString UPsDataEvent::Added(TEXT("Added"));
 const FString UPsDataEvent::AddedToParent(TEXT("AddedToParent"));
+const FString UPsDataEvent::AddedToRoot(TEXT("AddedToRoot"));
 const FString UPsDataEvent::Removed(TEXT("Removed"));
 const FString UPsDataEvent::RemovedFromParent(TEXT("RemovedFromParent"));
+const FString UPsDataEvent::RemovedFromRoot(TEXT("RemovedFromRoot"));
 const FString UPsDataEvent::Changed(TEXT("Changed"));
 const FString UPsDataEvent::NameChanged(TEXT("NameChanged"));
 

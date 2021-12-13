@@ -74,6 +74,32 @@ DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
+DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_SOFTCLASS_REF(TSoftClassPtr<UObject>, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TSoftClassPtr<UObject>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataTSoftClassPtrLibrary::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(TSoftClassPtr<UObject>, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<TSoftClassPtr<UObject>>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
 void UPsDataTSoftClassPtrLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FSoftObjectPath& SoftObjectPath)
 {
 	static const FString AssetPathNameParam(TEXT("AssetPathName"));

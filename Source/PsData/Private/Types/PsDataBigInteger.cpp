@@ -1767,7 +1767,7 @@ void Shuffle(TArray<T>& Array)
 		}                                                                                                        \
 	}
 
-#endif // !UE_BUILD_SHIPPING
+#endif
 
 void FPsDataBigInteger::Test()
 {

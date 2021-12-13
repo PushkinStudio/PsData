@@ -2,6 +2,8 @@
 
 #include "Types/PsData_Enum.h"
 
+#include "Types/PsData_uint8.h"
+
 TMap<UEnum*, TMap<uint8, FString>> UPsDataEnumLibrary::EnumValueToString;
 TMap<UEnum*, TMap<FString, uint8>> UPsDataEnumLibrary::EnumStringToValue;
 
@@ -77,6 +79,32 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
+DEFINE_FUNCTION(UPsDataEnumLibrary::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_PROPERTY_REF(FByteProperty, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	uint8* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataEnumLibrary::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(uint8, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<uint8>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
 void UPsDataEnumLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const uint8& Value)
 {
 	UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());
@@ -129,23 +157,15 @@ uint8 UPsDataEnumLibrary::TypeDeserialize(const UPsData* const Instance, const F
 			if (auto UintValue = Map->Find(String))
 			{
 				Result = *UintValue;
+				return Result;
 			}
-			else
-			{
-				UE_LOG(LogData, Warning, TEXT("Can't deserialize key \"%s\" for \"%s\""), *Field->Name, *Instance->GetPathFromRoot());
-			}
-		}
-		else
-		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize key \"%s\" for \"%s\""), *Field->Name, *Instance->GetPathFromRoot());
 		}
 	}
-	else
+	else if (Deserializer->ReadValue(Result))
 	{
-		if (!Deserializer->ReadValue(Result))
-		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize key \"%s\" for \"%s\""), *Field->Name, *Instance->GetPathFromRoot());
-		}
+		return Result;
 	}
+
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *Field->Context->GetCppType());
 	return Result;
 }

@@ -255,7 +255,7 @@ AppendNumber(TArray<TCHAR>& JsonStringCharArray, T Value)
 		constexpr T MaxUintValue = PowerOfTen<std::numeric_limits<T>::digits10>();
 		constexpr uint32 InvEpsilon = PowerOfTen<Precision>();
 		constexpr T Epsilon = static_cast<T>(1) / static_cast<T>(InvEpsilon);
-		
+
 		/**
 		 * Default buffer size: "±" + A(minimum 10 digits) + "." + B(Precision) ≈ 18
 		 * Scientific notation buffer size: "±" + A(always 1 digit) + "." + B(Precision) + "e±" + E(maximum 4 digits) ≈ 15
@@ -442,7 +442,6 @@ using namespace PsDataTools;
 FPsDataFastJsonSerializer::FPsDataFastJsonSerializer(bool bInPretty, int32 BufferSize)
 	: bPretty(bInPretty)
 	, Depth(0)
-	, bSupportEscapedCharactersForKey(false)
 {
 	Buffer.Reserve(BufferSize / sizeof(TCHAR));
 }
@@ -501,24 +500,9 @@ void FPsDataFastJsonSerializer::WriteKey(const FString& Key)
 	AppendComma();
 	AppendSpace();
 
-	if (bSupportEscapedCharactersForKey)
-	{
-		AppendStringAsJsonString(Buffer, Key.GetCharArray().GetData(), 0, Key.Len());
-	}
-	else
-	{
-#if WITH_EDITOR
-		if (HasСharToEscape(Key.GetCharArray().GetData(), 0, Key.Len()))
-		{
-			UE_LOG(LogData, Fatal, TEXT("Unsupported key: \"%s\" has char to escape. Use FPsDataFastJsonSerializer::bSupportEscapedCharactersForKey flag"), *Key)
-		}
-#endif // WITH_EDITOR
-
-		Buffer.Add('"');
-		Buffer.Append(Key.GetCharArray().GetData(), Key.Len());
-		Buffer.Add('"');
-	}
-
+	Buffer.Add('"');
+	Buffer.Append(Key.GetCharArray().GetData(), Key.Len());
+	Buffer.Add('"');
 	Buffer.Add(':');
 }
 

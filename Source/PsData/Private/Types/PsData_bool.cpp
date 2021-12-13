@@ -74,6 +74,32 @@ DEFINE_FUNCTION(UPsDataBoolLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
+DEFINE_FUNCTION(UPsDataBoolLibrary::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_UBOOL_REF(Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	bool* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataBoolLibrary::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(bool, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<bool>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
 void UPsDataBoolLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const bool& Value)
 {
 	Serializer->WriteValue(Value);

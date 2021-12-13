@@ -4,12 +4,16 @@
 
 #include "PsData.h"
 #include "PsDataField.h"
-#include "PsDataFunctionLibrary.h"
 #include "PsDataProperty.h"
+#include "PsDataRoot.h"
+#include "PsDataStringView.h"
 #include "PsDataTraits.h"
 
 #include "CoreMinimal.h"
 #include "UObject/Package.h"
+
+#define PSDATA_DEFAULT_THROW_RULE (!UE_BUILD_SHIPPING)
+#define PSDATA_ABSTRACT_LINK_SALT 0xFF
 
 namespace PsDataTools
 {
@@ -21,21 +25,26 @@ struct PSDATA_API FClassFields
 
 	void AddField(FDataField* Field);
 	void AddLink(FDataLink* Link);
+	void AddSuper(const FClassFields& SuperFields);
 	void Sort();
+
+	FDataField* GetMutableField(const FDataField* Field);
 
 	const TArray<FDataField*>& GetFieldsList();
 	const TArray<const FDataField*>& GetFieldsList() const;
 
-	FDataField* GetMutableField(const FDataField* Field);
-
-	const TArray<FDataLink*>& GetLinksList();
-	const TArray<const FDataLink*>& GetLinksList() const;
-
+	FDataField* GetFieldByHash(int32 Hash);
+	FDataField* GetFieldByName(const FString& Name);
+	FDataField* GetFieldByAlias(const FString& Alias);
+	FDataField* GetFieldByIndex(int32 Index);
+	FDataField* GetFieldByHashChecked(int32 Hash);
+	FDataField* GetFieldByNameChecked(const FString& Name);
+	FDataField* GetFieldByAliasChecked(const FString& Alias);
+	FDataField* GetFieldByIndexChecked(int32 Index);
 	const FDataField* GetFieldByHash(int32 Hash) const;
 	const FDataField* GetFieldByName(const FString& Name) const;
 	const FDataField* GetFieldByAlias(const FString& Alias) const;
 	const FDataField* GetFieldByIndex(int32 Index) const;
-
 	const FDataField* GetFieldByHashChecked(int32 Hash) const;
 	const FDataField* GetFieldByNameChecked(const FString& Name) const;
 	const FDataField* GetFieldByAliasChecked(const FString& Alias) const;
@@ -48,64 +57,69 @@ struct PSDATA_API FClassFields
 
 	int32 GetNumFields() const;
 
-	const FDataLink* GetLinkByHash(int32 Hash) const;
-	const FDataLink* GetLinkByName(const FString& Name) const;
+	const TArray<FDataLink*>& GetLinksList();
+	const TArray<const FDataLink*>& GetLinksList() const;
 
+	FDataLink* GetLinkByHash(int32 Hash);
+	FDataLink* GetLinkByHashChecked(int32 Hash);
+
+	const FDataLink* GetLinkByHash(int32 Hash) const;
 	const FDataLink* GetLinkByHashChecked(int32 Hash) const;
-	const FDataLink* GetLinkByNameChecked(const FString& Name) const;
+
+	bool HasLinkWithHash(int32 Hash) const;
 
 	int32 GetNumLinks() const;
 
 private:
 	TArray<FDataField*> FieldsList;
 	TArray<const FDataField*> ConstFieldsList;
-	TMap<FString, const FDataField*> FieldsByName;
-	TMap<FString, const FDataField*> FieldsByAlias;
-	TMap<int32, const FDataField*> FieldsByHash;
+	TMap<FString, FDataField*> FieldsByName;
+	TMap<FString, FDataField*> FieldsByAlias;
+	TMap<int32, FDataField*> FieldsByHash;
 
 	TArray<FDataLink*> LinkList;
 	TArray<const FDataLink*> ConstLinkList;
-	TMap<FString, const FDataLink*> LinksByName;
-	TMap<int32, const FDataLink*> LinksByHash;
+	TMap<int32, FDataLink*> LinksByHash;
 };
 
 struct PSDATA_API FDataReflection
 {
 private:
 	static TMap<UClass*, FClassFields> FieldsByClass;
-	static TMap<FString, const TArray<FString>> SplittedPath;
-	static TArray<const char*> MetaCollection;
+	static TMap<const FDataField*, FLinkPathFunction> LinkPathFunctionByField;
+	static FDataRawMeta RawMeta;
+	static UClass* DescribedClass;
 
 	static bool bCompiled;
 
 public:
-	static void InitField(const char* CharName, int32 Hash, FAbstractDataTypeContext* Context, FDataField*& Field, UPsData* Instance, FAbstractDataProperty* Property);
-	static void InitLink(const char* CharName, const char* CharPath, const char* CharReturnType, int32 Hash, bool bAbstract, bool bCollection, UPsData* Instance);
-	static void InitMeta(const char* Meta);
+	static bool InitMeta(const char* MetaString);
+	static bool InitProperty(UClass* Class, const char* Name, FAbstractDataTypeContext* Context, FDataField*& OutField);
+	static bool InitLinkProperty(UClass* Class, const char* Name, bool bAbstract, FAbstractDataTypeContext* ReturnContext, FLinkPathFunction PathFunction, FDataLink*& OutLink);
 
-	static void PreConstruct(UPsData* Instance);
-	static void PostConstruct(UPsData* Instance);
+	static void PreConstruct(UClass* Class);
+	static void PostConstruct(UClass* Class);
 
 	static const FClassFields* GetFieldsByClass(const UClass* Class);
 	static bool HasClass(const UClass* OwnerClass);
 
 	static void Compile();
 
-	static const TArray<FString>& SplitPath(const FString& Path);
+	static bool IsBaseClass(const UClass* Class);
 };
 
 /***********************************
- * Base context
+ * Context
  ***********************************/
 
 template <typename T>
-struct FDataTypeContext : public FAbstractDataTypeContext
+struct TDataTypeContext : public FAbstractDataTypeContext
 {
 	static_assert(TAlwaysFalse<T>::value, "Unsupported type");
 };
 
 template <typename T, class L>
-struct FDataTypeContextExtended : public FAbstractDataTypeContext
+struct TDataTypeContextExtended : public FAbstractDataTypeContext
 {
 	virtual bool IsArray() const override
 	{
@@ -118,6 +132,12 @@ struct FDataTypeContextExtended : public FAbstractDataTypeContext
 	}
 
 	virtual FDataFieldFunctions GetUFunctions() const override
+	{
+		constexpr auto Type = TIsContainer<T>::Value ? EDataFieldType::VALUE : (TIsContainer<T>::Array ? EDataFieldType::ARRAY : EDataFieldType::MAP);
+		return {L::StaticClass(), Type};
+	}
+
+	virtual FDataLinkFunctions GetLinkUFunctions() const override
 	{
 		constexpr auto Type = TIsContainer<T>::Value ? EDataFieldType::VALUE : (TIsContainer<T>::Array ? EDataFieldType::ARRAY : EDataFieldType::MAP);
 		return {L::StaticClass(), Type};
@@ -139,7 +159,7 @@ struct FDataTypeContextExtended : public FAbstractDataTypeContext
 		return Hash;
 	}
 
-	virtual ~FDataTypeContextExtended()
+	virtual ~TDataTypeContextExtended() override
 	{
 	}
 };
@@ -156,14 +176,14 @@ UClass* GetClass()
 }
 
 template <typename T>
-FDataTypeContext<T>& GetContext()
+TDataTypeContext<T>& GetContext()
 {
-	static const TSharedPtr<FDataTypeContext<T>> Context(new FDataTypeContext<T>());
+	static const TSharedPtr<TDataTypeContext<T>> Context(new TDataTypeContext<T>());
 	return *Context.Get();
 }
 
 /***********************************
- * CHECK TYPE BY CONTEXT
+ * Check type by context
  ***********************************/
 
 template <typename T>
@@ -182,471 +202,634 @@ bool CheckType(FAbstractDataTypeContext* LeftContext, FAbstractDataTypeContext* 
 }
 
 /***********************************
- * GET PROPERTY VALUE BY FIELD
+ * Get value by field
  ***********************************/
 
-template <typename T>
+template <bool bThrowError, typename T>
 bool GetByField(UPsData* Instance, const FDataField* Field, T*& OutValue)
 {
-	if (CheckType<T>(&GetContext<T>(), Field->Context))
+	if (Instance && Field)
 	{
-		return UnsafeGet(Instance, Field, OutValue);
+		auto OutputContext = &GetContext<T>();
+		if (CheckType<T>(OutputContext, Field->Context))
+		{
+			UnsafeGet(Instance, Field, OutValue);
+			return true;
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't cast property %s::%s to %s"), *Instance->GetClass()->GetName(), *Field->Name, *OutputContext->GetCppType());
+		}
 	}
 	else
 	{
-		check(false && "Can't cast property to T");
-		OutValue = nullptr;
-		return false;
+		if (bThrowError && !Instance)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Instance is null"));
+		}
+
+		if (bThrowError && !Field)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Field is null"));
+		}
 	}
+
+	OutValue = nullptr;
+	return false;
+}
+
+template <bool bThrowError, bool bThrowContainerError, typename T>
+bool GetByFieldAndKey(UPsData* Instance, const FDataField* Field, const FString& Key, T*& OutValue)
+{
+	if (Instance && Field)
+	{
+		if (Field->Context->IsMap())
+		{
+			TMap<FString, T>* MapPtr = nullptr;
+			if (GetByField<bThrowError>(Instance, Field, MapPtr))
+			{
+				if (auto ValuePtr = MapPtr->Find(Key))
+				{
+					OutValue = ValuePtr;
+					return true;
+				}
+				else if (bThrowContainerError)
+				{
+					UE_LOG(LogData, Fatal, TEXT("Can't find \"%s\" in %s::%s"), *Key, *Instance->GetClass()->GetName(), *Field->Name);
+				}
+			}
+		}
+		else if (Field->Context->IsArray())
+		{
+			const auto KeyView = ToStringView(Key);
+			if (IsUnsignedInteger(KeyView))
+			{
+				TArray<T>* ArrayPtr = nullptr;
+				if (GetByField<bThrowError>(Instance, Field, ArrayPtr))
+				{
+					const auto Index = ToUnsignedInteger(KeyView);
+					if (ArrayPtr->IsValidIndex(Index))
+					{
+						OutValue = &(*ArrayPtr)[Index];
+						return true;
+					}
+					else if (bThrowContainerError)
+					{
+						UE_LOG(LogData, Fatal, TEXT("Can't find \"%d\" in %s::%s out of bounds (array size: %d)"), Index, *Instance->GetClass()->GetName(), *Field->Name, ArrayPtr->Num());
+					}
+				}
+			}
+			else if (bThrowError)
+			{
+				UE_LOG(LogData, Fatal, TEXT("Can't find \"%s\" in %s::%s invalid index"), *Key, *Instance->GetClass()->GetName(), *Field->Name);
+			}
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Field is not container"));
+		}
+	}
+	else
+	{
+		if (bThrowError && !Instance)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Instance is null"));
+		}
+
+		if (bThrowError && !Field)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Field is null"));
+		}
+	}
+
+	OutValue = nullptr;
+	return false;
 }
 
 /***********************************
- * GET PROPERTY VALUE BY FIELD (for nested collections)
+ * Get value by hash
  ***********************************/
 
-template <typename T>
-bool GetByField(UPsData* Instance, const FDataField* Field, TArray<TArray<T>>*& OutValue)
-{
-	checkNoEntry();
-	OutValue = nullptr;
-	return false;
-}
-
-template <typename T>
-bool GetByField(UPsData* Instance, const FDataField* Field, TArray<TMap<FString, T>>*& OutValue)
-{
-	checkNoEntry();
-	OutValue = nullptr;
-	return false;
-}
-
-template <typename T>
-bool GetByField(UPsData* Instance, const FDataField* Field, TMap<FString, TArray<T>>*& OutValue)
-{
-	checkNoEntry();
-	OutValue = nullptr;
-	return false;
-}
-
-template <typename T>
-bool GetByField(UPsData* Instance, const FDataField* Field, TMap<FString, TMap<FString, T>>*& OutValue)
-{
-	checkNoEntry();
-	OutValue = nullptr;
-	return false;
-}
-
-/***********************************
- * GET PROPERTY VALUE BY HASH
- ***********************************/
-
-template <typename T>
+template <bool bThrowError, typename T>
 bool GetByHash(UPsData* Instance, int32 Hash, T*& OutValue)
 {
-	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByHash(Hash);
-	if (Field)
+	if (Instance)
 	{
-		return GetByField(Instance, Field, OutValue);
+		const auto InstanceClass = Instance->GetClass();
+		const auto Field = FDataReflection::GetFieldsByClass(InstanceClass)->GetFieldByHash(Hash);
+		if (Field)
+		{
+			return GetByField<bThrowError>(Instance, Field, OutValue);
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't find property with hash \"%d\" for %s"), Hash, *InstanceClass->GetName());
+		}
+	}
+	else if (bThrowError)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Instance is null"));
 	}
 
-	check(false && "Can't find property by hash");
+	OutValue = nullptr;
+	return false;
+}
+
+template <bool bThrowError, typename T>
+bool GetByHashAndKey(UPsData* Instance, int32 Hash, const FString& Key, T*& OutValue)
+{
+	if (Instance)
+	{
+		const auto InstanceClass = Instance->GetClass();
+		const auto Field = FDataReflection::GetFieldsByClass(InstanceClass)->GetFieldByHash(Hash);
+		if (Field)
+		{
+			return GetByFieldAndKey<bThrowError>(Instance, Field, Key, OutValue);
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't find property with hash \"%d\" for %s"), Hash, *InstanceClass->GetName());
+		}
+	}
+	else if (bThrowError)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Instance is null"));
+	}
+
+	OutValue = nullptr;
 	return false;
 }
 
 /***********************************
- * GET PROPERTY VALUE BY PATH
+ * Get value by name
  ***********************************/
 
-template <typename T>
-bool GetByPath(UPsData* Instance, const TArray<FString>& Path, int32 PathOffset, int32 PathLength, T*& OutValue)
+template <bool bThrowError, typename T>
+bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
 {
-	const int32 Delta = PathLength - PathOffset;
-	OutValue = nullptr;
-
-	check(PathLength <= Path.Num());
-	check(Delta > 0);
-
-	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Path[PathOffset]);
-	if (Field)
+	if (Instance)
 	{
-		if (Delta == 1)
+		const auto InstanceClass = Instance->GetClass();
+		const auto Field = FDataReflection::GetFieldsByClass(InstanceClass)->GetFieldByName(Name);
+		if (Field)
 		{
-			return GetByField(Instance, Field, OutValue);
+			return GetByField<bThrowError>(Instance, Field, OutValue);
 		}
-		else if (Delta > 1)
+		else if (bThrowError)
 		{
-			const bool bArray = Field->Context->IsArray();
-			const bool bMap = Field->Context->IsMap();
-			const bool bData = Field->Context->IsData();
-
-			if (!bArray && !bMap)
-			{
-				if (bData)
-				{
-					UPsData** DataPtr = nullptr;
-					if (GetByPath<UPsData*>(Instance, Path, PathOffset, PathOffset + 1, DataPtr))
-					{
-						UPsData* Data = *DataPtr;
-						if (Data)
-						{
-							return GetByPath<T>(Data, Path, PathOffset + 1, Path.Num(), OutValue);
-						}
-						else
-						{
-							check(false && "Can't use nullptr property");
-							return false;
-						}
-					}
-					else
-					{
-						return false;
-					}
-				}
-				else
-				{
-					check(false && "Can't use property without children");
-					return false;
-				}
-			}
-			else if (bArray)
-			{
-				if (bData)
-				{
-					TArray<UPsData*>* ArrayPtr = nullptr;
-					if (GetByField(Instance, Field, ArrayPtr))
-					{
-						TArray<UPsData*>& Array = *ArrayPtr;
-						const FString& StringArrayIndex = Path[PathOffset + 1];
-						if (StringArrayIndex.IsNumeric())
-						{
-							const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
-							if (Array.IsValidIndex(ArrayIndex))
-							{
-								if (Array[ArrayIndex])
-								{
-									return GetByPath<T>(Array[ArrayIndex], Path, PathOffset + 2, Path.Num(), OutValue);
-								}
-								else
-								{
-									check(false && "Can't use nullptr property");
-									return false;
-								}
-							}
-							else
-							{
-								check(false && "Can't find property by index");
-								return false;
-							}
-						}
-						else
-						{
-							check(false && "Can't use property as index");
-							return false;
-						}
-					}
-					else
-					{
-						return false;
-					}
-				}
-				else
-				{
-					TArray<T>* ArrayPtr = nullptr;
-					if (GetByField(Instance, Field, ArrayPtr))
-					{
-						TArray<T>& Array = *ArrayPtr;
-						const FString& StringArrayIndex = Path[PathOffset + 1];
-						if (StringArrayIndex.IsNumeric())
-						{
-							const int32 ArrayIndex = FCString::Atoi(*StringArrayIndex);
-							if (Array.IsValidIndex(ArrayIndex))
-							{
-								OutValue = &Array[ArrayIndex];
-								return true;
-							}
-							else
-							{
-								check(false && "Can't find property by index");
-								return false;
-							}
-						}
-						else
-						{
-							check(false && "Can't use property as index");
-							return false;
-						}
-					}
-					else
-					{
-						return false;
-					}
-				}
-			}
-			else if (bMap)
-			{
-				if (bData)
-				{
-					TMap<FString, UPsData*>* MapPtr = nullptr;
-					if (GetByField(Instance, Field, MapPtr))
-					{
-						TMap<FString, UPsData*>& Map = *MapPtr;
-						const FString& Key = Path[PathOffset + 1];
-						UPsData** DataPtr = Map.Find(Key);
-						if (DataPtr)
-						{
-							return GetByPath<T>(*DataPtr, Path, PathOffset + 2, Path.Num(), OutValue);
-						}
-						else
-						{
-							check(false && "Can't find property by name");
-							return false;
-						}
-					}
-					else
-					{
-						return false;
-					}
-				}
-				else
-				{
-					TMap<FString, T>* MapPtr = nullptr;
-					if (GetByField(Instance, Field, MapPtr))
-					{
-						TMap<FString, T>& Map = *MapPtr;
-						const FString& Key = Path[PathOffset + 1];
-						T* ValuePtr = Map.Find(Key);
-						if (ValuePtr)
-						{
-							OutValue = ValuePtr;
-							return true;
-						}
-						else
-						{
-							check(false && "Can't find property by name");
-							return false;
-						}
-					}
-					else
-					{
-						return false;
-					}
-				}
-			}
+			UE_LOG(LogData, Fatal, TEXT("Can't find property %s::%s"), *InstanceClass->GetName(), *Name);
 		}
 	}
-	else
+	else if (bThrowError)
 	{
-		check(false && "Can't find property by name");
+		UE_LOG(LogData, Fatal, TEXT("Instance is null"));
+	}
+
+	OutValue = nullptr;
+	return false;
+}
+
+template <bool bThrowError, typename T>
+bool GetByName(UPsData* Instance, const FString& Name, const FString& Key, T*& OutValue)
+{
+	if (Instance)
+	{
+		const auto InstanceClass = Instance->GetClass();
+		const auto Field = FDataReflection::GetFieldsByClass(InstanceClass)->GetFieldByName(Name);
+		if (Field)
+		{
+			return GetByField<bThrowError>(Instance, Field, Key, OutValue);
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't find property %s::%s"), *InstanceClass->GetName(), *Name);
+		}
+	}
+	else if (bThrowError)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Instance is null"));
+	}
+
+	OutValue = nullptr;
+	return false;
+}
+
+/***********************************
+ * Data path executor
+ ***********************************/
+
+template <bool bThrowError, bool bThrowContainerError>
+struct TDataPathExecutor
+{
+	TDataPathExecutor(UPsData* InData, const FString& InPath)
+		: Data(InData)
+		, Field(nullptr)
+		, bError(false)
+	{
+		check(Data);
+
+		auto PathView = ToStringView(InPath);
+		while (PathView.Len() > 0)
+		{
+			auto KeyView = PathView.LeftByChar('.');
+			Keys.Add(ToFString(KeyView));
+
+			PathView.RightChopInline(KeyView.Len() + 1);
+		}
+	}
+
+	explicit TDataPathExecutor(UPsData* InData)
+		: Data(InData)
+		, Field(nullptr)
+		, bError(false)
+	{
+		check(Data);
+	}
+
+	template <bool bThrowErrorOther, bool bThrowContainerErrorOther>
+	TDataPathExecutor(const TDataPathExecutor<bThrowErrorOther, bThrowContainerErrorOther>& Other)
+	{
+		if ((bThrowError || bThrowContainerErrorOther) && Other.HasError())
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't copy broken executor: %s::%s with path: \"%s\""), *Other.Data->GetClass()->GetName(), *Other.Field->Name, *GetPath());
+		}
+
+		Data = Other.Data;
+		Field = Other.Field;
+		Keys = Other.Keys;
+		bError = Other.bError;
+	}
+
+	template <bool bThrowErrorOther, bool bThrowContainerErrorOther>
+	TDataPathExecutor(TDataPathExecutor<bThrowErrorOther, bThrowContainerErrorOther>&& Other)
+	{
+		if ((bThrowError || bThrowContainerErrorOther) && Other.HasError())
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't move broken executor: %s::%s with path: \"%s\""), *Other.Data->GetClass()->GetName(), *Other.Field->Name, *GetPath());
+		}
+
+		Data = std::move(Other.Data);
+		Field = std::move(Other.Field);
+		Keys = std::move(Other.Keys);
+		bError = std::move(Other.bError);
+	}
+
+	UPsData* GetData() const
+	{
+		return Data;
+	}
+
+	const FDataField* GetField() const
+	{
+		return Field;
+	}
+
+	bool HasKeys() const
+	{
+		return Keys.Num() != 0;
+	}
+
+	const TArray<FString>& GetKeys() const
+	{
+		return Keys;
+	}
+
+	FString GetPath() const
+	{
+		FString Result;
+		for (const auto& Key : Keys)
+		{
+			if (!Result.IsEmpty())
+			{
+				Result.AppendChar('.');
+			}
+			Result.Append(Key);
+		}
+
+		return Result;
+	}
+
+	bool HasError() const
+	{
+		return bError;
+	}
+
+	bool Previous()
+	{
+		const auto Parent = Data->GetParent();
+		if (Parent)
+		{
+			PrependKey(Data->GetFullKey());
+			Field = FDataReflection::GetFieldsByClass(Parent->GetClass())->GetFieldByNameChecked(Data->GetDataKey());
+			Data = Parent;
+			bError = false;
+
+			return true;
+		}
+		else if (Field)
+		{
+			PrependKey(Field->Name);
+			Field = nullptr;
+			bError = false;
+
+			return true;
+		}
+
 		return false;
 	}
 
-	return false;
-}
-
-/***********************************
- * GET PROPERTY VALUE BY PATH
- ***********************************/
-
-template <typename T>
-bool GetByPath(UPsData* Instance, const FString& Path, T*& OutValue)
-{
-	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Path);
-	if (Field)
+	bool Next()
 	{
-		return GetByField(Instance, Field, OutValue);
-	}
-	else
-	{
-		const auto& PathArray = FDataReflection::SplitPath(Path);
-		if (PathArray.Num() > 1)
+		if (bError)
 		{
-			return GetByPath<T>(Instance, PathArray, 0, PathArray.Num(), OutValue);
+			return false;
 		}
-	}
 
-	check(false && "Can't find property by name");
-	OutValue = nullptr;
-	return false;
-}
-
-/***********************************
- * GET PROPERTY VALUE BY NAME
- ***********************************/
-
-template <typename T>
-bool GetByName(UPsData* Instance, const FString& Name, T*& OutValue)
-{
-	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Name);
-	if (Field)
-	{
-		return GetByField(Instance, Field, OutValue);
-	}
-	//	else
-	//	{
-	//		TArray<FString> Path;
-	//		Name.ParseIntoArray(Path, TEXT("."));
-	//		if (Path.Num() > 1)
-	//		{
-	//			return GetByPath<T>(Instance, Path, 0, Path.Num(), OutValue);
-	//		}
-	//	}
-
-	check(false && "Can't find property by name");
-	OutValue = nullptr;
-	return false;
-}
-
-/***********************************
- * SET PROPERTY VALUE BY FIELD
- ***********************************/
-
-template <typename T>
-void SetByField(UPsData* Instance, const FDataField* Field, typename TConstRef<T>::Type NewValue)
-{
-	if (CheckType<T>(Field->Context, &GetContext<T>()))
-	{
-		UnsafeSet<T>(Instance, Field, NewValue);
-	}
-	else
-	{
-		check(false && "Can't cast property to T");
-	}
-}
-
-/***********************************
- * SET PROPERTY VALUE BY HASH
- ***********************************/
-
-template <typename T>
-void SetByHash(UPsData* Instance, int32 Hash, typename TConstRef<T>::Type NewValue)
-{
-	auto Field = PsDataTools::FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByHash(Hash);
-	if (Field)
-	{
-		SetByField<T>(Instance, Field, NewValue);
-		return;
-	}
-
-	check(false && "Can't find property by hash");
-}
-
-/***********************************
- * SET PROPERTY VALUE BY NAME
- ***********************************/
-
-template <typename T>
-void SetByName(UPsData* Instance, const FString& Name, typename TConstRef<T>::Type NewValue)
-{
-	auto Field = FDataReflection::GetFieldsByClass(Instance->GetClass())->GetFieldByName(Name);
-	if (Field)
-	{
-		SetByField<T>(Instance, Field, NewValue);
-	}
-
-	check(false && "Can't find property by name");
-}
-
-/***********************************
- * Cast helper
- ***********************************/
-
-template <typename T>
-struct FPsDataCastHelper
-{
-	static T* Cast(UPsData* Data)
-	{
-		if (Data != nullptr)
+		if (!Field && Normalize())
 		{
-			const bool bCanCast = Data->GetClass()->IsChildOf(T::StaticClass());
-			if (bCanCast)
+			return true;
+		}
+
+		if (Field->Context->IsData())
+		{
+			if (Field->Context->IsContainer())
 			{
-				return static_cast<T*>(Data);
+				if (Keys.Num() > 1)
+				{
+					UPsData** DataPtr = nullptr;
+					if (GetByFieldAndKey<bThrowError, bThrowError>(Data, Field, Keys[0], DataPtr) && *DataPtr)
+					{
+						const auto NewData = *DataPtr;
+						const auto NewField = FDataReflection::GetFieldsByClass(NewData->GetClass())->GetFieldByName(Keys[1]);
+						if (NewField)
+						{
+							Keys.RemoveAt(0, 2);
+							Data = NewData;
+							Field = NewField;
+							return true;
+						}
+						else if (bThrowError)
+						{
+							UE_LOG(LogData, Fatal, TEXT("Can't find property %s::%s"), *NewData->GetClass()->GetName(), *Keys[1]);
+						}
+						else
+						{
+							bError = true;
+						}
+					}
+					else if (bThrowError)
+					{
+						UE_LOG(LogData, Fatal, TEXT("Can't find \"%s\" in %s::%s or it is null"), *Keys[0], *Data->GetClass()->GetName(), *Field->Name);
+					}
+					else
+					{
+						bError = true;
+					}
+				}
 			}
 			else
 			{
-				check(false && "Can't cast property to T");
+				if (Keys.Num() > 0)
+				{
+					UPsData** DataPtr = nullptr;
+					if (GetByField<bThrowError>(Data, Field, DataPtr) && *DataPtr)
+					{
+						const auto NewData = *DataPtr;
+						const auto NewField = FDataReflection::GetFieldsByClass(NewData->GetClass())->GetFieldByName(Keys[0]);
+						if (NewField)
+						{
+							Keys.RemoveAt(0, 1);
+							Data = NewData;
+							Field = NewField;
+							return true;
+						}
+						else if (bThrowError)
+						{
+							UE_LOG(LogData, Fatal, TEXT("Can't find property %s::%s"), *NewData->GetClass()->GetName(), *Keys[0]);
+						}
+						else
+						{
+							bError = true;
+						}
+					}
+					else if (bThrowError)
+					{
+						UE_LOG(LogData, Fatal, TEXT("Can't find %s::%s or it is null"), *Data->GetClass()->GetName(), *Field->Name);
+					}
+					else
+					{
+						bError = true;
+					}
+				}
 			}
 		}
-		return nullptr;
+
+		return false;
 	}
 
-	static TArray<T*> Cast(TArray<UPsData*> Array)
+	bool Execute()
 	{
-		TArray<T*> Result;
-		for (auto Element : Array)
+		while (Next())
 		{
-			Result.Add(Cast(Element));
+			// do nothing
 		}
-		return Result;
+
+		return !bError && Keys.Num() <= 1;
 	}
+
+	template <typename T>
+	bool Execute(T*& OutValue)
+	{
+		if (Execute())
+		{
+			const auto NumKeys = Keys.Num();
+			if (NumKeys == 0)
+			{
+				return GetByField<bThrowError>(Data, Field, OutValue);
+			}
+			else if (NumKeys == 1)
+			{
+				return GetByFieldAndKey<bThrowError, bThrowContainerError>(Data, Field, Keys[0], OutValue);
+			}
+		}
+
+		if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't execute %s::%s with path: \"%s\""), *Data->GetClass()->GetName(), *Field->Name, *GetPath());
+		}
+
+		OutValue = nullptr;
+		return false;
+	}
+
+	void AppendKey(const FString& Key)
+	{
+		Keys.Add(Key);
+	}
+
+private:
+	void PrependKey(const FString& Key)
+	{
+		Keys.Insert(Key, 0);
+	}
+
+	bool Normalize()
+	{
+		if (!Field)
+		{
+			const auto Parent = Data->GetParent();
+			if (Parent)
+			{
+				if (Data->InCollection())
+				{
+					PrependKey(Data->GetCollectionKey());
+				}
+
+				Field = FDataReflection::GetFieldsByClass(Parent->GetClass())->GetFieldByNameChecked(Data->GetDataKey());
+				Data = Parent;
+			}
+			else if (Keys.Num() > 0)
+			{
+				if (auto NewField = FDataReflection::GetFieldsByClass(Data->GetClass())->GetFieldByName(Keys[0]))
+				{
+					Field = NewField;
+					Keys.RemoveAt(0, 1);
+				}
+			}
+		}
+
+		return Field != nullptr;
+	}
+
+	UPsData* Data;
+	const FDataField* Field;
+	TArray<FString> Keys;
+	bool bError;
+
+	template <bool bThrowErrorOther, bool bThrowContainerErrorOther>
+	friend struct TDataPathExecutor;
 };
+
+using FDataPathExecutor = TDataPathExecutor<PSDATA_DEFAULT_THROW_RULE, PSDATA_DEFAULT_THROW_RULE>;
 
 /***********************************
- * FDLink
+ * Get value by path
  ***********************************/
 
-template <typename Type, typename ReturnType, int32 Hash>
-struct FDLinkHelper
+template <bool bThrowError, typename T>
+bool GetByPath(UPsData* Instance, const FString& Path, T*& OutValue)
 {
-	using NonPointerReturnType = typename TRemovePointer<ReturnType>::Type;
-	using CompleteReturnType = typename TConstRef<NonPointerReturnType*, true>::Type;
-	using ResultType = CompleteReturnType;
-
-	static ResultType Get(const UPsData* Instance)
+	if (Instance)
 	{
-		return Cast<NonPointerReturnType>(UPsDataFunctionLibrary::GetDataByLinkHash(Instance, Hash));
-	}
-};
-
-template <typename Type, typename ReturnType, int32 Hash>
-struct FDLinkHelper<TArray<Type>, ReturnType, Hash>
-{
-	using NonPointerReturnType = typename TRemovePointer<ReturnType>::Type;
-	using CompleteReturnType = typename TConstRef<NonPointerReturnType*, true>::Type;
-	using ResultType = TArray<CompleteReturnType>;
-
-	static ResultType Get(const UPsData* Instance)
-	{
-		ResultType Result;
-		for (UPsData* Data : UPsDataFunctionLibrary::GetDataArrayByLinkHash(Instance, Hash))
+		if (Path.Len() > 0)
 		{
-			Result.Add(Cast<NonPointerReturnType>(Data));
+			TDataPathExecutor<bThrowError, bThrowError> PathExecutor(Instance, Path);
+			return PathExecutor.Execute(OutValue);
 		}
-		return Result;
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Path is empty"));
+		}
 	}
-};
+	else if (bThrowError)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Instance is null"));
+	}
 
-template <typename Type, typename ReturnType, int32 Hash>
-struct FDLink : public FNoncopyable
+	OutValue = nullptr;
+	return false;
+}
+
+/***********************************
+ * Set value by field
+ ***********************************/
+
+template <bool bThrowError, typename T>
+bool SetByField(UPsData* Instance, const FDataField* Field, TConstRefType<T, false> NewValue)
 {
-private:
-	UPsData* Instance;
-
-public:
-	FDLink(const char* Name, const char* Path, const char* CharReturnType, UPsData* InInstance)
-		: Instance(InInstance)
+	if (Instance && Field)
 	{
-		static_assert(TIsContainer<ReturnType>::Value, "ReturnType must be non-container type");
+		auto OutputContext = &GetContext<T>();
+		if (CheckType<T>(OutputContext, Field->Context))
+		{
+			UnsafeSet<T>(Instance, Field, NewValue);
+			return true;
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't cast property %s::%s to %s"), *Instance->GetClass()->GetName(), *Field->Name, *OutputContext->GetCppType());
+		}
+	}
+	else
+	{
+		if (bThrowError && !Instance)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Instance is null"));
+		}
 
-		FDataReflection::InitLink(Name, Path, CharReturnType, Hash, false, !TIsContainer<Type>::Value, InInstance);
+		if (bThrowError && !Field)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Field is null"));
+		}
 	}
 
-	FDLink(const char* Name, const char* CharReturnType, UPsData* InInstance)
-		: Instance(InInstance)
-	{
-		static_assert(TIsContainer<ReturnType>::Value, "ReturnType must be non-container type");
+	return false;
+}
 
-		FDataReflection::InitLink(Name, "<ABSTRACT>", CharReturnType, Hash, true, !TIsContainer<Type>::Value, InInstance);
+/***********************************
+ * Set value by hash
+ ***********************************/
+
+template <bool bThrowError, typename T>
+bool SetByHash(UPsData* Instance, int32 Hash, TConstRefType<T, false> NewValue)
+{
+	if (Instance)
+	{
+		const auto InstanceClass = Instance->GetClass();
+		const auto Field = FDataReflection::GetFieldsByClass(InstanceClass)->GetFieldByHash(Hash);
+		if (Field)
+		{
+			return SetByField<bThrowError, T>(Instance, Field, NewValue);
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't find property with hash \"%d\" for %s"), Hash, *InstanceClass->GetName());
+		}
+	}
+	else if (bThrowError)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Instance is null"));
 	}
 
-	typename FDLinkHelper<Type, ReturnType, Hash>::ResultType Get() const
+	return false;
+}
+
+/***********************************
+ * Set value by name
+ ***********************************/
+
+template <bool bThrowError, typename T>
+bool SetByName(UPsData* Instance, const FString& Name, TConstRefType<T, false> NewValue)
+{
+	if (Instance)
 	{
-		return FDLinkHelper<Type, ReturnType, Hash>::Get(Instance);
+		const auto InstanceClass = Instance->GetClass();
+		const auto Field = FDataReflection::GetFieldsByClass(InstanceClass)->GetFieldByName(Name);
+		if (Field)
+		{
+			return SetByField<bThrowError, T>(Instance, Field, NewValue);
+		}
+		else if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't find property %s::%s"), *InstanceClass->GetName(), *Name);
+		}
+	}
+	else if (bThrowError)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Instance is null"));
 	}
 
-	bool IsEmpty() const
-	{
-		return UPsDataFunctionLibrary::IsLinkEmpty(Instance, Hash);
-	}
-};
+	return false;
+}
+
 } // namespace PsDataTools

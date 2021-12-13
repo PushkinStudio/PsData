@@ -74,6 +74,32 @@ DEFINE_FUNCTION(UPsDataFloatLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
+DEFINE_FUNCTION(UPsDataFloatLibrary::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(float, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<float>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFloatLibrary::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(FLinearColor, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<FLinearColor>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
 void UPsDataFloatLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const float& Value)
 {
 	Serializer->WriteValue(Value);

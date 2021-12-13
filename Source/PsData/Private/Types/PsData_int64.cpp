@@ -74,6 +74,32 @@ DEFINE_FUNCTION(UPsDataInt64Library::execGetProperty)
 	P_NATIVE_END;
 }
 
+DEFINE_FUNCTION(UPsDataInt64Library::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_PROPERTY_REF(FInt64Property, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	int64* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataInt64Library::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(int64, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<int64>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
 void UPsDataInt64Library::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const int64& Value)
 {
 	Serializer->WriteValue(Value);

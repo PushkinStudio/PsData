@@ -11,6 +11,8 @@
 
 #include "CoreMinimal.h"
 
+using namespace PsDataTools;
+
 template <typename T, bool bConst>
 struct FPsDataBaseArrayProxy
 {
@@ -18,16 +20,26 @@ private:
 	friend struct FPsDataBaseArrayProxy<T, true>;
 	friend struct FPsDataBaseArrayProxy<T, false>;
 
-	THardObjectPtr<UPsData> Instance;
-	PsDataTools::FDataProperty<TArray<T>>* Property;
+	TConstValueType<TDataProperty<TArray<T>>*, bConst> Property;
 
-	static PsDataTools::FDataProperty<TArray<T>>* GetProperty(UPsData* Instance, const FDataField* Field)
+	static TDataProperty<TArray<T>>* GetProperty(UPsData* Instance, const FDataField* Field)
 	{
+#if !UE_BUILD_SHIPPING
 		TArray<T>* Output = nullptr;
-		PsDataTools::GetByField(Instance, Field, Output);
-		check(Output);
+		GetByField<true>(Instance, Field, Output);
+#endif
 
-		return static_cast<PsDataTools::FDataProperty<TArray<T>>*>(PsDataTools::FPsDataFriend::GetProperties(Instance)[Field->Index]);
+		return static_cast<TDataProperty<TArray<T>>*>(FPsDataFriend::GetProperty(Instance, Field->Index));
+	}
+
+	static const TDataProperty<TArray<T>>* GetProperty(const UPsData* Instance, const FDataField* Field)
+	{
+#if !UE_BUILD_SHIPPING
+		TArray<T>* Output = nullptr;
+		GetByField<true>(Instance, Field, Output);
+#endif
+
+		return static_cast<const TDataProperty<TArray<T>>*>(FPsDataFriend::GetProperty(Instance, Field->Index));
 	}
 
 protected:
@@ -39,42 +51,60 @@ protected:
 	}
 
 public:
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
 	FPsDataBaseArrayProxy(UPsData* InInstance, const FDataField* InField)
-		: Instance(InInstance)
-		, Property(GetProperty(InInstance, InField))
+		: Property(GetProperty(InInstance, InField))
 	{
-		check(IsValid());
 	}
 
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
 	FPsDataBaseArrayProxy(UPsData* InInstance, int32 Hash)
-		: Instance(InInstance)
-		, Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHash(Hash)))
+		: Property(GetProperty(InInstance, FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
 	{
-		check(IsValid());
 	}
 
-	FPsDataBaseArrayProxy(UPsData* InInstance, const PsDataTools::FDataProperty<TArray<T>>* InProperty)
-		: Instance(InInstance)
-		, Property(const_cast<PsDataTools::FDataProperty<TArray<T>>*>(InProperty)) // TODO: const_cast
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
+	FPsDataBaseArrayProxy(TDataProperty<TArray<T>>* InProperty)
+		: Property(InProperty)
 	{
-		check(IsValid());
+	}
+
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<bOtherConst>::Type>
+	FPsDataBaseArrayProxy(const UPsData* InInstance, const FDataField* InField)
+		: Property(GetProperty(InInstance, InField))
+	{
+	}
+
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<bOtherConst>::Type>
+	FPsDataBaseArrayProxy(const UPsData* InInstance, int32 Hash)
+		: Property(GetProperty(InInstance, FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
+	{
+	}
+
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<bOtherConst>::Type>
+	FPsDataBaseArrayProxy(const TDataProperty<TArray<T>>* InProperty)
+		: Property(InProperty)
+	{
 	}
 
 	template <bool bOtherConst,
 		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
 	FPsDataBaseArrayProxy(const FPsDataBaseArrayProxy<T, bOtherConst>& ArrayProxy)
-		: Instance(ArrayProxy.Instance)
-		, Property(ArrayProxy.Property)
+		: Property(ArrayProxy.Property)
 	{
 	}
 
 	template <bool bOtherConst,
 		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
 	FPsDataBaseArrayProxy(FPsDataBaseArrayProxy<T, bOtherConst>&& ArrayProxy)
-		: Instance(std::move(ArrayProxy.Instance))
-		, Property(ArrayProxy.Property)
+		: Property(ArrayProxy.Property)
 	{
-		ArrayProxy.Instance = nullptr;
 		ArrayProxy.Property = nullptr;
 	}
 
@@ -82,7 +112,6 @@ public:
 		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
 	void operator=(const FPsDataBaseArrayProxy<T, bOtherConst>& ArrayProxy)
 	{
-		Instance = ArrayProxy.Instance;
 		Property = ArrayProxy.Property;
 	}
 
@@ -93,58 +122,58 @@ public:
 
 	bool IsValid() const
 	{
-		return Instance.IsValid() && Property;
+		return Property != nullptr;
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
 	void Set(const TArray<T>& NewArray)
 	{
-		Property->Set(NewArray, Instance.Get());
+		Property->SetValue(NewArray);
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
-	int32 Add(typename PsDataTools::TConstRef<T, false>::Type Element)
+	int32 Add(TConstRefType<T, false> Element)
 	{
-		auto NewArray = Property->Get();
+		auto NewArray = Property->GetValue();
 		auto Index = NewArray.Add(Element);
-		Property->Set(NewArray, Instance.Get());
+		Property->SetValue(NewArray);
 
 		return Index;
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
-	void Insert(typename PsDataTools::TConstRef<T, false>::Type Element, int32 Index)
+	void Insert(TConstRefType<T, false> Element, int32 Index)
 	{
-		auto NewArray = Property->Get();
+		auto NewArray = Property->GetValue();
 		NewArray.Insert(Element, Index);
-		Property->Set(NewArray, Instance.Get());
+		Property->SetValue(NewArray);
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
 	void RemoveAt(int32 Index, bool bAllowShrinking = false)
 	{
-		auto NewArray = Property->Get();
+		auto NewArray = Property->GetValue();
 		NewArray.RemoveAt(Index, 1, bAllowShrinking);
-		Property->Set(NewArray, Instance.Get());
+		Property->SetValue(NewArray);
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
-	int32 Remove(typename PsDataTools::TConstRef<T, false>::Type Element, bool bAllowShrinking = false)
+	int32 Remove(TConstRefType<T, false> Element, bool bAllowShrinking = false)
 	{
-		auto Index = Property->Get().Find(Element);
+		auto Index = Property->GetValue().Find(Element);
 		if (Index == INDEX_NONE)
 		{
 			return INDEX_NONE;
 		}
 
-		auto NewArray = Property->Get();
+		auto NewArray = Property->GetValue();
 		NewArray.RemoveAt(Index, 1, bAllowShrinking);
-		Property->Set(NewArray, Instance.Get());
+		Property->SetValue(NewArray);
 
 		return Index;
 	}
@@ -153,12 +182,12 @@ public:
 		typename = typename TEnableIf<!bOtherConst>::Type>
 	int32 RemoveAll(const PredicateType& Predicate)
 	{
-		auto NewArray = Property->Get();
+		auto NewArray = Property->GetValue();
 
 		int32 RemovedElements = 0;
 		for (auto It = NewArray.CreateIterator(); It; ++It)
 		{
-			typename PsDataTools::TConstRef<T, true>::Type Item = *It;
+			TConstRefType<T> Item = *It;
 			if (Predicate(Item))
 			{
 				It.RemoveCurrent();
@@ -166,18 +195,18 @@ public:
 			}
 		}
 
-		Property->Set(NewArray, Instance.Get());
+		Property->SetValue(NewArray);
 		return RemovedElements;
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
-	typename PsDataTools::TConstRef<T, bConst>::Type Set(typename PsDataTools::TConstRef<T, false>::Type Element, int32 Index)
+	TConstRefType<T, bConst> Set(TConstRefType<T, false> Element, int32 Index)
 	{
-		auto NewArray = Property->Get();
+		auto NewArray = Property->GetValue();
 		auto& OldElement = NewArray[Index];
 		NewArray[Index] = Element;
-		Property->Set(NewArray, Instance.Get());
+		Property->SetValue(NewArray);
 		return OldElement;
 	}
 
@@ -185,20 +214,20 @@ public:
 		typename = typename TEnableIf<!bOtherConst>::Type>
 	void Empty()
 	{
-		Property->Set({}, Instance.Get());
+		Property->SetValue({});
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
 	void Reserve(int32 Number)
 	{
-		Property->Get().Reserve(Number);
+		Property->GetValue().Reserve(Number);
 	}
 
-	typename PsDataTools::TConstValue<TArray<T>, bConst>::Type Get() const
+	auto Get() const
 	{
-		auto& Array = Property->Get();
-		typename PsDataTools::TConstValue<TArray<T>, bConst>::Type Result;
+		auto& Array = Property->GetValue();
+		TArray<TConstValueType<T, bConst>> Result;
 		Result.Reserve(Array.Num());
 		for (auto& Item : Array)
 		{
@@ -207,17 +236,17 @@ public:
 		return Result;
 	}
 
-	int32 Find(typename PsDataTools::TConstRef<T>::Type Element) const
+	int32 Find(TConstRefType<T> Element) const
 	{
-		return Property->Get().Find(Element);
+		return Property->GetValue().Find(Element);
 	}
 
 	template <typename PredicateType>
-	typename PsDataTools::TConstRef<T*, bConst>::Type FindByPredicate(const PredicateType& Predicate) const
+	TConstRefType<T*, bConst> FindByPredicate(const PredicateType& Predicate) const
 	{
-		for (auto It = Property->Get().CreateIterator(); It; ++It)
+		for (auto It = Property->GetValue().CreateConstIterator(); It; ++It)
 		{
-			typename PsDataTools::TConstRef<T, true>::Type Item = *It;
+			TConstRefType<T> Item = *It;
 			if (Predicate(Item))
 			{
 				return &(*It);
@@ -227,14 +256,14 @@ public:
 		return nullptr;
 	}
 
-	typename PsDataTools::TConstRef<T, bConst>::Type Get(int32 Index) const
+	TConstRefType<T, bConst> Get(int32 Index) const
 	{
-		return Property->Get()[Index];
+		return Property->GetValue()[Index];
 	}
 
 	int32 Num() const
 	{
-		return Property->Get().Num();
+		return Property->GetValue().Num();
 	}
 
 	bool IsEmpty() const
@@ -244,32 +273,32 @@ public:
 
 	bool IsValidIndex(int32 Index) const
 	{
-		return Property->Get().IsValidIndex(Index);
+		return Property->GetValue().IsValidIndex(Index);
 	}
 
 	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 	{
-		return Instance->BindInternal(Type, Delegate, Property->GetField());
+		return FPsDataFriend::BindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
 	}
 
 	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate) const
 	{
-		return Instance->BindInternal(Type, Delegate, Property->GetField());
+		return FPsDataFriend::BindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
 	}
 
 	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 	{
-		Instance->UnbindInternal(Type, Delegate, Property->GetField());
+		FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
 	}
 
 	void Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 	{
-		Instance->UnbindInternal(Type, Delegate, Property->GetField());
+		FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
 	}
 
-	typename PsDataTools::TConstRef<T, bConst>::Type operator[](int32 Index) const
+	TConstRefType<T, bConst> operator[](int32 Index) const
 	{
-		return Property->Get()[Index];
+		return Property->GetValue()[Index];
 	}
 
 	/***********************************
@@ -291,7 +320,7 @@ public:
 			: Proxy(InProxy)
 			, Index(0)
 		{
-			const auto& Array = Proxy.Property->Get();
+			const auto& Array = Proxy.Property->GetValue();
 			if (bEnd)
 			{
 				Index = Array.Num();
@@ -310,12 +339,12 @@ public:
 			return Proxy.Remove(GetValue());
 		}
 
-		typename PsDataTools::TConstRef<T, bIteratorConst>::Type GetValue() const
+		TConstRefType<T, bIteratorConst> GetValue() const
 		{
 			return Items[Index];
 		}
 
-		typename PsDataTools::TConstRef<T, true>::Type GetConstValue() const
+		TConstRefType<T> GetConstValue() const
 		{
 			return GetValue();
 		}
@@ -346,7 +375,7 @@ public:
 			return Lhs.Index != Rhs.Index;
 		}
 
-		typename PsDataTools::TConstRef<T, bIteratorConst>::Type operator*() const
+		TConstRefType<T, bIteratorConst> operator*() const
 		{
 			return Items[Index];
 		}
@@ -376,11 +405,11 @@ using FPsDataConstArrayProxy = FPsDataBaseArrayProxy<T, true>;
 template <typename T, bool bConst>
 struct FPsDataBaseArrayProxy<TArray<T>, bConst>
 {
-	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
+	static_assert(TAlwaysFalse<T>::value, "Unsupported type");
 };
 
 template <typename T, bool bConst>
 struct FPsDataBaseArrayProxy<TMap<FString, T>, bConst>
 {
-	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
+	static_assert(TAlwaysFalse<T>::value, "Unsupported type");
 };

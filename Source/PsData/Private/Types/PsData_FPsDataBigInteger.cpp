@@ -451,6 +451,32 @@ DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetProperty)
 	P_NATIVE_END;
 }
 
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_STRUCT_REF(FPsDataBigInteger, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FPsDataBigInteger* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataBigIntegerLibrary::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(FPsDataBigInteger, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<FPsDataBigInteger>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
 void UPsDataBigIntegerLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FPsDataBigInteger& Value)
 {
 	Serializer->WriteValue(Value.ToString());

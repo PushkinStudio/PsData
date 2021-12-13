@@ -5,4 +5,5 @@
 UPsDataRoot::UPsDataRoot(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	Root = this;
 }

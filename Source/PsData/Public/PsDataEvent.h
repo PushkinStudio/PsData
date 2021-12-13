@@ -41,11 +41,17 @@ public:
 	/** Added To Parent */
 	static const FString AddedToParent;
 
+	/** Added To Root */
+	static const FString AddedToRoot;
+
 	/** Removed */
 	static const FString Removed;
 
 	/** Removed From Parent */
 	static const FString RemovedFromParent;
+
+	/** Removed From Root */
+	static const FString RemovedFromRoot;
 
 	/** Changed */
 	static const FString Changed;

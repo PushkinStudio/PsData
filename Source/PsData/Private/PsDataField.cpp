@@ -5,17 +5,93 @@
 #include "PsData.h"
 #include "PsDataCore.h"
 
+using namespace PsDataTools;
+
 /***********************************
- * EDataMetaType
+ * FDataMetaType
  ***********************************/
 
-const char* EDataMetaType::Strict = "strict";
-const char* EDataMetaType::Event = "event";
-const char* EDataMetaType::Bubbles = "bubbles";
-const char* EDataMetaType::Alias = "alias";
-const char* EDataMetaType::ReadOnly = "readonly";
-const char* EDataMetaType::Deprecated = "deprecated";
-const char* EDataMetaType::Nullable = "nullable";
+const FDataStringViewChar FDataMetaType::Strict = "strict";
+const FDataStringViewChar FDataMetaType::Event = "event";
+const FDataStringViewChar FDataMetaType::Bubbles = "bubbles";
+const FDataStringViewChar FDataMetaType::Alias = "alias";
+const FDataStringViewChar FDataMetaType::ReadOnly = "readonly";
+const FDataStringViewChar FDataMetaType::Deprecated = "deprecated";
+const FDataStringViewChar FDataMetaType::Nullable = "nullable";
+
+/***********************************
+ * FDataRawMeta
+ ***********************************/
+
+FDataRawMeta::FDataRawMeta()
+{
+}
+
+void FDataRawMeta::Append(const char* MetaString)
+{
+	auto MetaStringView = PsDataTools::ToStringView(MetaString);
+	while (MetaStringView.Len() > 0)
+	{
+		auto MetaExpression = MetaStringView.LeftByChar(',');
+		Items.Add({MetaExpression.LeftByChar('=').Trim().TrimQuotes(), MetaExpression.RightByChar('=').Trim().TrimQuotes()});
+		MetaStringView.RightChopInline(MetaExpression.Len() + 1);
+	}
+}
+
+void FDataRawMeta::Append(const FDataRawMeta& OtherMeta)
+{
+	Items.Append(OtherMeta.Items);
+}
+
+void FDataRawMeta::Reset()
+{
+	Items.Reset();
+}
+
+FDataRawMetaItem* FDataRawMeta::Find(const FDataStringViewChar& Key)
+{
+	for (auto& Item : Items)
+	{
+		if (Item.Key.Equal<true>(Key))
+		{
+			return &Item;
+		}
+	}
+
+	return nullptr;
+}
+
+const FDataRawMetaItem* FDataRawMeta::Find(const FDataStringViewChar& Key) const
+{
+	for (auto& Item : Items)
+	{
+		if (Item.Key.Equal<true>(Key))
+		{
+			return &Item;
+		}
+	}
+
+	return nullptr;
+}
+
+bool FDataRawMeta::Contains(const FDataStringViewChar& Key) const
+{
+	return Find(Key) != nullptr;
+}
+
+bool FDataRawMeta::Remove(const FDataStringViewChar& Key)
+{
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		if (Items[i].Key.Equal<true>(Key))
+		{
+			Items.RemoveAt(i, 1, false);
+			return true;
+		}
+	}
+
+	return false;
+}
 
 /***********************************
  * FDataFieldMeta
@@ -75,6 +151,9 @@ FDataFieldFunctions::FDataFieldFunctions(UClass* InClass, EDataFieldType FieldTy
 		SetFunctionName = "SetMapProperty";
 	}
 	break;
+	default:
+		checkNoEntry();
+		break;
 	}
 }
 
@@ -88,6 +167,36 @@ UFunction* FDataFieldFunctions::ResolveGetFunction() const
 UFunction* FDataFieldFunctions::ResolveSetFunction() const
 {
 	const auto Result = Class->FindFunctionByName(SetFunctionName);
+	check(Result);
+	return Result;
+}
+
+FDataLinkFunctions::FDataLinkFunctions(UClass* InClass, FName InFunctionName)
+	: Class(InClass)
+	, FunctionName(InFunctionName)
+{
+}
+
+FDataLinkFunctions::FDataLinkFunctions(UClass* InClass, EDataFieldType FieldType)
+	: Class(InClass)
+{
+	switch (FieldType)
+	{
+	case EDataFieldType::VALUE:
+		FunctionName = "GetLinkValue";
+		break;
+	case EDataFieldType::ARRAY:
+		FunctionName = "GetArrayLinkValue";
+		break;
+	default:
+		FunctionName = "Unknown";
+		break;
+	}
+}
+
+UFunction* FDataLinkFunctions::ResolveFunction() const
+{
+	const auto Result = Class->FindFunctionByName(FunctionName);
 	check(Result);
 	return Result;
 }
@@ -148,169 +257,93 @@ bool FAbstractDataTypeContext::IsA(const FAbstractDataTypeContext* RightContext)
 }
 
 /***********************************
- * Meta prepare
+ * Apply Meta
  ***********************************/
 
-struct FMetaToken
+void PrintUnusedMetaValue(const FDataRawMetaItem* Item)
 {
-	char c;
-	int32 Size;
-	const char* String;
-
-	FMetaToken(const char* InString, int32 InSize)
-		: c(0)
-		, Size(InSize)
-		, String(InString)
+	if (!Item->Value.IsEmpty())
 	{
+		UE_LOG(LogDataReflection, Error, TEXT("      ? unused value \"%s\" for meta: \"%s\""), *ToFString(Item->Value), *ToFString(Item->Key));
 	}
-
-	FMetaToken(char InC)
-		: c(InC)
-		, Size(0)
-		, String(nullptr)
-	{
-	}
-};
-
-char ToLowerCase(char c)
-{
-	if (c >= 'A' && c <= 'Z')
-	{
-		const char o = 'Z' - 'z';
-		return c - o;
-	}
-	return c;
 }
 
-bool Equal(const char* str1, const char* str2)
+void PrintMissingMetaValue(const FDataRawMetaItem* Item)
 {
-	while (*str1 != 0 && *str2 != 0)
+	if (Item->Value.IsEmpty())
 	{
-		if (ToLowerCase(*str1) != ToLowerCase(*str2))
-		{
-			return false;
-		}
-
-		str1 += 1;
-		str2 += 1;
+		UE_LOG(LogDataReflection, Error, TEXT("      ? missing value for meta: \"%s\""), *ToFString(Item->Key));
 	}
-
-	return true;
 }
 
-std::pair<int, int> Trim(const char* Str, int Size)
+void PrintIrrelevantMeta(const FDataRawMetaItem* Item)
 {
-	if (Size == 0)
-	{
-		return std::pair<int, int>(0, 0);
-	}
-	int32 i = 0;
-	while (Str[i] == ' ')
-	{
-		++i;
-		--Size;
-	}
-	while (Size > 0 && Str[i + Size - 1] == ' ')
-	{
-		--Size;
-	}
-
-	return std::pair<int, int>(i, Size);
+	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    ? irrelevant meta: \"%s%s%s\""), *ToFString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? *ToFString(Item->Value) : TEXT(""));
 }
 
-void AddToken(TArray<FMetaToken>& Tokens, const char*& Str, int& Size, char c)
+void PrintIrrelevantMeta(const FDataRawMeta& RawMeta)
 {
-	const std::pair<int, int> range = Trim(Str, Size);
-	if (range.second > 0)
+	for (const auto& Item : RawMeta.Items)
 	{
-		Tokens.Add(FMetaToken(&Str[range.first], range.second));
+		PrintIrrelevantMeta(&Item);
 	}
-	Tokens.Add(FMetaToken(c));
-	Str = Str + (Size + 1);
-	Size = 0;
 }
 
-void AddToken(TArray<FMetaToken>& Tokens, const char*& Str, int& Size)
+void PrintApplyMeta(const FDataRawMetaItem* Item)
 {
-	const std::pair<int, int> range = Trim(Str, Size);
-	if (range.second > 0)
-	{
-		Tokens.Add(FMetaToken(&Str[range.first], range.second));
-	}
-	Str = Str + (Size + 1);
-	Size = 0;
+	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    + meta: \"%s%s%s\""), *ToFString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? *ToFString(Item->Value) : TEXT(""));
 }
 
-bool CheckTokens(TArray<FMetaToken> Tokens, int32 Index, const char* Pattern)
+void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 {
-	while (*Pattern != 0)
+	if (const auto Strict = RawMeta.Find(FDataMetaType::Strict))
 	{
-		if (*Pattern == '%')
-		{
-			if (Tokens[Index].String == nullptr)
-			{
-				return false;
-			}
-		}
-		else
-		{
-			if (Tokens[Index].c != *Pattern)
-			{
-				return false;
-			}
-		}
-		Pattern += 1;
-		++Index;
-	}
-	return true;
-}
-
-void ParseMetaPair(FDataField* Field, const char* Key, int32 KeySize, const char* Value, int32 ValueSize)
-{
-	bool bError = false;
-	if (Equal(Key, EDataMetaType::Strict))
-	{
-		ensureMsgf(Value == nullptr, TEXT("Unused value!"));
 		Field->Meta.bStrict = true;
+		PrintUnusedMetaValue(Strict);
+		PrintApplyMeta(Strict);
+
+		RawMeta.Remove(FDataMetaType::Strict);
 	}
-	else if (Equal(Key, EDataMetaType::Event))
+	if (const auto Event = RawMeta.Find(FDataMetaType::Event))
 	{
 		Field->Meta.bEvent = true;
-		Field->Meta.EventType = Value ? FString(ValueSize, Value) : FString::Printf(TEXT("%sChanged"), *Field->Name);
-	}
-	else if (Equal(Key, EDataMetaType::Bubbles))
-	{
-		ensureMsgf(Value == nullptr, TEXT("Unused value!"));
-		Field->Meta.bBubbles = true;
-	}
-	else if (Equal(Key, EDataMetaType::Alias))
-	{
-		checkf(Value != nullptr, TEXT("Value needed!"));
-		Field->Meta.Alias = Value ? FString(ValueSize, Value) : TEXT("");
-		Field->Meta.bAlias = true;
-	}
-	else if (Equal(Key, EDataMetaType::Deprecated))
-	{
-		ensureMsgf(Value == nullptr, TEXT("Unused value!"));
-		Field->Meta.bDeprecated = true;
-	}
-	else if (Equal(Key, EDataMetaType::ReadOnly))
-	{
-		ensureMsgf(Value == nullptr, TEXT("Unused value!"));
-		Field->Meta.bReadOnly = true;
-	}
-	else
-	{
-		bError = true;
-	}
+		Field->Meta.EventType = Event->Value.IsEmpty() ? FString::Printf(TEXT("%sChanged"), *Field->Name) : ToFString(Event->Value);
+		PrintApplyMeta(Event);
 
-	if (bError)
-	{
-		UE_LOG(LogData, Error, TEXT("      ? unknown meta: \"%s%s%s\""), *FString(KeySize, Key), Value ? TEXT(" = ") : TEXT(""), Value ? *FString(ValueSize, Value) : TEXT(""));
+		RawMeta.Remove(FDataMetaType::Event);
 	}
-	else
+	if (const auto Bubbles = RawMeta.Find(FDataMetaType::Bubbles))
 	{
-		UE_LOG(LogData, VeryVerbose, TEXT("    + meta: \"%s%s%s\""), *FString(KeySize, Key), Value ? TEXT(" = ") : TEXT(""), Value ? *FString(ValueSize, Value) : TEXT(""));
+		Field->Meta.bBubbles = true;
+		PrintUnusedMetaValue(Bubbles);
+		PrintApplyMeta(Bubbles);
+
+		RawMeta.Remove(FDataMetaType::Bubbles);
+	}
+	if (const auto Alias = RawMeta.Find(FDataMetaType::Alias))
+	{
+		Field->Meta.bAlias = !Alias->Value.IsEmpty();
+		Field->Meta.Alias = ToFString(Alias->Value);
+		PrintMissingMetaValue(Alias);
+		PrintApplyMeta(Alias);
+
+		RawMeta.Remove(FDataMetaType::Alias);
+	}
+	if (const auto Deprecated = RawMeta.Find(FDataMetaType::Deprecated))
+	{
+		Field->Meta.bDeprecated = true;
+		PrintUnusedMetaValue(Deprecated);
+		PrintApplyMeta(Deprecated);
+
+		RawMeta.Remove(FDataMetaType::Deprecated);
+	}
+	if (const auto ReadOnly = RawMeta.Find(FDataMetaType::ReadOnly))
+	{
+		Field->Meta.bReadOnly = true;
+		PrintUnusedMetaValue(ReadOnly);
+		PrintApplyMeta(ReadOnly);
+
+		RawMeta.Remove(FDataMetaType::ReadOnly);
 	}
 
 	if (Field->Meta.bStrict && Field->Meta.bEvent)
@@ -318,111 +351,42 @@ void ParseMetaPair(FDataField* Field, const char* Key, int32 KeySize, const char
 		Field->Meta.bEvent = false;
 		Field->Meta.bBubbles = false;
 		Field->Meta.EventType = TEXT("");
-		UE_LOG(LogData, Error, TEXT("Property with strict meta can't broadcast event"))
+
+		UE_LOG(LogDataReflection, Error, TEXT("Property with strict meta can't broadcast event"))
 	}
 }
 
-void ParseMetaPair(FDataLink* Link, const char* Key, int32 KeySize, const char* Value, int32 ValueSize)
+void ApplyMetaItems(FDataLink* Link, FDataRawMeta& RawMeta)
 {
-	bool bError = false;
-	if (Equal(Key, EDataMetaType::Nullable))
+	if (const auto Nullable = RawMeta.Find(FDataMetaType::Nullable))
 	{
-		ensureMsgf(Value == nullptr, TEXT("Unused value!"));
 		Link->Meta.bNullable = true;
-	}
-	else
-	{
-		bError = true;
-	}
+		PrintUnusedMetaValue(Nullable);
+		PrintApplyMeta(Nullable);
 
-	if (bError)
-	{
-		UE_LOG(LogData, Error, TEXT("      ? unknown meta: \"%s%s%s\""), *FString(KeySize, Key), Value ? TEXT(" = ") : TEXT(""), Value ? *FString(ValueSize, Value) : TEXT(""));
-	}
-	else
-	{
-		UE_LOG(LogData, Verbose, TEXT("    + meta: \"%s%s%s\""), *FString(KeySize, Key), Value ? TEXT(" = ") : TEXT(""), Value ? *FString(ValueSize, Value) : TEXT(""));
+		RawMeta.Remove(FDataMetaType::Nullable);
 	}
 }
 
 template <typename T>
-void ParseMeta(T* Meta, const TArray<const char*>& Collection)
+void ApplyMeta(T* Meta, PsDataTools::FDataRawMeta& RawMeta)
 {
-	TArray<FMetaToken> Tokens;
-	Tokens.Reserve(Collection.Num() * 5);
-	for (const char* Str : Collection)
-	{
-		char Quote = 0;
-
-		int32 i = 0;
-		while (Str[i] != 0)
-		{
-			const char c = Str[i];
-			if (c == '\'' || c == '\"')
-			{
-				if (Quote == 0)
-				{
-					Quote = c;
-					AddToken(Tokens, Str, i);
-					continue;
-				}
-				else if (Quote == c)
-				{
-					Quote = 0;
-					AddToken(Tokens, Str, i);
-					continue;
-				}
-			}
-
-			if (Quote == 0 && (c == ',' || c == '='))
-			{
-				AddToken(Tokens, Str, i, c);
-				continue;
-			}
-
-			++i;
-		}
-
-		if (i > 0)
-		{
-			AddToken(Tokens, Str, i);
-		}
-
-		Tokens.Add(FMetaToken(','));
-	}
-
-	int32 TokenOffset = 0;
-	while (Tokens.Num() > TokenOffset)
-	{
-		if (CheckTokens(Tokens, TokenOffset, "%,"))
-		{
-			ParseMetaPair(Meta, Tokens[TokenOffset].String, Tokens[TokenOffset].Size, nullptr, 0);
-			TokenOffset += 2;
-		}
-		else if (CheckTokens(Tokens, TokenOffset, "%=%,"))
-		{
-			ParseMetaPair(Meta, Tokens[TokenOffset].String, Tokens[TokenOffset].Size, Tokens[TokenOffset + 2].String, Tokens[TokenOffset + 2].Size);
-			TokenOffset += 4;
-		}
-		else
-		{
-			UE_LOG(LogData, Error, TEXT("      ? unknown meta pattern: \"%s\""), Tokens[TokenOffset].String ? *FString(Tokens[TokenOffset].Size, Tokens[TokenOffset].String) : *FString(1, &Tokens[TokenOffset].c));
-			TokenOffset += 1;
-		}
-	}
+	ApplyMetaItems(Meta, RawMeta);
+	PrintIrrelevantMeta(RawMeta);
+	RawMeta.Reset();
 }
 
 /***********************************
  * FDataField
  ***********************************/
 
-FDataField::FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, const TArray<const char*>& MetaCollection)
+FDataField::FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, PsDataTools::FDataRawMeta& RawMeta)
 	: Name(InName)
 	, Index(InIndex)
 	, Hash(InHash)
 	, Context(InContext)
 {
-	ParseMeta<FDataField>(this, MetaCollection);
+	ApplyMeta<FDataField>(this, RawMeta);
 }
 
 const FString& FDataField::GetChangedEventName() const
@@ -444,14 +408,13 @@ const FString& FDataField::GetNameForSerialize() const
  * FDataLink
  ***********************************/
 
-FDataLink::FDataLink(const FString& InName, const FString& InPath, bool bInPathProperty, const FString& InReturnType, int32 InHash, bool bInAbstract, bool bInCollection, const TArray<const char*>& MetaCollection)
-	: Name(InName)
-	, Path(InPath)
-	, bPathProperty(bInPathProperty)
-	, ReturnType(InReturnType)
+FDataLink::FDataLink(const FDataField* InField, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InReturnContext, FLinkPathFunction InPathFunction, bool bInAbstract, PsDataTools::FDataRawMeta& RawMeta)
+	: Field(InField)
+	, Index(InIndex)
 	, Hash(InHash)
-	, bCollection(bInCollection)
+	, ReturnContext(InReturnContext)
+	, PathFunction(InPathFunction)
 	, bAbstract(bInAbstract)
 {
-	ParseMeta<FDataLink>(this, MetaCollection);
+	ApplyMeta<FDataLink>(this, RawMeta);
 }

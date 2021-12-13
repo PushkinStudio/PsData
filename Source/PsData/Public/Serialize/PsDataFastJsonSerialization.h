@@ -37,8 +37,6 @@ private:
 	void AppendValueSpace();
 
 public:
-	bool bSupportEscapedCharactersForKey;
-
 	virtual void WriteKey(const FString& Key) override;
 	virtual void WriteArray() override;
 	virtual void WriteObject() override;

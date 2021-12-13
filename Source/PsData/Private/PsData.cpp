@@ -24,88 +24,22 @@ namespace PsDataTools
 {
 void FPsDataFriend::ChangeDataName(UPsData* Data, const FString& Name, const FString& CollectionName)
 {
-	if (Data->DataKey != Name || Data->CollectionKey != CollectionName)
-	{
-		Data->FullKey = CollectionName.IsEmpty() ? Name : (CollectionName + TEXT(".") + Name);
-		Data->DataKey = Name;
-		Data->CollectionKey = CollectionName;
-		if (Data->IsBound(UPsDataEvent::NameChanged, false))
-		{
-			Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::NameChanged, false));
-		}
-	}
+	Data->ChangeName(Name, CollectionName);
 }
 
 void FPsDataFriend::AddChild(UPsData* Parent, UPsData* Data)
 {
-	if (Data->Parent.IsValid())
-	{
-		UE_LOG(LogData, Fatal, TEXT("Child already added"));
-		return;
-	}
-
-	Data->Parent = Parent;
-	Parent->Children.Add(Data);
-
-	Data->DropImprint();
-
-	if (Data->IsBound(UPsDataEvent::AddedToParent, false))
-	{
-		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::AddedToParent, false));
-	}
-
-	if (Data->IsBound(UPsDataEvent::Added, true))
-	{
-		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
-	}
+	Parent->AddChild(Data);
 }
 
 void FPsDataFriend::RemoveChild(UPsData* Parent, UPsData* Data)
 {
-	if (Data->Parent != Parent)
-	{
-		UE_LOG(LogData, Fatal, TEXT("Child not added"));
-		return;
-	}
-
-	const auto bIsBound = Data->IsBound(UPsDataEvent::Removed, true);
-
-	Parent->Children.Remove(Data);
-	Data->Parent.Reset();
-
-	if (Data->IsBound(UPsDataEvent::RemovedFromParent, false))
-	{
-		Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::RemovedFromParent, false));
-	}
-
-	if (bIsBound)
-	{
-		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true);
-		Data->Broadcast(Event);
-		Parent->Broadcast(Event, Data);
-	}
+	Parent->RemoveChild(Data);
 }
 
 void FPsDataFriend::Changed(UPsData* Data, const FDataField* Field)
 {
-	Data->DropImprint();
-
-	if (Field->Meta.bEvent && Data->IsBound(Field->GetChangedEventName(), Field->Meta.bBubbles))
-	{
-		Data->Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
-	}
-
-	if (!Data->bChanged)
-	{
-		Data->bChanged = true;
-		DeferredTask(Data, [Data]() {
-			Data->bChanged = false;
-			if (Data->IsBound(UPsDataEvent::Changed, false))
-			{
-				Data->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
-			}
-		});
-	}
+	Data->Changed(Field);
 }
 
 void FPsDataFriend::InitProperties(UPsData* Data)
@@ -117,6 +51,31 @@ void FPsDataFriend::InitProperties(UPsData* Data)
 TArray<FAbstractDataProperty*>& FPsDataFriend::GetProperties(UPsData* Data)
 {
 	return Data->Properties;
+}
+
+FAbstractDataProperty* FPsDataFriend::GetProperty(UPsData* Data, int32 Index)
+{
+	return Data->Properties[Index];
+}
+
+const FAbstractDataProperty* FPsDataFriend::GetProperty(const UPsData* Data, int32 Index)
+{
+	return Data->Properties[Index];
+}
+
+TArray<FAbstractDataLinkProperty*>& FPsDataFriend::GetLinks(UPsData* Data)
+{
+	return Data->Links;
+}
+
+FAbstractDataLinkProperty* FPsDataFriend::GetLink(UPsData* Data, int32 Index)
+{
+	return Data->Links[Index];
+}
+
+const FAbstractDataLinkProperty* FPsDataFriend::GetLink(const UPsData* Data, int32 Index)
+{
+	return Data->Links[Index];
 }
 
 void FPsDataFriend::Serialize(const UPsData* Data, FPsDataSerializer* Serializer)
@@ -133,6 +92,31 @@ const FPsDataImprint& FPsDataFriend::GetImprint(const UPsData* Data)
 {
 	Data->CalculateImprint();
 	return Data->Imprint;
+}
+
+const TSet<UPsData*>& FPsDataFriend::GetChildren(const UPsData* Data)
+{
+	return Data->Children;
+}
+
+FPsDataBind FPsDataFriend::BindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field)
+{
+	return Data->BindInternal(Type, Delegate, Field);
+}
+
+FPsDataBind FPsDataFriend::BindInternal(const UPsData* Data, const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field)
+{
+	return Data->BindInternal(Type, Delegate, Field);
+}
+
+void FPsDataFriend::UnbindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field)
+{
+	Data->UnbindInternal(Type, Delegate, Field);
+}
+
+void FPsDataFriend::UnbindInternal(const UPsData* Data, const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field)
+{
+	Data->UnbindInternal(Type, Delegate, Field);
 }
 } // namespace PsDataTools
 
@@ -160,6 +144,16 @@ void FPsDataBind::Unbind()
 	DelegateWrapper.Reset();
 }
 
+FPsDataBind FPsDataBind::Force() const
+{
+	if (DelegateWrapper.IsValid())
+	{
+		DelegateWrapper->bForced = true;
+	}
+
+	return *this;
+}
+
 /***********************************
  * FPsDataBindCollection
  ***********************************/
@@ -179,31 +173,12 @@ void FPsDataBindCollection::Add(const FPsDataBind& Bind)
 
 void FPsDataBindCollection::Unbind()
 {
-	for (auto& DelegateWrapper : Collection)
+	for (const auto& DelegateWrapper : Collection)
 	{
 		DelegateWrapper->Delegate.Unbind();
 		DelegateWrapper->DynamicDelegate.Unbind();
 	}
 	Collection.Reset();
-}
-
-/***********************************
- * FPsDataReport
- ***********************************/
-
-FPsDataReport::FPsDataReport(EPsDataReportType InType, const FString& InSourcePath, const FString& InReason)
-	: Type(InType)
-	, SourcePath(InSourcePath)
-	, Reason(InReason)
-{
-}
-
-FPsDataReport::FPsDataReport(EPsDataReportType InType, const FString& InSourcePath, const FString& InReason, const FString& InLinkedPath)
-	: Type(InType)
-	, SourcePath(InSourcePath)
-	, Reason(InReason)
-	, LinkedPath(InLinkedPath)
-{
 }
 
 /***********************************
@@ -213,21 +188,173 @@ FPsDataReport::FPsDataReport(EPsDataReportType InType, const FString& InSourcePa
 UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, Parent(nullptr)
+	, Root(nullptr)
 	, BroadcastInProgress(0)
 	, bChanged(false)
 	, SerializeBufferSize(1024)
 	, ClassFields(nullptr)
 {
-	PsDataTools::FDataReflection::PreConstruct(this);
+	if (HasAnyFlags(RF_ClassDefaultObject | RF_DefaultSubObject))
+	{
+		PsDataTools::FDataReflection::PreConstruct(GetClass());
+	}
+	else
+	{
+		ClassFields = PsDataTools::FDataReflection::GetFieldsByClass(GetClass());
+		Properties.Reset(ClassFields->GetNumFields());
+		Links.Reset(ClassFields->GetNumLinks());
+	}
 }
 
 void UPsData::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	ClassFields = PsDataTools::FDataReflection::GetFieldsByClass(GetClass());
+	if (HasAnyFlags(RF_ClassDefaultObject | RF_DefaultSubObject))
+	{
+		PsDataTools::FDataReflection::PostConstruct(GetClass());
+	}
+	else
+	{
+		for (const auto Property : Properties)
+		{
+			if (Property->GetField()->Meta.bStrict)
+			{
+				Property->Allocate();
+			}
+		}
 
-	PsDataTools::FDataReflection::PostConstruct(this);
+		InitProperties();
+		PostDeserialize();
+	}
+}
+
+void UPsData::AddChild(UPsData* Child)
+{
+	if (Child->Parent)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Child already added"));
+		return;
+	}
+
+	Child->Parent = this;
+	Children.Add(Child);
+	Child->AddToRootData();
+
+	Child->DropImprint();
+
+	if (Child->IsBound(UPsDataEvent::AddedToParent, false))
+	{
+		Child->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::AddedToParent, false));
+	}
+
+	if (Child->IsBound(UPsDataEvent::Added, true))
+	{
+		Child->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
+	}
+}
+
+void UPsData::RemoveChild(UPsData* Child)
+{
+	if (Child->Parent != this)
+	{
+		UE_LOG(LogData, Fatal, TEXT("Child not added"));
+		return;
+	}
+
+	const auto bIsBound = Child->IsBound(UPsDataEvent::Removed, true);
+
+	Children.Remove(Child);
+	Child->Parent = nullptr;
+	Child->RemoveFromRootData();
+
+	Child->DropImprint();
+
+	if (Child->IsBound(UPsDataEvent::RemovedFromParent, false))
+	{
+		Child->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::RemovedFromParent, false));
+	}
+
+	if (bIsBound)
+	{
+		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true);
+		Child->Broadcast(Event);
+		Broadcast(Event, Child);
+	}
+}
+
+void UPsData::ChangeName(const FString& Name, const FString& CollectionName)
+{
+	if (DataKey != Name || CollectionKey != CollectionName)
+	{
+		FullKey = CollectionName.IsEmpty() ? Name : (CollectionName + TEXT(".") + Name);
+		DataKey = Name;
+		CollectionKey = CollectionName;
+
+		if (IsBound(UPsDataEvent::NameChanged, false))
+		{
+			Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::NameChanged, false));
+		}
+	}
+}
+
+void UPsData::Changed(const FDataField* Field)
+{
+	DropImprint();
+
+	const auto EventName = Field->GetChangedEventName();
+	if ((Field->Meta.bEvent || HasForcedDelegates(EventName)) && IsBound(EventName, Field->Meta.bBubbles))
+	{
+		Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
+	}
+
+	if (!bChanged)
+	{
+		bChanged = true;
+		PsDataTools::DeferredTask(this, [this]() {
+			bChanged = false;
+			if (IsBound(UPsDataEvent::Changed, false))
+			{
+				Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Changed, false));
+			}
+		});
+	}
+}
+
+void UPsData::AddToRootData()
+{
+	if (Parent->Root)
+	{
+		Root = Parent->Root;
+
+		if (IsBound(UPsDataEvent::AddedToRoot, false))
+		{
+			Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::AddedToRoot, false));
+		}
+
+		for (UPsData* Child : Children)
+		{
+			Child->AddToRootData();
+		}
+	}
+}
+
+void UPsData::RemoveFromRootData()
+{
+	if (Root)
+	{
+		Root = nullptr;
+
+		if (IsBound(UPsDataEvent::RemovedFromRoot, false))
+		{
+			Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::RemovedFromRoot, false));
+		}
+
+		for (UPsData* Child : Children)
+		{
+			Child->RemoveFromRootData();
+		}
+	}
 }
 
 void UPsData::DropImprint() const
@@ -239,7 +366,7 @@ void UPsData::DropImprint() const
 void UPsData::DropHash() const
 {
 	Hash.Reset();
-	if (Parent.IsValid() && Parent->Hash.IsSet())
+	if (Parent && Parent->Hash.IsSet())
 	{
 		Parent->DropHash();
 	}
@@ -305,12 +432,11 @@ void UPsData::PostDeserialize()
  * Event system
  ***********************************/
 
-bool UPsData::IsBound(const FString& Type, bool bBubbles) const
+bool UPsData::IsBound(const FString& EventType, bool bBubbles) const
 {
-	const auto Find = Delegates.Find(Type);
-	if (Find)
+	if (const auto Find = Delegates.Find(EventType))
 	{
-		for (auto& Wrapper : *Find)
+		for (const auto& Wrapper : *Find)
 		{
 			if (Wrapper->IsBound())
 			{
@@ -319,9 +445,9 @@ bool UPsData::IsBound(const FString& Type, bool bBubbles) const
 		}
 	}
 
-	if (bBubbles && Parent.IsValid())
+	if (bBubbles && Parent)
 	{
-		return Parent->IsBound(Type, bBubbles);
+		return Parent->IsBound(EventType, bBubbles);
 	}
 
 	return false;
@@ -350,6 +476,11 @@ void UPsData::Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate
 void UPsData::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 {
 	UnbindInternal(Type, Delegate);
+}
+
+void UPsData::UnbindAll(UObject* Object) const
+{
+	UnbindAllInternal(Object);
 }
 
 FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
@@ -390,6 +521,27 @@ void UPsData::BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate&
 	UnbindInternal(Type, Delegate);
 }
 
+void UPsData::BlueprintUnbindAll(UObject* Object)
+{
+	UnbindAllInternal(Object);
+}
+
+bool UPsData::HasForcedDelegates(const FString& EventType) const
+{
+	if (const auto Find = Delegates.Find(EventType))
+	{
+		for (const auto& Wrapper : *Find)
+		{
+			if (Wrapper->IsForced())
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 void UPsData::UpdateDelegates() const
 {
 	if (BroadcastInProgress > 0)
@@ -401,7 +553,7 @@ void UPsData::UpdateDelegates() const
 	{
 		for (auto ArrayIt = MapIt->Value.CreateIterator(); ArrayIt; ++ArrayIt)
 		{
-			TSharedRef<FDelegateWrapper>& Wrapper = *ArrayIt;
+			const auto& Wrapper = *ArrayIt;
 			if (!Wrapper->DynamicDelegate.IsBound() && !Wrapper->Delegate.IsBound())
 			{
 				ArrayIt.RemoveCurrent();
@@ -445,11 +597,10 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 
 	if (!Event->bStopImmediate)
 	{
-		const auto Find = Delegates.Find(Event->Type);
-		if (Find)
+		if (const auto Find = Delegates.Find(Event->Type))
 		{
 			TArray<TSharedRef<FDelegateWrapper>> Copy = *Find;
-			for (auto& Wrapper : Copy)
+			for (const auto& Wrapper : Copy)
 			{
 				bool bExecute = true;
 				if (Wrapper->Field)
@@ -485,7 +636,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 
 	if (!Event->bStop && Event->bBubbles)
 	{
-		if (Parent.IsValid())
+		if (Parent)
 		{
 			Parent->BroadcastInternal(Event, this);
 		}
@@ -528,10 +679,9 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& 
 {
 	if (Delegate.IsBound())
 	{
-		const auto Find = Delegates.Find(Type);
-		if (Find)
+		if (const auto Find = Delegates.Find(Type))
 		{
-			for (auto& Wrapper : *Find)
+			for (const auto& Wrapper : *Find)
 			{
 				if (Wrapper->DynamicDelegate == Delegate && Wrapper->Field == Field)
 				{
@@ -548,15 +698,34 @@ void UPsData::UnbindInternal(const FString& Type, const FPsDataDelegate& Delegat
 {
 	if (Delegate.IsBound())
 	{
-		const auto Find = Delegates.Find(Type);
-		if (Find)
+		if (const auto Find = Delegates.Find(Type))
 		{
-			for (auto& Wrapper : *Find)
+			for (const auto& Wrapper : *Find)
 			{
 				if (Wrapper->Delegate.GetHandle() == Delegate.GetHandle() && Wrapper->Field == Field)
 				{
 					Wrapper->Delegate.Unbind();
 				}
+			}
+		}
+	}
+
+	UpdateDelegates();
+}
+
+void UPsData::UnbindAllInternal(UObject* Object) const
+{
+	for (auto& Pair : Delegates)
+	{
+		for (auto& Wrapper : Pair.Value)
+		{
+			if (Wrapper->DynamicDelegate.GetUObject() == Object)
+			{
+				Wrapper->DynamicDelegate.Unbind();
+			}
+			if (Wrapper->Delegate.GetUObject() == Object)
+			{
+				Wrapper->DynamicDelegate.Unbind();
 			}
 		}
 	}
@@ -620,7 +789,7 @@ void UPsData::DataSerializeInternal(FPsDataSerializer* Serializer) const
 
 		const auto& Key = Field->GetNameForSerialize();
 		Serializer->WriteKey(Key);
-		Property->Serialize(this, Serializer);
+		Property->Serialize(Serializer);
 		Serializer->PopKey(Key);
 	}
 }
@@ -632,7 +801,7 @@ void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
 	{
 		if (const auto Field = ClassFields->GetFieldByAlias(Key))
 		{
-			Properties[Field->Index]->Deserialize(this, Deserializer);
+			Properties[Field->Index]->Deserialize(Deserializer);
 		}
 		else
 		{
@@ -651,6 +820,11 @@ void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
  * Data property
  ***********************************/
 
+const FString& UPsData::GetFullKey() const
+{
+	return FullKey;
+}
+
 const FString& UPsData::GetDataKey() const
 {
 	return DataKey;
@@ -661,30 +835,35 @@ const FString& UPsData::GetCollectionKey() const
 	return CollectionKey;
 }
 
-const FString& UPsData::GetFullKey() const
+void UPsData::GetPathFromRoot(FString& OutPath) const
 {
-	return FullKey;
+	if (Parent)
+	{
+		Parent->GetPathFromRoot(OutPath);
+		if (OutPath.Len() > 0)
+		{
+			OutPath.AppendChar('.');
+		}
+	}
+
+	OutPath.Append(GetFullKey());
+}
+
+FString UPsData::GetPathFromRoot() const
+{
+	FString Result;
+	GetPathFromRoot(Result);
+	return Result;
 }
 
 UPsData* UPsData::GetParent() const
 {
-	return Parent.Get();
+	return Parent;
 }
 
 UPsDataRoot* UPsData::GetRoot() const
 {
-	UPsData* Root = const_cast<UPsData*>(this);
-	while (Root)
-	{
-		if (Root->IsA(UPsDataRoot::StaticClass()))
-		{
-			return static_cast<UPsDataRoot*>(Root);
-		}
-
-		Root = Root->Parent.Get();
-	}
-
-	return nullptr;
+	return Root;
 }
 
 bool UPsData::HasRoot() const
@@ -698,16 +877,9 @@ FString UPsData::GetHash() const
 	return Hash.GetValue().ToString();
 }
 
-FString UPsData::GetPathFromRoot() const
+bool UPsData::InCollection() const
 {
-	const UPsData* Current = this;
-	FString Path = Current->GetFullKey();
-	while (Current->GetParent())
-	{
-		Current = Current->GetParent();
-		Path = Current->GetFullKey() + TEXT(".") + Path;
-	}
-	return Path;
+	return !CollectionKey.IsEmpty();
 }
 
 /***********************************
@@ -716,9 +888,9 @@ FString UPsData::GetPathFromRoot() const
 
 void UPsData::Reset()
 {
-	for (auto& Property : Properties)
+	for (const auto Property : Properties)
 	{
-		Property->Reset(this);
+		Property->Reset();
 	}
 
 	InitProperties();
@@ -739,100 +911,22 @@ UPsData* UPsData::Copy() const
 	return Copy;
 }
 
-TArray<FPsDataReport> UPsData::Validation() const
+void UPsData::Validation(TArray<FString>& OutResult) const
 {
-	TArray<FPsDataReport> Result;
-
-	// TODO: PS-136
-	UPsData* Data = const_cast<UPsData*>(this);
-	UPsData* RootData = Data->GetRoot();
-	const FString Path = GetPathFromRoot();
-
-	for (const auto Link : PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetLinksList())
+	for (const auto LinkProperty : Links)
 	{
-		const FString FieldPath = Path + TEXT(".") + Link->Name;
-
-		if (Link->bAbstract)
-		{
-			Result.Add(FPsDataReport(EPsDataReportType::Logic, FieldPath, TEXT("Used abstract property")));
-		}
-		else
-		{
-			TArray<FString> Keys;
-			UPsDataFunctionLibrary::GetLinkKeys(Data, Link, Keys);
-			TMap<FString, UPsData*>* MapPtr = nullptr;
-			const FString& LinkPath = UPsDataFunctionLibrary::GetLinkPath(Data, Link);
-			if (PsDataTools::GetByPath(RootData, LinkPath, MapPtr))
-			{
-				TMap<FString, UPsData*> Map = *MapPtr;
-				for (const FString& Key : Keys)
-				{
-					if (Key.Len() > 0)
-					{
-						UPsData** Find = Map.Find(Key);
-						if (Find == nullptr)
-						{
-							Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property not found"), LinkPath + TEXT(".") + Key));
-						}
-					}
-					else if (!Link->Meta.bNullable)
-					{
-						Result.Add(FPsDataReport(EPsDataReportType::Link, FieldPath, TEXT("Property is empty"), LinkPath + TEXT(".?")));
-					}
-				}
-			}
-			else
-			{
-				Result.Add(FPsDataReport(EPsDataReportType::Logic, LinkPath, TEXT("Used undeclared property")));
-			}
-		}
+		LinkProperty->Validate(OutResult);
 	}
 
-	for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(this->GetClass())->GetFieldsList())
+	for (const auto Child : Children)
 	{
-		if (Field->Context->IsData())
-		{
-			if (Field->Context->IsArray())
-			{
-				TArray<UPsData*>* Value = nullptr;
-				if (PsDataTools::GetByField(Data, Field, Value))
-				{
-					for (UPsData* Element : *Value)
-					{
-						if (Element)
-						{
-							Result.Append(Element->Validation());
-						}
-					}
-				}
-			}
-			else if (Field->Context->IsMap())
-			{
-				TMap<FString, UPsData*>* Value = nullptr;
-				if (PsDataTools::GetByField(Data, Field, Value))
-				{
-					for (const auto& ElementPair : *Value)
-					{
-						if (ElementPair.Value)
-						{
-							Result.Append(ElementPair.Value->Validation());
-						}
-					}
-				}
-			}
-			else
-			{
-				UPsData** Value = nullptr;
-				if (PsDataTools::GetByField(Data, Field, Value))
-				{
-					if (*Value)
-					{
-						Result.Append((*Value)->Validation());
-					}
-				}
-			}
-		}
+		Child->Validation(OutResult);
 	}
+}
 
+TArray<FString> UPsData::Validation() const
+{
+	TArray<FString> Result;
+	Validation(Result);
 	return Result;
 }

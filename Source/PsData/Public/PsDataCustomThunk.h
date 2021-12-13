@@ -3,12 +3,12 @@
 #pragma once
 
 #include "PsDataCore.h"
+#include "PsDataLink.h"
 
 #include "CoreMinimal.h"
 
 struct PSDATA_API FCustomThunkTemplates_PsData
 {
-public:
 	template <typename T>
 	static void GetProperty(UPsData* Target, int32 Index, T& Out)
 	{
@@ -18,7 +18,7 @@ public:
 	}
 
 	template <typename T>
-	static void SetProperty(UPsData* Target, int32 Index, T& Value)
+	static void SetProperty(UPsData* Target, int32 Index, const T& Value)
 	{
 		PsDataTools::UnsafeSetByIndex<T>(Target, Index, Value);
 	}
@@ -32,7 +32,7 @@ public:
 	}
 
 	template <typename T>
-	static void SetArrayProperty(UPsData* Target, int32 Index, typename PsDataTools::TConstRef<TArray<T>>::Type Value)
+	static void SetArrayProperty(UPsData* Target, int32 Index, PsDataTools::TConstRefType<TArray<T>, false> Value)
 	{
 		PsDataTools::UnsafeSetByIndex<TArray<T>>(Target, Index, Value);
 	}
@@ -46,15 +46,30 @@ public:
 	}
 
 	template <typename T>
-	static void SetMapProperty(UPsData* Target, int32 Index, typename PsDataTools::TConstRef<TMap<FString, T>>::Type Value)
+	static void SetMapProperty(UPsData* Target, int32 Index, PsDataTools::TConstRefType<TMap<FString, T>, false> Value)
 	{
 		PsDataTools::UnsafeSetByIndex<TMap<FString, T>>(Target, Index, Value);
+	}
+
+	template <typename T>
+	static void GetLinkValue(UPsData* Target, int32 Index, T& Out)
+	{
+		T* Result = nullptr;
+		PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+		Out = *Result;
+	}
+
+	template <typename T>
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, T& Out)
+	{
+		T* Result = nullptr;
+		PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+		Out = *Result;
 	}
 };
 
 struct PSDATA_API FCustomThunkTemplates_PsDataPtr
 {
-public:
 	template <typename T>
 	static void GetProperty(UPsData* Target, int32 Index, T& Out)
 	{
@@ -78,7 +93,7 @@ public:
 	}
 
 	template <typename T>
-	static void SetArrayProperty(UPsData* Target, int32 Index, typename PsDataTools::TConstRef<TArray<T>>::Type Value)
+	static void SetArrayProperty(UPsData* Target, int32 Index, PsDataTools::TConstRefType<TArray<T>, false> Value)
 	{
 		PsDataTools::UnsafeSetByIndex<TArray<T>>(Target, Index, Value);
 	}
@@ -92,8 +107,24 @@ public:
 	}
 
 	template <typename T>
-	static void SetMapProperty(UPsData* Target, int32 Index, typename PsDataTools::TConstRef<TMap<FString, T>>::Type Value)
+	static void SetMapProperty(UPsData* Target, int32 Index, PsDataTools::TConstRefType<TMap<FString, T>, false> Value)
 	{
 		PsDataTools::UnsafeSetByIndex<TMap<FString, T>>(Target, Index, Value);
+	}
+
+	template <typename T>
+	static void GetLinkValue(UPsData* Target, int32 Index, T& Out)
+	{
+		T* Result = nullptr;
+		PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+		Out = *Result;
+	}
+
+	template <typename T>
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, T& Out)
+	{
+		T* Result = nullptr;
+		PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+		Out = *Result;
 	}
 };

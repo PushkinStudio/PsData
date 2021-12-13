@@ -2,6 +2,7 @@
 
 #include "Types/PsData_UPsData.h"
 
+#include "PsDataLink.h"
 #include "Serialize/PsDataSerialization.h"
 
 DEFINE_FUNCTION(UPsDataUPsDataLibrary::execSetMapProperty)
@@ -72,6 +73,32 @@ DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetProperty)
 	P_NATIVE_BEGIN;
 	UPsData** Result = nullptr;
 	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_OBJECT_REF(UPsData, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	UPsData** Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataUPsDataLibrary::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(UPsData*, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<UPsData*>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

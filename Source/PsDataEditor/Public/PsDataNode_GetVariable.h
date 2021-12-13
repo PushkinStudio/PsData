@@ -26,7 +26,7 @@ public:
 	// End UK2Node interface.
 
 	/** Update allocated pin */
-	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const override;
+	virtual void UpdatePinByContext(EPsDataVariablePinType PinType, UEdGraphPin* Pin, int32 Index, FAbstractDataTypeContext* Context) const override;
 
 	/** Get function to call */
 	virtual UFunction* GetFunction() const override;

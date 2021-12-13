@@ -2,6 +2,8 @@
 
 #include "Types/PsData_FText.h"
 
+#include "UObject/TextProperty.h"
+
 DEFINE_FUNCTION(UPsDataFTextLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
@@ -70,6 +72,32 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execGetProperty)
 	P_NATIVE_BEGIN;
 	FText* Result = nullptr;
 	PsDataTools::UnsafeGetByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFTextLibrary::execGetLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_PROPERTY_REF(FTextProperty, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	FText* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
+	Out = *Result;
+	P_NATIVE_END;
+}
+
+DEFINE_FUNCTION(UPsDataFTextLibrary::execGetArrayLinkValue)
+{
+	P_GET_OBJECT(UPsData, Target);
+	P_GET_PROPERTY(FIntProperty, Index);
+	P_GET_TARRAY_REF(FText, Out);
+	P_FINISH;
+	P_NATIVE_BEGIN;
+	TArray<FText>* Result = nullptr;
+	PsDataTools::UnsafeGetLinkValueByIndex(Target, Index, Result);
 	Out = *Result;
 	P_NATIVE_END;
 }

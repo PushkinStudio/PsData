@@ -16,7 +16,6 @@ class PSDATA_API UPsDataTSoftObjectPtrLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
-public:
 	/** Get property */
 	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
 	static void GetProperty(UPsData* Target, int32 Index, TSoftObjectPtr<UObject>& Out);
@@ -41,13 +40,24 @@ public:
 	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
 	static void SetMapProperty(UPsData* Target, int32 Index, const TMap<FString, TSoftObjectPtr<UObject>>& Value);
 
+	/** Get link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetLinkValue(UPsData* Target, int32 Index, TSoftObjectPtr<UObject>& Out);
+
+	/** Get array link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, TArray<TSoftObjectPtr<UObject>>& Out);
+
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);
 	DECLARE_FUNCTION(execGetArrayProperty);
 	DECLARE_FUNCTION(execSetArrayProperty);
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
+	DECLARE_FUNCTION(execGetLinkValue);
+	DECLARE_FUNCTION(execGetArrayLinkValue);
 
+public:
 	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FSoftObjectPath& Value);
 	static FSoftObjectPath TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& Value);
 };
@@ -56,7 +66,7 @@ namespace PsDataTools
 {
 
 template <typename T>
-struct FDataTypeContext<TSoftObjectPtr<T>> : public FDataTypeContextExtended<TSoftObjectPtr<T>, UPsDataTSoftObjectPtrLibrary>
+struct TDataTypeContext<TSoftObjectPtr<T>> : public TDataTypeContextExtended<TSoftObjectPtr<T>, UPsDataTSoftObjectPtrLibrary>
 {
 	virtual UField* GetUE4Type() const override
 	{
@@ -70,7 +80,7 @@ struct FDataTypeContext<TSoftObjectPtr<T>> : public FDataTypeContextExtended<TSo
 };
 
 template <typename T>
-struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FDataTypeContextExtended<TArray<TSoftObjectPtr<T>>, UPsDataTSoftObjectPtrLibrary>
+struct TDataTypeContext<TArray<TSoftObjectPtr<T>>> : public TDataTypeContextExtended<TArray<TSoftObjectPtr<T>>, UPsDataTSoftObjectPtrLibrary>
 {
 	virtual UField* GetUE4Type() const override
 	{
@@ -84,7 +94,7 @@ struct FDataTypeContext<TArray<TSoftObjectPtr<T>>> : public FDataTypeContextExte
 };
 
 template <typename T>
-struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FDataTypeContextExtended<TMap<FString, TSoftObjectPtr<T>>, UPsDataTSoftObjectPtrLibrary>
+struct TDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public TDataTypeContextExtended<TMap<FString, TSoftObjectPtr<T>>, UPsDataTSoftObjectPtrLibrary>
 {
 	virtual UField* GetUE4Type() const override
 	{
@@ -98,7 +108,7 @@ struct FDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public FDataTypeCont
 };
 
 template <typename T>
-struct FTypeSerializer<TSoftObjectPtr<T>>
+struct TTypeSerializer<TSoftObjectPtr<T>>
 {
 	static void Serialize(const UPsData* Instance, const FDataField* Field, FPsDataSerializer* Serializer, const TSoftObjectPtr<T>& Value)
 	{
@@ -107,7 +117,7 @@ struct FTypeSerializer<TSoftObjectPtr<T>>
 };
 
 template <typename T>
-struct FTypeDeserializer<TSoftObjectPtr<T>>
+struct TTypeDeserializer<TSoftObjectPtr<T>>
 {
 	static TSoftObjectPtr<T> Deserialize(const UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const TSoftObjectPtr<T>& Value)
 	{

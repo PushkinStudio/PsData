@@ -98,9 +98,9 @@ void UPsDataNode_SetVariable::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
 	}
 }
 
-void UPsDataNode_SetVariable::UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const
+void UPsDataNode_SetVariable::UpdatePinByContext(EPsDataVariablePinType PinType, UEdGraphPin* Pin, int32 Index, FAbstractDataTypeContext* Context) const
 {
-	Super::UpdatePin(PinType, Pin);
+	Super::UpdatePinByContext(PinType, Pin, Index, Context);
 	if (PinType == EPsDataVariablePinType::PropertyOut || PinType == EPsDataVariablePinType::OldPropertyOut)
 	{
 		Pin->PinFriendlyName = FText::FromString(TEXT(""));

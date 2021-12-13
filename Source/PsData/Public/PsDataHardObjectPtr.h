@@ -11,7 +11,6 @@
 template <class T>
 class THardObjectPtr : public FGCObject
 {
-private:
 	T* Value;
 
 public:
@@ -59,7 +58,6 @@ public:
 	template <class OtherType>
 	friend class THardObjectPtr;
 
-public:
 	void Reset()
 	{
 		Value = nullptr;

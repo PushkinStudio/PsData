@@ -285,6 +285,7 @@ public:
 	// PsData functions
 	//
 
+private:
 	/** Get FPsDataBigInteger property */
 	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
 	static void GetProperty(UPsData* Target, int32 Index, FPsDataBigInteger& Out);
@@ -309,13 +310,24 @@ public:
 	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
 	static void SetMapProperty(UPsData* Target, int32 Index, const TMap<FString, FPsDataBigInteger>& Value);
 
+	/** Get link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetLinkValue(UPsData* Target, int32 Index, FPsDataBigInteger& Out);
+
+	/** Get array link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, TArray<FPsDataBigInteger>& Out);
+
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);
 	DECLARE_FUNCTION(execGetArrayProperty);
 	DECLARE_FUNCTION(execSetArrayProperty);
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
+	DECLARE_FUNCTION(execGetLinkValue);
+	DECLARE_FUNCTION(execGetArrayLinkValue);
 
+public:
 	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FPsDataBigInteger& Value);
 	static FPsDataBigInteger TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FPsDataBigInteger& Value);
 };
@@ -324,27 +336,27 @@ namespace PsDataTools
 {
 
 template <>
-struct FDataTypeContext<FPsDataBigInteger> : public FDataTypeContextExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
+struct TDataTypeContext<FPsDataBigInteger> : public TDataTypeContextExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
 };
 
 template <>
-struct FDataTypeContext<TArray<FPsDataBigInteger>> : public FDataTypeContextExtended<TArray<FPsDataBigInteger>, UPsDataBigIntegerLibrary>
+struct TDataTypeContext<TArray<FPsDataBigInteger>> : public TDataTypeContextExtended<TArray<FPsDataBigInteger>, UPsDataBigIntegerLibrary>
 {
 };
 
 template <>
-struct FDataTypeContext<TMap<FString, FPsDataBigInteger>> : public FDataTypeContextExtended<TMap<FString, FPsDataBigInteger>, UPsDataBigIntegerLibrary>
+struct TDataTypeContext<TMap<FString, FPsDataBigInteger>> : public TDataTypeContextExtended<TMap<FString, FPsDataBigInteger>, UPsDataBigIntegerLibrary>
 {
 };
 
 template <>
-struct FTypeSerializer<FPsDataBigInteger> : public FTypeSerializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
+struct TTypeSerializer<FPsDataBigInteger> : public TTypeSerializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
 };
 
 template <>
-struct FTypeDeserializer<FPsDataBigInteger> : public FTypeDeserializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
+struct TTypeDeserializer<FPsDataBigInteger> : public TTypeDeserializerExtended<FPsDataBigInteger, UPsDataBigIntegerLibrary>
 {
 };
 } // namespace PsDataTools

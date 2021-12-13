@@ -5,30 +5,69 @@
 #include "PsDataTraits.h"
 
 #include "CoreMinimal.h"
-#include "UObject/UnrealType.h"
 
-struct FAbstractDataProperty;
+DEFINE_LOG_CATEGORY_STATIC(LogDataReflection, VeryVerbose, All);
+
+namespace PsDataTools
+{
 
 /***********************************
- * EDataMetaType
+ * FDataMetaType
  ***********************************/
 
-struct EDataMetaType
+struct PSDATA_API FDataMetaType
 {
-	static const char* Strict;
-	static const char* Event;
-	static const char* Bubbles;
-	static const char* Alias;
-	static const char* ReadOnly;
-	static const char* Deprecated;
-	static const char* Nullable;
+	static const FDataStringViewChar Strict;
+	static const FDataStringViewChar Event;
+	static const FDataStringViewChar Bubbles;
+	static const FDataStringViewChar Alias;
+	static const FDataStringViewChar ReadOnly;
+	static const FDataStringViewChar Deprecated;
+	static const FDataStringViewChar Nullable;
 };
+
+/***********************************
+ * FDataRawMetaItem
+ ***********************************/
+
+struct PSDATA_API FDataRawMetaItem
+{
+	FDataStringViewChar Key;
+	FDataStringViewChar Value;
+
+	FDataRawMetaItem(const FDataStringViewChar& InKey, const FDataStringViewChar& InValue)
+		: Key(InKey)
+		, Value(InValue)
+	{
+	}
+};
+
+/***********************************
+ * FDataRawMeta
+ ***********************************/
+
+struct PSDATA_API FDataRawMeta
+{
+	FDataRawMeta();
+
+	void Append(const char* MetaString);
+	void Append(const FDataRawMeta& OtherMeta);
+	void Reset();
+	FDataRawMetaItem* Find(const FDataStringViewChar& Key);
+	const FDataRawMetaItem* Find(const FDataStringViewChar& Key) const;
+	bool Contains(const FDataStringViewChar& Key) const;
+	bool Remove(const FDataStringViewChar& Key);
+
+	TArray<FDataRawMetaItem> Items;
+};
+
+} // namespace PsDataTools
 
 /***********************************
  * FDataFieldMeta
  ***********************************/
 
-struct FDataFieldMeta
+struct PSDATA_API FDataFieldMeta
 {
 	bool bStrict;
 	bool bEvent;
@@ -47,7 +86,7 @@ struct FDataFieldMeta
  * FDataLinkMeta
  ***********************************/
 
-struct FDataLinkMeta
+struct PSDATA_API FDataLinkMeta
 {
 	bool bNullable;
 
@@ -78,16 +117,30 @@ struct PSDATA_API FDataFieldFunctions
 	UFunction* ResolveSetFunction() const;
 };
 
+struct PSDATA_API FDataLinkFunctions
+{
+	UClass* Class;
+	FName FunctionName;
+
+	FDataLinkFunctions(UClass* Class, FName FunctionName);
+	FDataLinkFunctions(UClass* Class, EDataFieldType FieldType);
+
+	UFunction* ResolveFunction() const;
+};
+
 /***********************************
  * Field Context
  ***********************************/
 
 struct PSDATA_API FAbstractDataTypeContext
 {
+	virtual ~FAbstractDataTypeContext() {}
+
 	virtual FString GetCppType() const = 0;
 	virtual FString GetCppContentType() const = 0;
 	virtual uint32 GetHash() const = 0;
 	virtual FDataFieldFunctions GetUFunctions() const = 0;
+	virtual FDataLinkFunctions GetLinkUFunctions() const = 0;
 	virtual UField* GetUE4Type() const;
 
 	virtual bool IsArray() const;
@@ -106,14 +159,13 @@ struct PSDATA_API FAbstractDataTypeContext
 
 struct PSDATA_API FDataField
 {
-public:
 	FString Name;
 	int32 Index;
 	int32 Hash;
 	FAbstractDataTypeContext* Context;
 	FDataFieldMeta Meta;
 
-	FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, const TArray<const char*>& MetaCollection);
+	FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InContext, PsDataTools::FDataRawMeta& RawMeta);
 	const FString& GetChangedEventName() const;
 	const FString& GetAliasName() const;
 	const FString& GetNameForSerialize() const;
@@ -123,17 +175,17 @@ public:
  * FDataLink
  ***********************************/
 
+using FLinkPathFunction = TFunction<void(class UPsData* Data, FString& OutPath)>;
+
 struct PSDATA_API FDataLink
 {
-public:
-	FString Name;
-	FString Path;
-	bool bPathProperty;
-	FString ReturnType;
+	const FDataField* Field;
+	int32 Index;
 	int32 Hash;
-	bool bCollection;
+	FAbstractDataTypeContext* ReturnContext;
+	FLinkPathFunction PathFunction;
 	bool bAbstract;
 	FDataLinkMeta Meta;
 
-	FDataLink(const FString& InName, const FString& InPath, bool bInPathProperty, const FString& InReturnType, int32 InHash, bool bInAbstract, bool bInCollection, const TArray<const char*>& MetaCollection);
+	FDataLink(const FDataField* InField, int32 InIndex, int32 InHash, FAbstractDataTypeContext* InReturnContext, FLinkPathFunction InPathFunction, bool bInAbstract, PsDataTools::FDataRawMeta& RawMeta);
 };

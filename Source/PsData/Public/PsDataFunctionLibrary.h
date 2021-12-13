@@ -10,7 +10,6 @@
 class UPsData;
 class UPsDataBlueprintMapProxy;
 class UPsDataBlueprintArrayProxy;
-struct FDataLink;
 
 UCLASS()
 class PSDATA_API UPsDataFunctionLibrary : public UBlueprintFunctionLibrary
@@ -19,36 +18,14 @@ class PSDATA_API UPsDataFunctionLibrary : public UBlueprintFunctionLibrary
 
 public:
 	/***********************************
-	 * Link
-	 ***********************************/
-
-	/** Get path by link hash */
-	static const FString& GetLinkPath(const UPsData* Target, const FDataLink* Link);
-
-	/** Get keys by link hash */
-	static void GetLinkKeys(const UPsData* Target, const FDataLink* Link, TArray<FString>& OutKeys);
-
-	/** Get data array property by hash */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
-	static TArray<UPsData*> GetDataArrayByLinkHash(const UPsData* Target, int32 Hash);
-
-	/** Get data property by hash */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
-	static UPsData* GetDataByLinkHash(const UPsData* Target, int32 Hash);
-
-	/** Is link empty? */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data")
-	static bool IsLinkEmpty(const UPsData* Target, int32 Hash);
-
-	/***********************************
 	 * Blueprint collections proxy
 	 ***********************************/
 
 	/** Get map proxy property */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
-	static UPsDataBlueprintMapProxy* GetMapProxy(UPsData* Target, int32 Hash);
+	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index"))
+	static UPsDataBlueprintMapProxy* GetMapProxy(UPsData* Target, int32 Index);
 
 	/** Get map proxy property */
-	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Hash"))
-	static UPsDataBlueprintArrayProxy* GetArrayProxy(UPsData* Target, int32 Hash);
+	UFUNCTION(BlueprintPure, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index"))
+	static UPsDataBlueprintArrayProxy* GetArrayProxy(UPsData* Target, int32 Index);
 };

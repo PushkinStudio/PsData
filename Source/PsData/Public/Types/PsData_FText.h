@@ -8,7 +8,6 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "UObject/TextProperty.h"
 
 #include "PsData_FText.generated.h"
 
@@ -17,7 +16,6 @@ class PSDATA_API UPsDataFTextLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
-public:
 	/** Get property */
 	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
 	static void GetProperty(UPsData* Target, int32 Index, FText& Out);
@@ -42,13 +40,24 @@ public:
 	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
 	static void SetMapProperty(UPsData* Target, int32 Index, const TMap<FString, FText>& Value);
 
+	/** Get link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetLinkValue(UPsData* Target, int32 Index, FText& Out);
+
+	/** Get array link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, TArray<FText>& Out);
+
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);
 	DECLARE_FUNCTION(execGetArrayProperty);
 	DECLARE_FUNCTION(execSetArrayProperty);
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
+	DECLARE_FUNCTION(execGetLinkValue);
+	DECLARE_FUNCTION(execGetArrayLinkValue);
 
+public:
 	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FText& Value);
 	static FText TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FText& Value);
 };
@@ -57,22 +66,22 @@ namespace PsDataTools
 {
 
 template <>
-struct FDataTypeContext<FText> : public FDataTypeContextExtended<FText, UPsDataFTextLibrary>
+struct TDataTypeContext<FText> : public TDataTypeContextExtended<FText, UPsDataFTextLibrary>
 {
 };
 
 template <>
-struct FDataTypeContext<TArray<FText>> : public FDataTypeContextExtended<TArray<FText>, UPsDataFTextLibrary>
+struct TDataTypeContext<TArray<FText>> : public TDataTypeContextExtended<TArray<FText>, UPsDataFTextLibrary>
 {
 };
 
 template <>
-struct FDataTypeContext<TMap<FString, FText>> : public FDataTypeContextExtended<TMap<FString, FText>, UPsDataFTextLibrary>
+struct TDataTypeContext<TMap<FString, FText>> : public TDataTypeContextExtended<TMap<FString, FText>, UPsDataFTextLibrary>
 {
 };
 
 template <>
-struct FTypeComparator<FText>
+struct TTypeComparator<FText>
 {
 	static bool Compare(const FText& Value0, const FText& Value1)
 	{
@@ -100,12 +109,12 @@ struct FTypeComparator<FText>
 };
 
 template <>
-struct FTypeSerializer<FText> : public FTypeSerializerExtended<FText, UPsDataFTextLibrary>
+struct TTypeSerializer<FText> : public TTypeSerializerExtended<FText, UPsDataFTextLibrary>
 {
 };
 
 template <>
-struct FTypeDeserializer<FText> : public FTypeDeserializerExtended<FText, UPsDataFTextLibrary>
+struct TTypeDeserializer<FText> : public TTypeDeserializerExtended<FText, UPsDataFTextLibrary>
 {
 };
 

@@ -66,12 +66,12 @@ public:
 	/** Update allocated pin */
 	virtual void UpdatePin(EPsDataVariablePinType PinType, UEdGraphPin* Pin) const;
 
+	/** Update allocated pin */
+	virtual void UpdatePinByContext(EPsDataVariablePinType PinType, UEdGraphPin* Pin, int32 Index, FAbstractDataTypeContext* Context) const;
+
 	/** Get function to call */
 	virtual UFunction* GetFunction() const;
 
 	/** Update function reference */
 	void UpdateFunctionReference();
-
-	/** Node is link */
-	virtual bool IsLink() const { return false; }
 };

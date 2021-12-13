@@ -16,7 +16,6 @@ class PSDATA_API UPsDataInt32Library : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
-public:
 	/** Get property */
 	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
 	static void GetProperty(UPsData* Target, int32 Index, int32& Out);
@@ -41,13 +40,24 @@ public:
 	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
 	static void SetMapProperty(UPsData* Target, int32 Index, const TMap<FString, int32>& Value);
 
+	/** Get link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetLinkValue(UPsData* Target, int32 Index, int32& Out);
+
+	/** Get array link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, TArray<int32>& Out);
+
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);
 	DECLARE_FUNCTION(execGetArrayProperty);
 	DECLARE_FUNCTION(execSetArrayProperty);
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
+	DECLARE_FUNCTION(execGetLinkValue);
+	DECLARE_FUNCTION(execGetArrayLinkValue);
 
+public:
 	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const int32& Value);
 	static int32 TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const int32& Value);
 };
@@ -56,33 +66,33 @@ namespace PsDataTools
 {
 
 template <>
-struct FDataTypeContext<int32> : public FDataTypeContextExtended<int32, UPsDataInt32Library>
+struct TDataTypeContext<int32> : public TDataTypeContextExtended<int32, UPsDataInt32Library>
 {
 };
 
 template <>
-struct FDataTypeContext<TArray<int32>> : public FDataTypeContextExtended<TArray<int32>, UPsDataInt32Library>
+struct TDataTypeContext<TArray<int32>> : public TDataTypeContextExtended<TArray<int32>, UPsDataInt32Library>
 {
 };
 
 template <>
-struct FDataTypeContext<TMap<FString, int32>> : public FDataTypeContextExtended<TMap<FString, int32>, UPsDataInt32Library>
+struct TDataTypeContext<TMap<FString, int32>> : public TDataTypeContextExtended<TMap<FString, int32>, UPsDataInt32Library>
 {
 };
 
 template <>
-struct FTypeDefault<int32>
+struct TTypeDefault<int32>
 {
 	static const int32 GetDefaultValue() { return 0; }
 };
 
 template <>
-struct FTypeSerializer<int32> : public FTypeSerializerExtended<int32, UPsDataInt32Library>
+struct TTypeSerializer<int32> : public TTypeSerializerExtended<int32, UPsDataInt32Library>
 {
 };
 
 template <>
-struct FTypeDeserializer<int32> : public FTypeDeserializerExtended<int32, UPsDataInt32Library>
+struct TTypeDeserializer<int32> : public TTypeDeserializerExtended<int32, UPsDataInt32Library>
 {
 };
 

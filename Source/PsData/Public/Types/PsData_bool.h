@@ -16,7 +16,6 @@ class PSDATA_API UPsDataBoolLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
-public:
 	/** Get property */
 	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
 	static void GetProperty(UPsData* Target, int32 Index, bool& Out);
@@ -41,13 +40,24 @@ public:
 	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
 	static void SetMapProperty(UPsData* Target, int32 Index, const TMap<FString, bool>& Value);
 
+	/** Get link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetLinkValue(UPsData* Target, int32 Index, bool& Out);
+
+	/** Get array link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, TArray<bool>& Out);
+
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);
 	DECLARE_FUNCTION(execGetArrayProperty);
 	DECLARE_FUNCTION(execSetArrayProperty);
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
+	DECLARE_FUNCTION(execGetLinkValue);
+	DECLARE_FUNCTION(execGetArrayLinkValue);
 
+public:
 	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const bool& Value);
 	static bool TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const bool& Value);
 };
@@ -56,33 +66,33 @@ namespace PsDataTools
 {
 
 template <>
-struct FDataTypeContext<bool> : public FDataTypeContextExtended<bool, UPsDataBoolLibrary>
+struct TDataTypeContext<bool> : public TDataTypeContextExtended<bool, UPsDataBoolLibrary>
 {
 };
 
 template <>
-struct FDataTypeContext<TArray<bool>> : public FDataTypeContextExtended<TArray<bool>, UPsDataBoolLibrary>
+struct TDataTypeContext<TArray<bool>> : public TDataTypeContextExtended<TArray<bool>, UPsDataBoolLibrary>
 {
 };
 
 template <>
-struct FDataTypeContext<TMap<FString, bool>> : public FDataTypeContextExtended<TMap<FString, bool>, UPsDataBoolLibrary>
+struct TDataTypeContext<TMap<FString, bool>> : public TDataTypeContextExtended<TMap<FString, bool>, UPsDataBoolLibrary>
 {
 };
 
 template <>
-struct FTypeDefault<bool>
+struct TTypeDefault<bool>
 {
 	static const bool GetDefaultValue() { return false; }
 };
 
 template <>
-struct FTypeSerializer<bool> : public FTypeSerializerExtended<bool, UPsDataBoolLibrary>
+struct TTypeSerializer<bool> : public TTypeSerializerExtended<bool, UPsDataBoolLibrary>
 {
 };
 
 template <>
-struct FTypeDeserializer<bool> : public FTypeDeserializerExtended<bool, UPsDataBoolLibrary>
+struct TTypeDeserializer<bool> : public TTypeDeserializerExtended<bool, UPsDataBoolLibrary>
 {
 };
 

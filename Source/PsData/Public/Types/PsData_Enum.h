@@ -5,7 +5,6 @@
 #include "PsDataCore.h"
 
 #include "PsDataCustomThunk.h"
-#include "Types/PsData_uint8.h"
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
@@ -17,7 +16,6 @@ class PSDATA_API UPsDataEnumLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
-public:
 	/** Get property */
 	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
 	static void GetProperty(UPsData* Target, int32 Index, int32& Out);
@@ -42,13 +40,24 @@ public:
 	UFUNCTION(BlueprintCallable, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataIn = "Value"))
 	static void SetMapProperty(UPsData* Target, int32 Index, const TMap<FString, int32>& Value);
 
+	/** Get link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetLinkValue(UPsData* Target, int32 Index, int32& Out);
+
+	/** Get array link value */
+	UFUNCTION(BlueprintPure, CustomThunk, Category = "PsData|Data", meta = (PsDataTarget = "Target", PsDataIndex = "Index", PsDataOut = "Out"))
+	static void GetArrayLinkValue(UPsData* Target, int32 Index, TArray<int32>& Out);
+
 	DECLARE_FUNCTION(execGetProperty);
 	DECLARE_FUNCTION(execSetProperty);
 	DECLARE_FUNCTION(execGetArrayProperty);
 	DECLARE_FUNCTION(execSetArrayProperty);
 	DECLARE_FUNCTION(execGetMapProperty);
 	DECLARE_FUNCTION(execSetMapProperty);
+	DECLARE_FUNCTION(execGetLinkValue);
+	DECLARE_FUNCTION(execGetArrayLinkValue);
 
+public:
 	static void TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const uint8& Value);
 	static uint8 TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const uint8& Value);
 
@@ -70,9 +79,9 @@ UEnum* FindUEnum()
 }
 
 template <typename T>
-struct FEnumDataTypeContext : public FDataTypeContextExtended<T, UPsDataEnumLibrary>
+struct FEnumDataTypeContext : public TDataTypeContextExtended<T, UPsDataEnumLibrary>
 {
-	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
+	static_assert(std::is_enum<T>::value && sizeof(T) == 1, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
 
 	virtual UField* GetUE4Type() const override
 	{
@@ -99,7 +108,7 @@ struct FEnumDataTypeContext : public FDataTypeContextExtended<T, UPsDataEnumLibr
 };
 
 template <typename T>
-struct FEnumDataTypeContext<TArray<T>> : public FDataTypeContextExtended<TArray<T>, UPsDataEnumLibrary>
+struct FEnumDataTypeContext<TArray<T>> : public TDataTypeContextExtended<TArray<T>, UPsDataEnumLibrary>
 {
 	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
 
@@ -128,7 +137,7 @@ struct FEnumDataTypeContext<TArray<T>> : public FDataTypeContextExtended<TArray<
 };
 
 template <typename T>
-struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<TMap<FString, T>, UPsDataEnumLibrary>
+struct FEnumDataTypeContext<TMap<FString, T>> : public TDataTypeContextExtended<TMap<FString, T>, UPsDataEnumLibrary>
 {
 	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
 
@@ -166,31 +175,40 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 	{                                                                                                                                          \
                                                                                                                                                \
 	template <>                                                                                                                                \
-	struct FDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                                  \
+	struct TTypeToString<__Type__>                                                                                                             \
 	{                                                                                                                                          \
-		virtual ~FDataTypeContext() {}                                                                                                         \
+		static FString ToString(__Type__ Value)                                                                                                \
+		{                                                                                                                                      \
+			return FindUEnum<__Type__>()->GetNameStringByValue(static_cast<int64>(Value));                                                     \
+		}                                                                                                                                      \
 	};                                                                                                                                         \
                                                                                                                                                \
 	template <>                                                                                                                                \
-	struct FDataTypeContext<TArray<__Type__>> : public FEnumDataTypeContext<TArray<__Type__>>                                                  \
+	struct TDataTypeContext<__Type__> : public FEnumDataTypeContext<__Type__>                                                                  \
 	{                                                                                                                                          \
-		virtual ~FDataTypeContext() {}                                                                                                         \
+		virtual ~TDataTypeContext() {}                                                                                                         \
 	};                                                                                                                                         \
                                                                                                                                                \
 	template <>                                                                                                                                \
-	struct FDataTypeContext<TMap<FString, __Type__>> : public FEnumDataTypeContext<TMap<FString, __Type__>>                                    \
+	struct TDataTypeContext<TArray<__Type__>> : public FEnumDataTypeContext<TArray<__Type__>>                                                  \
 	{                                                                                                                                          \
-		virtual ~FDataTypeContext() {}                                                                                                         \
+		virtual ~TDataTypeContext() {}                                                                                                         \
 	};                                                                                                                                         \
                                                                                                                                                \
 	template <>                                                                                                                                \
-	struct FTypeDefault<__Type__>                                                                                                              \
+	struct TDataTypeContext<TMap<FString, __Type__>> : public FEnumDataTypeContext<TMap<FString, __Type__>>                                    \
+	{                                                                                                                                          \
+		virtual ~TDataTypeContext() {}                                                                                                         \
+	};                                                                                                                                         \
+                                                                                                                                               \
+	template <>                                                                                                                                \
+	struct TTypeDefault<__Type__>                                                                                                              \
 	{                                                                                                                                          \
 		static const __Type__ GetDefaultValue() { return static_cast<__Type__>(0); }                                                           \
 	};                                                                                                                                         \
                                                                                                                                                \
 	template <>                                                                                                                                \
-	struct FTypeSerializer<__Type__>                                                                                                           \
+	struct TTypeSerializer<__Type__>                                                                                                           \
 	{                                                                                                                                          \
 		static void Serialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const __Type__ Value)     \
 		{                                                                                                                                      \
@@ -199,7 +217,7 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public FDataTypeContextExtended<
 	};                                                                                                                                         \
                                                                                                                                                \
 	template <>                                                                                                                                \
-	struct FTypeDeserializer<__Type__>                                                                                                         \
+	struct TTypeDeserializer<__Type__>                                                                                                         \
 	{                                                                                                                                          \
 		static __Type__ Deserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, __Type__ Value) \
 		{                                                                                                                                      \
