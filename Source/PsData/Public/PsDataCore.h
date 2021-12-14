@@ -5,7 +5,6 @@
 #include "PsData.h"
 #include "PsDataField.h"
 #include "PsDataProperty.h"
-#include "PsDataRoot.h"
 #include "PsDataStringView.h"
 #include "PsDataTraits.h"
 

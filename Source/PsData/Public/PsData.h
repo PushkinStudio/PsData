@@ -43,6 +43,48 @@ private:
 };
 
 /***********************************
+ * EDataBindFlags
+ ***********************************/
+
+enum class EDataBindFlags : uint8
+{
+	Default = 0,
+	IgnoreFieldMeta = 1,
+	NonDeferred = 2,
+};
+
+FORCEINLINE EDataBindFlags operator|(EDataBindFlags Left, EDataBindFlags Right)
+{
+	return static_cast<EDataBindFlags>(static_cast<uint8>(Left) | static_cast<uint8>(Right));
+}
+
+FORCEINLINE EDataBindFlags operator&(EDataBindFlags Left, EDataBindFlags Right)
+{
+	return static_cast<EDataBindFlags>(static_cast<uint8>(Left) & static_cast<uint8>(Right));
+}
+
+FORCEINLINE EDataBindFlags operator^(EDataBindFlags Left, EDataBindFlags Right)
+{
+	return static_cast<EDataBindFlags>(static_cast<uint8>(Left) ^ static_cast<uint8>(Right));
+}
+
+FORCEINLINE EDataBindFlags operator~(EDataBindFlags Value)
+{
+	return static_cast<EDataBindFlags>(~static_cast<uint8>(Value));
+}
+
+/***********************************
+ * EDataBroadcastPass
+ ***********************************/
+
+enum class EDataBroadcastPass : uint8
+{
+	Default = 0,
+	Deferred = 1,
+	NonDeferred = 2,
+};
+
+/***********************************
  * FDelegateWrapper
  ***********************************/
 
@@ -51,30 +93,25 @@ struct FDelegateWrapper
 	FPsDataDynamicDelegate DynamicDelegate;
 	FPsDataDelegate Delegate;
 	const FDataField* Field;
-	bool bForced;
+	EDataBindFlags Flags;
 
-	FDelegateWrapper(const FPsDataDynamicDelegate& InDynamicDelegate, const FDataField* InField = nullptr)
+	FDelegateWrapper(const FPsDataDynamicDelegate& InDynamicDelegate, EDataBindFlags InFlags, const FDataField* InField)
 		: DynamicDelegate(InDynamicDelegate)
 		, Field(InField)
-		, bForced(false)
+		, Flags(InFlags)
 	{
 	}
 
-	FDelegateWrapper(const FPsDataDelegate& InDelegate, const FDataField* InField = nullptr)
+	FDelegateWrapper(const FPsDataDelegate& InDelegate, EDataBindFlags InFlags, const FDataField* InField)
 		: Delegate(InDelegate)
 		, Field(InField)
-		, bForced(false)
+		, Flags(InFlags)
 	{
 	}
 
 	bool IsBound() const
 	{
 		return DynamicDelegate.IsBound() || Delegate.IsBound();
-	}
-
-	bool IsForced() const
-	{
-		return bForced && IsBound();
 	}
 };
 
@@ -100,9 +137,6 @@ public:
 
 	/** Unbind */
 	void Unbind();
-
-	/** Ignore field metadata rule (Field->Meta.bEvent) */
-	FPsDataBind Force() const;
 };
 
 /***********************************
@@ -154,8 +188,8 @@ struct PSDATA_API FPsDataFriend
 	static void Deserialize(UPsData* Data, FPsDataDeserializer* Deserializer);
 	static const FPsDataImprint& GetImprint(const UPsData* Data);
 	static const TSet<UPsData*>& GetChildren(const UPsData* Data);
-	static FPsDataBind BindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field = nullptr);
-	static FPsDataBind BindInternal(const UPsData* Data, const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field = nullptr);
+	static FPsDataBind BindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags, const FDataField* Field = nullptr);
+	static FPsDataBind BindInternal(const UPsData* Data, const FString& Type, const FPsDataDelegate& Delegate, EDataBindFlags Flags, const FDataField* Field = nullptr);
 	static void UnbindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field = nullptr);
 	static void UnbindInternal(const UPsData* Data, const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field = nullptr);
 };
@@ -303,14 +337,16 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (Category = "PsData|Data"))
 	bool IsBound(const FString& EventType, bool bBubbles) const;
 
+	bool IsBoundWithFlag(const FString& EventType, EDataBindFlags Flags, bool bBubbles) const;
+
 	/** Broadcast */
 	void Broadcast(UPsDataEvent* Event) const;
 
 	/** Bind */
-	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const;
+	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const;
 
 	/** Bind */
-	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate) const;
+	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const;
 
 	/** Bind */
 	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const;
@@ -321,23 +357,10 @@ public:
 	/** Unbind all */
 	void UnbindAll(UObject* Object) const;
 
-protected:
-	/** Bind */
-	FPsDataBind Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const;
-
-	/** Bind */
-	FPsDataBind Bind(int32 FieldHash, const FPsDataDelegate& Delegate) const;
-
-	/** Bind */
-	void Unbind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const;
-
-	/** Bind */
-	void Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const;
-
 public:
 	/** Blueprint bind */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData|Data"))
-	void BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate);
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData|Data", AdvancedDisplay = "bIgnoreFieldMeta, bNonDeferred"))
+	void BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate, bool bIgnoreFieldMeta = false, bool bNonDeferred = false);
 
 	/** Blueprint unbind */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Unbind", Category = "PsData|Data"))
@@ -348,9 +371,6 @@ public:
 	void BlueprintUnbindAll(UObject* Object);
 
 private:
-	/** Checks if forced delegates exist for EventType */
-	bool HasForcedDelegates(const FString& EventType) const;
-
 	/** Update delegates */
 	void UpdateDelegates() const;
 
@@ -358,13 +378,13 @@ private:
 	void Broadcast(UPsDataEvent* Event, const UPsData* Previous) const;
 
 	/** Broadcast internal */
-	void BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) const;
+	void BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous, EDataBroadcastPass Pass) const;
 
 	/** Bind internal */
-	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field = nullptr) const;
+	FPsDataBind BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default, const FDataField* Field = nullptr) const;
 
 	/** Bind internal */
-	FPsDataBind BindInternal(const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field = nullptr) const;
+	FPsDataBind BindInternal(const FString& Type, const FPsDataDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default, const FDataField* Field = nullptr) const;
 
 	/** Unbind internal */
 	void UnbindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field = nullptr) const;

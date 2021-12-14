@@ -99,14 +99,14 @@ const TSet<UPsData*>& FPsDataFriend::GetChildren(const UPsData* Data)
 	return Data->Children;
 }
 
-FPsDataBind FPsDataFriend::BindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field)
+FPsDataBind FPsDataFriend::BindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags, const FDataField* Field)
 {
-	return Data->BindInternal(Type, Delegate, Field);
+	return Data->BindInternal(Type, Delegate, Flags, Field);
 }
 
-FPsDataBind FPsDataFriend::BindInternal(const UPsData* Data, const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field)
+FPsDataBind FPsDataFriend::BindInternal(const UPsData* Data, const FString& Type, const FPsDataDelegate& Delegate, EDataBindFlags Flags, const FDataField* Field)
 {
-	return Data->BindInternal(Type, Delegate, Field);
+	return Data->BindInternal(Type, Delegate, Flags, Field);
 }
 
 void FPsDataFriend::UnbindInternal(const UPsData* Data, const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field)
@@ -142,16 +142,6 @@ void FPsDataBind::Unbind()
 		DelegateWrapper->DynamicDelegate.Unbind();
 	}
 	DelegateWrapper.Reset();
-}
-
-FPsDataBind FPsDataBind::Force() const
-{
-	if (DelegateWrapper.IsValid())
-	{
-		DelegateWrapper->bForced = true;
-	}
-
-	return *this;
 }
 
 /***********************************
@@ -302,10 +292,17 @@ void UPsData::Changed(const FDataField* Field)
 {
 	DropImprint();
 
-	const auto EventName = Field->GetChangedEventName();
-	if ((Field->Meta.bEvent || HasForcedDelegates(EventName)) && IsBound(EventName, Field->Meta.bBubbles))
+	const auto& EventName = Field->GetChangedEventName();
+	if (Field->Meta.bEvent)
 	{
-		Broadcast(UPsDataEvent::ConstructEvent(Field->GetChangedEventName(), Field->Meta.bBubbles));
+		if (IsBound(EventName, Field->Meta.bBubbles))
+		{
+			Broadcast(UPsDataEvent::ConstructEvent(EventName, Field->Meta.bBubbles));
+		}
+	}
+	else if (IsBoundWithFlag(EventName, EDataBindFlags::IgnoreFieldMeta, false))
+	{
+		Broadcast(UPsDataEvent::ConstructEvent(EventName, false));
 	}
 
 	if (!bChanged)
@@ -453,19 +450,40 @@ bool UPsData::IsBound(const FString& EventType, bool bBubbles) const
 	return false;
 }
 
+bool UPsData::IsBoundWithFlag(const FString& EventType, EDataBindFlags Flags, bool bBubbles) const
+{
+	if (const auto Find = Delegates.Find(EventType))
+	{
+		for (const auto& Wrapper : *Find)
+		{
+			if (static_cast<uint8>(Wrapper->Flags & Flags) != 0 && Wrapper->IsBound())
+			{
+				return true;
+			}
+		}
+	}
+
+	if (bBubbles && Parent)
+	{
+		return Parent->IsBoundWithFlag(EventType, Flags, bBubbles);
+	}
+
+	return false;
+}
+
 void UPsData::Broadcast(UPsDataEvent* Event) const
 {
 	Broadcast(Event, nullptr);
 }
 
-FPsDataBind UPsData::Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
+FPsDataBind UPsData::Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags) const
 {
-	return BindInternal(Type, Delegate);
+	return BindInternal(Type, Delegate, Flags);
 }
 
-FPsDataBind UPsData::Bind(const FString& Type, const FPsDataDelegate& Delegate) const
+FPsDataBind UPsData::Bind(const FString& Type, const FPsDataDelegate& Delegate, EDataBindFlags Flags) const
 {
-	return BindInternal(Type, Delegate);
+	return BindInternal(Type, Delegate, Flags);
 }
 
 void UPsData::Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
@@ -483,37 +501,18 @@ void UPsData::UnbindAll(UObject* Object) const
 	UnbindAllInternal(Object);
 }
 
-FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
+void UPsData::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate, bool bIgnoreFieldMeta, bool bNonDeferred)
 {
-	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
-	check(Field);
-	return BindInternal(Field->GetChangedEventName(), Delegate);
-}
-
-FPsDataBind UPsData::Bind(int32 FieldHash, const FPsDataDelegate& Delegate) const
-{
-	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
-	check(Field);
-	return BindInternal(Field->GetChangedEventName(), Delegate);
-}
-
-void UPsData::Unbind(int32 FieldHash, const FPsDataDynamicDelegate& Delegate) const
-{
-	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
-	check(Field);
-	UnbindInternal(Field->GetChangedEventName(), Delegate);
-}
-
-void UPsData::Unbind(int32 FieldHash, const FPsDataDelegate& Delegate) const
-{
-	const auto Field = PsDataTools::FDataReflection::GetFieldsByClass(GetClass())->GetFieldByHash(FieldHash);
-	check(Field);
-	UnbindInternal(Field->GetChangedEventName(), Delegate);
-}
-
-void UPsData::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
-{
-	BindInternal(Type, Delegate);
+	EDataBindFlags Flags = EDataBindFlags::Default;
+	if (bNonDeferred)
+	{
+		Flags = Flags | EDataBindFlags::NonDeferred;
+	}
+	if (bIgnoreFieldMeta)
+	{
+		Flags = Flags | EDataBindFlags::IgnoreFieldMeta;
+	}
+	BindInternal(Type, Delegate, Flags);
 }
 
 void UPsData::BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
@@ -524,22 +523,6 @@ void UPsData::BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate&
 void UPsData::BlueprintUnbindAll(UObject* Object)
 {
 	UnbindAllInternal(Object);
-}
-
-bool UPsData::HasForcedDelegates(const FString& EventType) const
-{
-	if (const auto Find = Delegates.Find(EventType))
-	{
-		for (const auto& Wrapper : *Find)
-		{
-			if (Wrapper->IsForced())
-			{
-				return true;
-			}
-		}
-	}
-
-	return false;
 }
 
 void UPsData::UpdateDelegates() const
@@ -576,32 +559,54 @@ void UPsData::Broadcast(UPsDataEvent* Event, const UPsData* Previous) const
 
 	if (FPsDataEventScopeGuard::IsGuarded())
 	{
+		BroadcastInternal(Event, Previous, EDataBroadcastPass::NonDeferred);
+
 		Event->AddToRoot();
 		FPsDataEventScopeGuard::AddCallback([WeakThis = MakeWeakObjectPtr(this), WeakPrevious = MakeWeakObjectPtr(Previous), Event]() {
 			Event->RemoveFromRoot();
 			if (WeakThis.IsValid())
 			{
-				WeakThis->BroadcastInternal(Event, WeakPrevious.Get());
+				WeakThis->BroadcastInternal(Event, WeakPrevious.Get(), EDataBroadcastPass::Deferred);
 			}
 		});
 	}
 	else
 	{
-		BroadcastInternal(Event, Previous);
+		BroadcastInternal(Event, Previous, EDataBroadcastPass::Default);
 	}
 }
 
-void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) const
+void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous, EDataBroadcastPass Pass) const
 {
 	++BroadcastInProgress;
 
 	if (!Event->bStopImmediate)
 	{
+		TArray<TSharedRef<FDelegateWrapper>> Copy;
 		if (const auto Find = Delegates.Find(Event->Type))
 		{
-			TArray<TSharedRef<FDelegateWrapper>> Copy = *Find;
+			Copy.Append(*Find);
 			for (const auto& Wrapper : Copy)
 			{
+				if (Pass != EDataBroadcastPass::Default)
+				{
+					const bool bNonDeferredDelegate = static_cast<uint8>(Wrapper->Flags & EDataBindFlags::NonDeferred) != 0;
+					if (bNonDeferredDelegate)
+					{
+						if (Pass == EDataBroadcastPass::Deferred)
+						{
+							continue;
+						}
+					}
+					else
+					{
+						if (Pass == EDataBroadcastPass::NonDeferred)
+						{
+							continue;
+						}
+					}
+				}
+
 				bool bExecute = true;
 				if (Wrapper->Field)
 				{
@@ -631,6 +636,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 					}
 				}
 			}
+			Copy.Reset();
 		}
 	}
 
@@ -638,7 +644,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 	{
 		if (Parent)
 		{
-			Parent->BroadcastInternal(Event, this);
+			Parent->BroadcastInternal(Event, this, Pass);
 		}
 	}
 
@@ -647,28 +653,28 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous) co
 	UpdateDelegates();
 }
 
-FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, const FDataField* Field) const
+FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags, const FDataField* Field) const
 {
 	if (!Delegate.IsBound())
 	{
 		return {};
 	}
 
-	const TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
+	const TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Flags, Field));
 	Delegates.FindOrAdd(Type).Add(Ref);
 	UpdateDelegates();
 
 	return FPsDataBind(Ref);
 }
 
-FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDelegate& Delegate, const FDataField* Field) const
+FPsDataBind UPsData::BindInternal(const FString& Type, const FPsDataDelegate& Delegate, EDataBindFlags Flags, const FDataField* Field) const
 {
 	if (!Delegate.IsBound())
 	{
-		return FPsDataBind();
+		return {};
 	}
 
-	const TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Field));
+	const TSharedRef<FDelegateWrapper> Ref(new FDelegateWrapper(Delegate, Flags, Field));
 	Delegates.FindOrAdd(Type).Add(Ref);
 	UpdateDelegates();
 

@@ -4,15 +4,10 @@
 
 #include "PsData.h"
 #include "PsDataCore.h"
-#include "PsDataEvent.h"
 #include "PsDataField.h"
-#include "PsDataHardObjectPtr.h"
 #include "PsDataTraits.h"
-#include "Types/PsData_UPsData.h"
 
 #include "CoreMinimal.h"
-
-using namespace PsDataTools;
 
 template <typename T, bool bConst>
 struct FPsDataBaseMapProxy
@@ -21,26 +16,26 @@ private:
 	friend struct FPsDataBaseMapProxy<T, true>;
 	friend struct FPsDataBaseMapProxy<T, false>;
 
-	TConstValueType<TDataProperty<TMap<FString, T>>*, bConst> Property;
+	PsDataTools::TConstValueType<PsDataTools::TDataProperty<TMap<FString, T>>*, bConst> Property;
 
-	static TDataProperty<TMap<FString, T>>* GetProperty(UPsData* Instance, const FDataField* Field)
+	static PsDataTools::TDataProperty<TMap<FString, T>>* GetProperty(UPsData* Instance, const FDataField* Field)
 	{
 #if !UE_BUILD_SHIPPING
 		TMap<FString, T>* Output = nullptr;
-		GetByField<true>(Instance, Field, Output);
+		PsDataTools::GetByField<true>(Instance, Field, Output);
 #endif
 
-		return static_cast<TDataProperty<TMap<FString, T>>*>(FPsDataFriend::GetProperty(Instance, Field->Index));
+		return static_cast<PsDataTools::TDataProperty<TMap<FString, T>>*>(PsDataTools::FPsDataFriend::GetProperty(Instance, Field->Index));
 	}
 
-	static const TDataProperty<TMap<FString, T>>* GetProperty(const UPsData* Instance, const FDataField* Field)
+	static const PsDataTools::TDataProperty<TMap<FString, T>>* GetProperty(const UPsData* Instance, const FDataField* Field)
 	{
 #if !UE_BUILD_SHIPPING
 		TMap<FString, T>* Output = nullptr;
-		GetByField<true>(Instance, Field, Output);
+		PsDataTools::GetByField<true>(Instance, Field, Output);
 #endif
 
-		return static_cast<TDataProperty<TMap<FString, T>>*>(FPsDataFriend::GetProperty(Instance, Field->Index));
+		return static_cast<PsDataTools::TDataProperty<TMap<FString, T>>*>(PsDataTools::FPsDataFriend::GetProperty(Instance, Field->Index));
 	}
 
 protected:
@@ -62,13 +57,13 @@ public:
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
 	FPsDataBaseMapProxy(UPsData* InInstance, int32 Hash)
-		: Property(GetProperty(InInstance, FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
+		: Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
 	{
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
-	FPsDataBaseMapProxy(TDataProperty<TMap<FString, T>>* InProperty)
+	FPsDataBaseMapProxy(PsDataTools::TDataProperty<TMap<FString, T>>* InProperty)
 		: Property(InProperty)
 	{
 	}
@@ -83,13 +78,13 @@ public:
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<bOtherConst>::Type>
 	FPsDataBaseMapProxy(const UPsData* InInstance, int32 Hash)
-		: Property(GetProperty(InInstance, FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
+		: Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
 	{
 	}
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<bOtherConst>::Type>
-	FPsDataBaseMapProxy(const TDataProperty<TMap<FString, T>>* InProperty)
+	FPsDataBaseMapProxy(const PsDataTools::TDataProperty<TMap<FString, T>>* InProperty)
 		: Property(InProperty)
 	{
 	}
@@ -135,7 +130,7 @@ public:
 
 	template <bool bOtherConst = bConst,
 		typename = typename TEnableIf<!bOtherConst>::Type>
-	void Add(const FString& Key, TConstRefType<T, false> Element)
+	void Add(const FString& Key, PsDataTools::TConstRefType<T, false> Element)
 	{
 		auto NewMap = Property->GetValue();
 		NewMap.Add(Key, Element);
@@ -175,7 +170,7 @@ public:
 	auto Get() const
 	{
 		auto& Map = Property->GetValue();
-		TMap<FString, TConstValueType<T, bConst>> Result;
+		TMap<FString, PsDataTools::TConstValueType<T, bConst>> Result;
 		Result.Reserve(Map.Num());
 		for (auto& Pair : Map)
 		{
@@ -199,7 +194,7 @@ public:
 	auto GetValues() const
 	{
 		auto& Map = Property->GetValue();
-		TArray<TConstValueType<T, bConst>> Result;
+		TArray<PsDataTools::TConstValueType<T, bConst>> Result;
 		Result.Reserve(Map.Num());
 		for (auto& Pair : Map)
 		{
@@ -213,12 +208,12 @@ public:
 		return Property->GetValue().Contains(Key);
 	}
 
-	TConstRefType<T*, bConst> Find(const FString& Key) const
+	PsDataTools::TConstRefType<T*, bConst> Find(const FString& Key) const
 	{
 		return Property->GetValue().Find(Key);
 	}
 
-	TConstRefType<T, bConst> FindChecked(const FString& Key) const
+	PsDataTools::TConstRefType<T, bConst> FindChecked(const FString& Key) const
 	{
 		return Property->GetValue().FindChecked(Key);
 	}
@@ -233,27 +228,27 @@ public:
 		return Num() == 0;
 	}
 
-	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
+	FPsDataBind Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
 	{
-		return FPsDataFriend::BindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
+		return PsDataTools::FPsDataFriend::BindInternal(Property->GetOwner(), Type, Delegate, Flags, Property->GetField());
 	}
 
-	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate) const
+	FPsDataBind Bind(const FString& Type, const FPsDataDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
 	{
-		return FPsDataFriend::BindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
+		return PsDataTools::FPsDataFriend::BindInternal(Property->GetOwner(), Type, Delegate, Flags, Property->GetField());
 	}
 
 	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 	{
-		FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
+		PsDataTools::FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
 	}
 
 	void Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 	{
-		FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
+		PsDataTools::FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
 	}
 
-	TConstRefType<T, bConst> operator[](const FString& Key) const
+	PsDataTools::TConstRefType<T, bConst> operator[](const FString& Key) const
 	{
 		return Property->GetValue().FindChecked(Key);
 	}
@@ -269,7 +264,7 @@ public:
 		struct TPair
 		{
 			const FString Key;
-			TConstValueType<T, bIteratorConst> Value;
+			PsDataTools::TConstValueType<T, bIteratorConst> Value;
 
 			TPair(const TPair&) = delete;
 			TPair& operator=(const TPair&) = delete;
@@ -341,7 +336,7 @@ public:
 			return Pairs[Index].Key;
 		}
 
-		TConstRefType<T, bIteratorConst> Value() const
+		PsDataTools::TConstRefType<T, bIteratorConst> Value() const
 		{
 			return Pairs[Index].Value;
 		}
@@ -381,11 +376,11 @@ using FPsDataConstMapProxy = FPsDataBaseMapProxy<T, true>;
 template <typename T, bool bConst>
 struct FPsDataBaseMapProxy<TArray<T>, bConst>
 {
-	static_assert(TAlwaysFalse<T>::value, "Unsupported type");
+	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
 };
 
 template <typename T, bool bConst>
 struct FPsDataBaseMapProxy<TMap<FString, T>, bConst>
 {
-	static_assert(TAlwaysFalse<T>::value, "Unsupported type");
+	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
 };

@@ -307,7 +307,7 @@ void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 	if (const auto Event = RawMeta.Find(FDataMetaType::Event))
 	{
 		Field->Meta.bEvent = true;
-		Field->Meta.EventType = Event->Value.IsEmpty() ? FString::Printf(TEXT("%sChanged"), *Field->Name) : ToFString(Event->Value);
+		PrintUnusedMetaValue(Event);
 		PrintApplyMeta(Event);
 
 		RawMeta.Remove(FDataMetaType::Event);
@@ -350,8 +350,6 @@ void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 	{
 		Field->Meta.bEvent = false;
 		Field->Meta.bBubbles = false;
-		Field->Meta.EventType = TEXT("");
-
 		UE_LOG(LogDataReflection, Error, TEXT("Property with strict meta can't broadcast event"))
 	}
 }
@@ -387,6 +385,7 @@ FDataField::FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbst
 	, Context(InContext)
 {
 	ApplyMeta<FDataField>(this, RawMeta);
+	Meta.EventType = FString::Printf(TEXT("%sChanged"), *Name);
 }
 
 const FString& FDataField::GetChangedEventName() const

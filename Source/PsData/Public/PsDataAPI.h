@@ -160,9 +160,9 @@ public:
 		return PrivateGet();
 	}
 
-	FPsDataBind Bind(const FPsDataDelegate& Delegate) const
+	FPsDataBind Bind(const FPsDataDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
 	{
-		return this->GetPropertyOwner()->Bind(this->ProtectedStaticField()->GetChangedEventName(), Delegate);
+		return this->GetPropertyOwner()->Bind(this->ProtectedStaticField()->GetChangedEventName(), Delegate, Flags);
 	}
 
 	TDProp& operator=(TValueType<false> InValue)
@@ -568,23 +568,23 @@ private:           \
  * Macro DPROP
  ***********************************/
 
-#define DPROP(__Type__, __Name__)                                                                                    \
-protected:                                                                                                           \
-	using DPropType_##__Name__ = PsDataTools::TDProp<__Type__, ThisClass, FDataStringViewChar(#__Name__).GetHash()>; \
-                                                                                                                     \
-public:                                                                                                              \
+#define DPROP(__Type__, __Name__)                                                                                                 \
+protected:                                                                                                                        \
+	using DPropType_##__Name__ = PsDataTools::TDProp<__Type__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash()>; \
+                                                                                                                                  \
+public:                                                                                                                           \
 	DPropType_##__Name__ __Name__{#__Name__, this};
 
 /***********************************
  * Macro DPROP_CONST
  ***********************************/
 
-#define DPROP_CONST(__Type__, __Name__, __Friend__)                                                                                   \
-protected:                                                                                                                            \
-	DMETA(ReadOnly, Strict);                                                                                                          \
-	using DPropType_##__Name__ = PsDataTools::TDPropConst<__Type__, ThisClass, FDataStringViewChar(#__Name__).GetHash(), __Friend__>; \
-                                                                                                                                      \
-public:                                                                                                                               \
+#define DPROP_CONST(__Type__, __Name__, __Friend__)                                                                                                \
+protected:                                                                                                                                         \
+	DMETA(ReadOnly, Strict);                                                                                                                       \
+	using DPropType_##__Name__ = PsDataTools::TDPropConst<__Type__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash(), __Friend__>; \
+                                                                                                                                                   \
+public:                                                                                                                                            \
 	DPropType_##__Name__ __Name__{#__Name__, this};
 
 /***********************************
@@ -605,7 +605,7 @@ public:                                                                         
 
 #define DLINK(__ReturnType__, __Name__, __Path__) \
 public:                                           \
-	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, FDataStringViewChar(#__Name__).GetHash(), false> LinkBy##__Name__{#__Name__, this, #__Path__};
+	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash(), false> LinkBy##__Name__{#__Name__, this, #__Path__};
 
 /***********************************
  * Macro DLINK_ABSTRACT
@@ -613,7 +613,7 @@ public:                                           \
 
 #define DLINK_ABSTRACT(__ReturnType__, __Name__) \
 public:                                          \
-	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, FDataStringViewChar(#__Name__).GetHash(), true> LinkByAbstract##__Name__{#__Name__, this};
+	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash(), true> LinkByAbstract##__Name__{#__Name__, this};
 
 /***********************************
  * Macro DEFERRED_EVENT_PROCESSING
@@ -628,35 +628,35 @@ public:                                          \
  * Macro DPROP_OLD
  ***********************************/
 
-#define DPROP_OLD(__Type__, __Name__)                                                                                \
-protected:                                                                                                           \
-	using DPropType_##__Name__ = PsDataTools::TDProp<__Type__, ThisClass, FDataStringViewChar(#__Name__).GetHash()>; \
-	DPropType_##__Name__ DProp_##__Name__{#__Name__, this};                                                          \
-                                                                                                                     \
-public:                                                                                                              \
-	typename DPropType_##__Name__::TReturnType<true> Get##__Name__() const                                           \
-	{                                                                                                                \
-		return DProp_##__Name__.Get();                                                                               \
-	}                                                                                                                \
-                                                                                                                     \
-	typename DPropType_##__Name__::TReturnType<false> Get##__Name__()                                                \
-	{                                                                                                                \
-		return DProp_##__Name__.Get();                                                                               \
-	}                                                                                                                \
-                                                                                                                     \
-	void Set##__Name__(typename DPropType_##__Name__::TValueType<false> Value)                                       \
-	{                                                                                                                \
-		DProp_##__Name__.Set(Value);                                                                                 \
-	}                                                                                                                \
-                                                                                                                     \
-	static const FString& Get##__Name__##ChangedEventName()                                                          \
-	{                                                                                                                \
-		return DPropType_##__Name__::StaticField()->GetChangedEventName();                                           \
-	}                                                                                                                \
-                                                                                                                     \
-	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                      \
-	{                                                                                                                \
-		return DProp_##__Name__.Bind(Delegate);                                                                      \
+#define DPROP_OLD(__Type__, __Name__)                                                                                             \
+protected:                                                                                                                        \
+	using DPropType_##__Name__ = PsDataTools::TDProp<__Type__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash()>; \
+	DPropType_##__Name__ DProp_##__Name__{#__Name__, this};                                                                       \
+                                                                                                                                  \
+public:                                                                                                                           \
+	typename DPropType_##__Name__::TReturnType<true> Get##__Name__() const                                                        \
+	{                                                                                                                             \
+		return DProp_##__Name__.Get();                                                                                            \
+	}                                                                                                                             \
+                                                                                                                                  \
+	typename DPropType_##__Name__::TReturnType<false> Get##__Name__()                                                             \
+	{                                                                                                                             \
+		return DProp_##__Name__.Get();                                                                                            \
+	}                                                                                                                             \
+                                                                                                                                  \
+	void Set##__Name__(typename DPropType_##__Name__::TValueType<false> Value)                                                    \
+	{                                                                                                                             \
+		DProp_##__Name__.Set(Value);                                                                                              \
+	}                                                                                                                             \
+                                                                                                                                  \
+	static const FString& Get##__Name__##ChangedEventName()                                                                       \
+	{                                                                                                                             \
+		return DPropType_##__Name__::StaticField()->GetChangedEventName();                                                        \
+	}                                                                                                                             \
+                                                                                                                                  \
+	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                                   \
+	{                                                                                                                             \
+		return DProp_##__Name__.Bind(Delegate);                                                                                   \
 	}
 
 /***********************************

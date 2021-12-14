@@ -5,6 +5,7 @@
 #include "Serialize/PsDataSerialization.h"
 
 #include "CoreMinimal.h"
+#include "UObject/ObjectMacros.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 

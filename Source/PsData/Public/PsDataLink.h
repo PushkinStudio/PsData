@@ -96,8 +96,8 @@ struct TAbstractDataLinkProperty : public TDataLinkPropertyGetter<typename TData
 		const auto Owner = this->GetOwner();
 		const auto Link = this->GetLink();
 
-		BindCollection.Add(Owner->Bind(UPsDataEvent::RemovedFromRoot, ResetDelegate));
-		BindCollection.Add(Owner->Bind(Link->Field->GetChangedEventName(), ResetDelegate).Force());
+		BindCollection.Add(Owner->Bind(UPsDataEvent::RemovedFromRoot, ResetDelegate, EDataBindFlags::NonDeferred));
+		BindCollection.Add(Owner->Bind(Link->Field->GetChangedEventName(), ResetDelegate, EDataBindFlags::IgnoreFieldMeta | EDataBindFlags::NonDeferred));
 	}
 
 	void Destruct()
@@ -196,8 +196,8 @@ private:
 			const auto ExecutorData = Executor.GetData();
 			const auto ExecutorField = Executor.GetField();
 
-			Cache.BindCollection.Add(ExecutorData->Bind(UPsDataEvent::RemovedFromRoot, ResetDelegate));
-			Cache.BindCollection.Add(ExecutorData->Bind(ExecutorField->GetChangedEventName(), ResetDelegate).Force());
+			Cache.BindCollection.Add(ExecutorData->Bind(UPsDataEvent::RemovedFromRoot, ResetDelegate, EDataBindFlags::NonDeferred));
+			Cache.BindCollection.Add(ExecutorData->Bind(ExecutorField->GetChangedEventName(), ResetDelegate, EDataBindFlags::IgnoreFieldMeta | EDataBindFlags::NonDeferred));
 
 			if (!UpdateValueInternal(Owner, Link, Executor, Cache.Key, Cache.Value, Cache.BindCollection, ResetDelegate))
 			{
@@ -300,8 +300,8 @@ private:
 		{
 			if (Executor.GetData() != KeyExecutor.GetData())
 			{
-				InOutBindCollection.Add(KeyExecutor.GetData()->Bind(UPsDataEvent::RemovedFromRoot, Delegate));
-				InOutBindCollection.Add(KeyExecutor.GetData()->Bind(KeyExecutor.GetField()->GetChangedEventName(), Delegate).Force());
+				InOutBindCollection.Add(KeyExecutor.GetData()->Bind(UPsDataEvent::RemovedFromRoot, Delegate, EDataBindFlags::NonDeferred));
+				InOutBindCollection.Add(KeyExecutor.GetData()->Bind(KeyExecutor.GetField()->GetChangedEventName(), Delegate, EDataBindFlags::IgnoreFieldMeta | EDataBindFlags::NonDeferred));
 			}
 
 			OutValue = *ValuePtr;
@@ -386,8 +386,8 @@ private:
 			{
 				if (Executor.GetData() != KeyExecutor.GetData())
 				{
-					InOutBindCollection.Add(KeyExecutor.GetData()->Bind(UPsDataEvent::RemovedFromRoot, Delegate));
-					InOutBindCollection.Add(KeyExecutor.GetData()->Bind(KeyExecutor.GetField()->GetChangedEventName(), Delegate).Force());
+					InOutBindCollection.Add(KeyExecutor.GetData()->Bind(UPsDataEvent::RemovedFromRoot, Delegate, EDataBindFlags::NonDeferred));
+					InOutBindCollection.Add(KeyExecutor.GetData()->Bind(KeyExecutor.GetField()->GetChangedEventName(), Delegate, EDataBindFlags::IgnoreFieldMeta | EDataBindFlags::NonDeferred));
 				}
 
 				OutValues.Add(*ValuePtr);
