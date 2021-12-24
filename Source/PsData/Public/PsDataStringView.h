@@ -591,3 +591,15 @@ inline uint32 GetTypeHash(const PsDataTools::FDataStringViewTCHAR& StringView)
 	// @see GetTypeHash(const FString&)
 	return FCrc::Strihash_DEPRECATED(StringView.Len(), StringView.GetData());
 }
+
+template <typename T>
+constexpr int32 GetStaticTypeHash(const PsDataTools::TDataStringView<T>& View)
+{
+	return View.GetHash();
+}
+
+template <typename T>
+constexpr int32 GetStaticTypeHash(const T* View)
+{
+	return GetStaticTypeHash(PsDataTools::TDataStringView<T>(View));
+}

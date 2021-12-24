@@ -71,7 +71,7 @@ struct TDataTypeContext<T*> : public TDataTypeContextExtended<T*, UPsDataUPsData
 {
 	virtual UField* GetUE4Type() const override
 	{
-		return GetClass<T>();
+		return StaticClass<T>();
 	}
 
 	virtual bool IsData() const override

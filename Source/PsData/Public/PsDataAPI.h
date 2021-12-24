@@ -38,12 +38,17 @@ namespace PsDataTools
  ***********************************/
 
 template <class OwnerClass, int32 Hash>
-struct TDMeta : public FDataNoncopyable, public FDataNonmovable
+struct TDMeta
 {
 	TDMeta(const char* MetaString)
 	{
 		static const auto StaticInit = FDataReflection::InitMeta(MetaString);
 	}
+
+	TDMeta(const TDMeta&) = delete;
+	TDMeta& operator=(const TDMeta&) = delete;
+	TDMeta(TDMeta&&) = delete;
+	TDMeta& operator=(TDMeta&&) = delete;
 };
 
 /***********************************
@@ -51,12 +56,17 @@ struct TDMeta : public FDataNoncopyable, public FDataNonmovable
  ***********************************/
 
 template <class OwnerClass, int32 Hash, typename FieldType, typename... Other>
-struct TDBaseProp : public FDataNoncopyable, public FDataNonmovable
+struct TDBaseProp
 {
 	TDBaseProp(OwnerClass* InPropertyOwner)
 		: PropertyOwner(InPropertyOwner)
 	{
 	}
+
+	TDBaseProp(const TDBaseProp&) = delete;
+	TDBaseProp& operator=(const TDBaseProp&) = delete;
+	TDBaseProp(TDBaseProp&&) = delete;
+	TDBaseProp& operator=(TDBaseProp&&) = delete;
 
 protected:
 	static FieldType*& ProtectedStaticField()
@@ -92,6 +102,8 @@ private:
 template <typename T, class OwnerClass, int32 Hash>
 struct TDProp : public TDBaseProp<OwnerClass, Hash, FDataField>, protected TDataProperty<T>
 {
+	static_assert(TIsContainer<T>::Value, "Unsupported type");
+
 private:
 	virtual const FDataField* GetField() const override
 	{
@@ -108,32 +120,17 @@ private:
 		return this->GetPropertyOwner();
 	}
 
-protected:
-	template <bool bConst>
-	using TArrayType = FPsDataBaseArrayProxy<typename TIsContainer<T>::Type, bConst>;
-	template <bool bConst>
-	using TMapType = FPsDataBaseMapProxy<typename TIsContainer<T>::Type, bConst>;
-
 public:
 	using Type = T;
 	template <bool bConst>
 	using TValueType = TConstRefType<T, bConst>;
 	template <bool bConst>
-	using TReturnType = typename TSelector<
-		TValueType<bConst>,
-		typename TSelector<
-			TArrayType<bConst>,
-			typename TSelector<
-				TMapType<bConst>,
-				void,
-				TIsContainer<T>::Map>::Value,
-			TIsContainer<T>::Array>::Value,
-		TIsContainer<T>::Value>::Value;
+	using TReturnType = TValueType<bConst>;
 
 	TDProp(const char* Name, OwnerClass* InOwner)
 		: TDBaseProp<OwnerClass, Hash, FDataField>(InOwner)
 	{
-		static const auto StaticInit = FDataReflection::InitProperty(StaticClass<OwnerClass>(), Name, &GetContext<T>(), this->ProtectedStaticField());
+		static const auto StaticInit = FDataReflection::InitProperty(StaticClass<OwnerClass>(), Name, &GetContext<Type>(), this->ProtectedStaticField());
 		const auto Index = FPsDataFriend::GetProperties(InOwner).Add(this);
 
 #if !UE_BUILD_SHIPPING
@@ -141,8 +138,30 @@ public:
 #endif
 	}
 
-	virtual ~TDProp() override
+	TDProp(const TDProp&) = delete;
+	TDProp& operator=(const TDProp&) = delete;
+	TDProp(TDProp&&) = delete;
+	TDProp& operator=(TDProp&&) = delete;
+	virtual ~TDProp() override {}
+
+	FPsDataBind Bind(const FPsDataDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
 	{
+		return GetOwner()->Bind(GetField()->GetChangedEventName(), Delegate, Flags);
+	}
+
+	FPsDataBind Bind(const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
+	{
+		return GetOwner()->Bind(GetField()->GetChangedEventName(), Delegate, Flags);
+	}
+
+	void Unbind(const FPsDataDelegate& Delegate) const
+	{
+		return GetOwner()->Unbind(GetField()->GetChangedEventName(), Delegate);
+	}
+
+	void Unbind(const FPsDataDynamicDelegate& Delegate) const
+	{
+		return GetOwner()->Unbind(GetField()->GetChangedEventName(), Delegate);
 	}
 
 	void Set(TValueType<false> InValue)
@@ -152,107 +171,147 @@ public:
 
 	TReturnType<false> Get()
 	{
-		return PrivateGet();
+		return this->GetValue();
 	}
 
 	TReturnType<true> Get() const
 	{
-		return PrivateGet();
+		return this->GetValue();
 	}
 
-	FPsDataBind Bind(const FPsDataDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
-	{
-		return this->GetPropertyOwner()->Bind(this->ProtectedStaticField()->GetChangedEventName(), Delegate, Flags);
-	}
-
-	TDProp& operator=(TValueType<false> InValue)
+	void operator=(TValueType<false> InValue)
 	{
 		Set(InValue);
-		return *this;
 	}
 
 	TReturnType<false> operator*()
 	{
-		return PrivateGet();
+		return Get();
 	}
 
 	TReturnType<true> operator*() const
 	{
-		return PrivateGet();
+		return Get();
 	}
 
+	template <typename K = T,
+		typename = typename TEnableIf<TIsPointer<K>::Value>::Type>
 	TReturnType<false> operator->()
 	{
-		return PrivateGet();
+		return Get();
 	}
 
+	template <typename K = T,
+		typename = typename TEnableIf<TIsPointer<K>::Value>::Type>
 	TReturnType<true> operator->() const
 	{
-		return PrivateGet();
+		return Get();
+	}
+
+	template <typename K = T,
+		typename = typename TEnableIf<!TIsPointer<K>::Value>::Type>
+	const T* operator->() const
+	{
+		return &this->GetValue();
+	}
+
+	bool operator==(TValueType<true> InValue) const
+	{
+		return TTypeComparator<T>::Compare(this->GetValue(), InValue);
+	}
+
+	bool operator!=(TValueType<true> InValue) const
+	{
+		return !TTypeComparator<T>::Compare(this->GetValue(), InValue);
+	}
+
+	operator TReturnType<false>()
+	{
+		return Get();
+	}
+
+	operator TReturnType<true>() const
+	{
+		return Get();
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	TDProp& operator+=(T InValue)
+	T operator+=(T InValue)
 	{
-		Set(PrivateGet() + InValue);
-		return *this;
+		T Result = Get() + InValue;
+		Set(Result);
+		return Result;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	TDProp& operator-=(T InValue)
+	T operator-=(T InValue)
 	{
-		Set(PrivateGet() - InValue);
-		return *this;
+		T Result = Get() - InValue;
+		Set(Result);
+		return Result;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	TDProp& operator*=(T InValue)
+	T operator*=(T InValue)
 	{
-		Set(PrivateGet() * InValue);
-		return *this;
+		T Result = Get() * InValue;
+		Set(Result);
+		return Result;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	TDProp& operator/=(T InValue)
+	T operator/=(T InValue)
 	{
-		Set(PrivateGet() / InValue);
-		return *this;
+		T Result = Get() / InValue;
+		Set(Result);
+		return Result;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	TDProp& operator++()
+	T operator%=(T InValue)
 	{
-		Set(PrivateGet() + 1);
-		return *this;
+		T Result = Get() % InValue;
+		Set(Result);
+		return Result;
+	}
+
+	template <typename K = T,
+		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
+	T operator++()
+	{
+		T Result = Get() + 1;
+		Set(Result);
+		return Result;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	T operator++(int)
 	{
-		auto Result = PrivateGet();
+		T Result = Get();
 		Set(Result + 1);
 		return Result;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	TDProp& operator--()
+	T operator--()
 	{
-		Set(PrivateGet() - 1);
-		return *this;
+		T Result = Get() - 1;
+		Set(Result);
+		return Result;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	T operator--(int)
 	{
-		auto Result = PrivateGet();
+		T Result = Get();
 		Set(Result - 1);
 		return Result;
 	}
@@ -261,148 +320,77 @@ public:
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	T operator+(T InValue) const
 	{
-		return PrivateGet() + InValue;
+		return Get() + InValue;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	T operator-(T InValue) const
 	{
-		return PrivateGet() - InValue;
+		return Get() - InValue;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	T operator*(T InValue) const
 	{
-		return PrivateGet() * InValue;
+		return Get() * InValue;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	T operator/(T InValue) const
 	{
-		return PrivateGet() / InValue;
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	T operator+() const
-	{
-		return PrivateGet();
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
-	T operator-() const
-	{
-		return -PrivateGet();
+		return Get() / InValue;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	T operator%(T InValue) const
 	{
-		return PrivateGet() % InValue;
+		return Get() % InValue;
+	}
+
+	template <typename K = T,
+		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
+	T operator+() const
+	{
+		return Get();
+	}
+
+	template <typename K = T,
+		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
+	T operator-() const
+	{
+		return -Get();
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	bool operator>(T InValue) const
 	{
-		return PrivateGet() > InValue;
+		return Get() > InValue;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	bool operator>=(T InValue) const
 	{
-		return PrivateGet() >= InValue;
+		return Get() >= InValue;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	bool operator<(T InValue) const
 	{
-		return PrivateGet() < InValue;
+		return Get() < InValue;
 	}
 
 	template <typename K = T,
 		typename = typename TEnableIf<std::is_arithmetic<K>::value>::Type>
 	bool operator<=(T InValue) const
 	{
-		return PrivateGet() <= InValue;
-	}
-
-	template <typename Other, typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Value>::Type>
-	bool operator==(const Other& InValue) const
-	{
-		return PrivateGet() == InValue;
-	}
-
-	template <typename Other, typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Value>::Type>
-	bool operator!=(const Other& InValue) const
-	{
-		return PrivateGet() != InValue;
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Value>::Type>
-	operator TReturnType<false>()
-	{
-		return PrivateGet();
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Value>::Type>
-	operator TReturnType<true>() const
-	{
-		return PrivateGet();
-	}
-
-private:
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Value>::Type>
-	TValueType<false> PrivateGet()
-	{
-		return this->GetValue();
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Value>::Type>
-	TValueType<true> PrivateGet() const
-	{
-		return this->GetValue();
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Array>::Type>
-	TArrayType<false> PrivateGet()
-	{
-		return {this};
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Array>::Type>
-	TArrayType<true> PrivateGet() const
-	{
-		return {this};
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Map>::Type>
-	TMapType<false> PrivateGet()
-	{
-		return {this};
-	}
-
-	template <typename K = T,
-		typename = typename TEnableIf<TIsContainer<K>::Map>::Type>
-	TMapType<true> PrivateGet() const
-	{
-		return {this};
+		return Get() <= InValue;
 	}
 };
 
@@ -411,7 +399,7 @@ private:
  ***********************************/
 
 template <typename T, class OwnerClass, int32 Hash, typename Friend>
-struct TDPropConst : public FDataNoncopyable, public FDataNonmovable
+struct TDPropConst
 {
 	using DPropType = TDProp<T, OwnerClass, Hash>;
 	using Type = typename DPropType::Type;
@@ -423,6 +411,21 @@ struct TDPropConst : public FDataNoncopyable, public FDataNonmovable
 	TDPropConst(const char* Name, OwnerClass* InOwner)
 		: Mutable(Name, InOwner)
 	{
+	}
+
+	TDPropConst(const TDPropConst&) = delete;
+	TDPropConst& operator=(const TDPropConst&) = delete;
+	TDPropConst(TDPropConst&&) = delete;
+	TDPropConst& operator=(TDPropConst&&) = delete;
+
+	TReturnType<true> Get()
+	{
+		return Mutable.Get();
+	}
+
+	TReturnType<true> Get() const
+	{
+		return Mutable.Get();
 	}
 
 	TReturnType<true> operator*()
@@ -445,19 +448,152 @@ struct TDPropConst : public FDataNoncopyable, public FDataNonmovable
 		return Get();
 	}
 
-	TReturnType<true> Get()
+private:
+	friend Friend;
+	DPropType Mutable;
+};
+
+/***********************************
+ * TDPropProxy
+ ***********************************/
+
+template <typename T, class OwnerClass, int32 Hash>
+struct TDPropProxy : public TDBaseProp<OwnerClass, Hash, FDataField>, protected TDataProperty<T>
+{
+	static_assert(TIsContainer<T>::Array || TIsContainer<T>::Map, "Unsupported type");
+
+private:
+	virtual const FDataField* GetField() const override
 	{
-		return Mutable.Get();
+		return this->StaticField();
+	}
+
+	virtual UPsData* GetOwner() override
+	{
+		return this->GetPropertyOwner();
+	}
+
+	virtual UPsData* GetOwner() const override
+	{
+		return this->GetPropertyOwner();
+	}
+
+public:
+	using Type = T;
+	template <bool bConst>
+	using TValueType = TConstRefType<Type, bConst>;
+	template <bool bConst>
+	using TReturnType = typename TSelector<
+		TPsDataBaseArrayProxy<typename TIsContainer<T>::Type, bConst>,
+		TPsDataBaseMapProxy<typename TIsContainer<T>::Type, bConst>,
+		TIsContainer<T>::Array>::Value;
+	using FKeyType = typename TReturnType<false>::FKeyType;
+
+	TDPropProxy(const char* Name, OwnerClass* InOwner)
+		: TDBaseProp<OwnerClass, Hash, FDataField>(InOwner)
+		, Proxy(this)
+	{
+		static const auto StaticInit = FDataReflection::InitProperty(StaticClass<OwnerClass>(), Name, &GetContext<Type>(), this->ProtectedStaticField());
+		const auto Index = FPsDataFriend::GetProperties(InOwner).Add(this);
+
+#if !UE_BUILD_SHIPPING
+		check(Index == this->ProtectedStaticField()->Index);
+#endif
+	}
+
+	TDPropProxy(const TDPropProxy&) = delete;
+	TDPropProxy& operator=(const TDPropProxy&) = delete;
+	TDPropProxy(TDPropProxy&&) = delete;
+	TDPropProxy& operator=(TDPropProxy&&) = delete;
+	virtual ~TDPropProxy() override {}
+
+	FPsDataBind Bind(const FPsDataDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
+	{
+		return GetOwner()->Bind(GetField()->GetChangedEventName(), Delegate, Flags);
+	}
+
+	FPsDataBind Bind(const FPsDataDynamicDelegate& Delegate, EDataBindFlags Flags = EDataBindFlags::Default) const
+	{
+		return GetOwner()->Bind(GetField()->GetChangedEventName(), Delegate, Flags);
+	}
+
+	void Unbind(const FPsDataDelegate& Delegate) const
+	{
+		return GetOwner()->Unbind(GetField()->GetChangedEventName(), Delegate);
+	}
+
+	void Unbind(const FPsDataDynamicDelegate& Delegate) const
+	{
+		return GetOwner()->Unbind(GetField()->GetChangedEventName(), Delegate);
+	}
+
+	void Set(TValueType<false> InValue)
+	{
+		Proxy = InValue;
+	}
+
+	TReturnType<false> Get()
+	{
+		return Proxy;
 	}
 
 	TReturnType<true> Get() const
 	{
-		return Mutable.Get();
+		return Proxy;
 	}
 
+	void operator=(TValueType<false> InValue)
+	{
+		Proxy = InValue;
+	}
+
+	TReturnType<false> operator*()
+	{
+		return Proxy;
+	}
+
+	TReturnType<true> operator*() const
+	{
+		return Proxy;
+	}
+
+	TReturnType<false>* operator->()
+	{
+		return &Proxy;
+	}
+
+	const TReturnType<false>* operator->() const
+	{
+		return &Proxy;
+	}
+
+	auto operator[](const FKeyType& Key)
+	{
+		return Proxy[Key];
+	}
+
+	auto operator[](const FKeyType& Key) const
+	{
+		return Proxy[Key];
+	}
+
+	operator TReturnType<false>()
+	{
+		return Proxy;
+	}
+
+	operator TReturnType<true>() const
+	{
+		return Proxy;
+	}
+
+	auto begin() { return Proxy.begin(); }
+	auto end() { return Proxy.end(); }
+	auto begin() const { return Proxy.begin(); }
+	auto end() const { return Proxy.end(); }
+
 private:
-	friend Friend;
-	DPropType Mutable;
+	TReturnType<false> Proxy;
 };
 
 /***********************************
@@ -516,6 +652,11 @@ public:
 	{
 	}
 
+	TDLink(const TDLink&) = delete;
+	TDLink& operator=(const TDLink&) = delete;
+	TDLink(TDLink&&) = delete;
+	TDLink& operator=(TDLink&&) = delete;
+
 	virtual ~TDLink() override
 	{
 		this->Destruct();
@@ -542,19 +683,19 @@ public:
 	}
 };
 
+template <typename T, class OwnerClass, int32 Hash>
+using TDPropSelector = typename TSelector<
+	TDProp<T, OwnerClass, Hash>,
+	TDPropProxy<T, OwnerClass, Hash>,
+	TIsContainer<T>::Value>::Value;
+
 } // namespace PsDataTools
 
 /***********************************
- * Private macros
+ * Common macros
  ***********************************/
 
 #define COMMA ,
-#define __TOKENPASTE(x) #x
-#define _TOKENPASTE(x) __TOKENPASTE(x)
-#define __TOKENPASTE2(x, y) x##y
-#define _TOKENPASTE2(x, y) __TOKENPASTE2(x, y)
-#define __TOKENPASTE3(x, y, z) x##y##z
-#define _TOKENPASTE3(x, y, z) __TOKENPASTE3(x, y, z)
 
 /***********************************
  * Macro DMETA
@@ -562,29 +703,29 @@ public:
 
 #define DMETA(...) \
 private:           \
-	PsDataTools::TDMeta<ThisClass, __LINE__> _TOKENPASTE2(DMeta_, __LINE__){#__VA_ARGS__};
+	PsDataTools::TDMeta<ThisClass, __LINE__> PREPROCESSOR_JOIN(DMeta_, __LINE__){#__VA_ARGS__};
 
 /***********************************
  * Macro DPROP
  ***********************************/
 
-#define DPROP(__Type__, __Name__)                                                                                                 \
-protected:                                                                                                                        \
-	using DPropType_##__Name__ = PsDataTools::TDProp<__Type__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash()>; \
-                                                                                                                                  \
-public:                                                                                                                           \
+#define DPROP(__Type__, __Name__)                                                                                \
+protected:                                                                                                       \
+	using DPropType_##__Name__ = PsDataTools::TDPropSelector<__Type__, ThisClass, GetStaticTypeHash(#__Name__)>; \
+                                                                                                                 \
+public:                                                                                                          \
 	DPropType_##__Name__ __Name__{#__Name__, this};
 
 /***********************************
  * Macro DPROP_CONST
  ***********************************/
 
-#define DPROP_CONST(__Type__, __Name__, __Friend__)                                                                                                \
-protected:                                                                                                                                         \
-	DMETA(ReadOnly, Strict);                                                                                                                       \
-	using DPropType_##__Name__ = PsDataTools::TDPropConst<__Type__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash(), __Friend__>; \
-                                                                                                                                                   \
-public:                                                                                                                                            \
+#define DPROP_CONST(__Type__, __Name__, __Friend__)                                                                       \
+protected:                                                                                                                \
+	DMETA(ReadOnly, Strict);                                                                                              \
+	using DPropType_##__Name__ = PsDataTools::TDPropConst<__Type__, ThisClass, GetStaticTypeHash(#__Name__), __Friend__>; \
+                                                                                                                          \
+public:                                                                                                                   \
 	DPropType_##__Name__ __Name__{#__Name__, this};
 
 /***********************************
@@ -605,7 +746,7 @@ public:                                                                         
 
 #define DLINK(__ReturnType__, __Name__, __Path__) \
 public:                                           \
-	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash(), false> LinkBy##__Name__{#__Name__, this, #__Path__};
+	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, GetStaticTypeHash(#__Name__), false> LinkBy##__Name__{#__Name__, this, #__Path__};
 
 /***********************************
  * Macro DLINK_ABSTRACT
@@ -613,14 +754,14 @@ public:                                           \
 
 #define DLINK_ABSTRACT(__ReturnType__, __Name__) \
 public:                                          \
-	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash(), true> LinkByAbstract##__Name__{#__Name__, this};
+	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, GetStaticTypeHash(#__Name__), true> LinkByAbstract##__Name__{#__Name__, this};
 
 /***********************************
  * Macro DEFERRED_EVENT_PROCESSING
  ***********************************/
 
 #define DEFERRED_EVENT_PROCESSING() \
-	FPsDataEventScopeGuard EventScopeGuard();
+	FPsDataEventScopeGuard EventScopeGuard;
 
 #if PSDATA_OLD_MACRO
 
@@ -628,35 +769,35 @@ public:                                          \
  * Macro DPROP_OLD
  ***********************************/
 
-#define DPROP_OLD(__Type__, __Name__)                                                                                             \
-protected:                                                                                                                        \
-	using DPropType_##__Name__ = PsDataTools::TDProp<__Type__, ThisClass, PsDataTools::FDataStringViewChar(#__Name__).GetHash()>; \
-	DPropType_##__Name__ DProp_##__Name__{#__Name__, this};                                                                       \
-                                                                                                                                  \
-public:                                                                                                                           \
-	typename DPropType_##__Name__::TReturnType<true> Get##__Name__() const                                                        \
-	{                                                                                                                             \
-		return DProp_##__Name__.Get();                                                                                            \
-	}                                                                                                                             \
-                                                                                                                                  \
-	typename DPropType_##__Name__::TReturnType<false> Get##__Name__()                                                             \
-	{                                                                                                                             \
-		return DProp_##__Name__.Get();                                                                                            \
-	}                                                                                                                             \
-                                                                                                                                  \
-	void Set##__Name__(typename DPropType_##__Name__::TValueType<false> Value)                                                    \
-	{                                                                                                                             \
-		DProp_##__Name__.Set(Value);                                                                                              \
-	}                                                                                                                             \
-                                                                                                                                  \
-	static const FString& Get##__Name__##ChangedEventName()                                                                       \
-	{                                                                                                                             \
-		return DPropType_##__Name__::StaticField()->GetChangedEventName();                                                        \
-	}                                                                                                                             \
-                                                                                                                                  \
-	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                                   \
-	{                                                                                                                             \
-		return DProp_##__Name__.Bind(Delegate);                                                                                   \
+#define DPROP_OLD(__Type__, __Name__)                                                                            \
+protected:                                                                                                       \
+	using DPropType_##__Name__ = PsDataTools::TDPropSelector<__Type__, ThisClass, GetStaticTypeHash(#__Name__)>; \
+	DPropType_##__Name__ DProp_##__Name__{#__Name__, this};                                                      \
+                                                                                                                 \
+public:                                                                                                          \
+	void Set##__Name__(typename DPropType_##__Name__::TValueType<false> Value)                                   \
+	{                                                                                                            \
+		DProp_##__Name__.Set(Value);                                                                             \
+	}                                                                                                            \
+                                                                                                                 \
+	typename DPropType_##__Name__::TReturnType<false> Get##__Name__()                                            \
+	{                                                                                                            \
+		return DProp_##__Name__;                                                                                 \
+	}                                                                                                            \
+                                                                                                                 \
+	typename DPropType_##__Name__::TReturnType<true> Get##__Name__() const                                       \
+	{                                                                                                            \
+		return DProp_##__Name__;                                                                                 \
+	}                                                                                                            \
+                                                                                                                 \
+	static const FString& Get##__Name__##ChangedEventName()                                                      \
+	{                                                                                                            \
+		return DPropType_##__Name__::StaticField()->GetChangedEventName();                                       \
+	}                                                                                                            \
+                                                                                                                 \
+	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                  \
+	{                                                                                                            \
+		return DProp_##__Name__.Bind(Delegate);                                                                  \
 	}
 
 /***********************************

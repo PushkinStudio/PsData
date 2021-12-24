@@ -10,115 +10,55 @@
 #include "CoreMinimal.h"
 
 template <typename T, bool bConst>
-struct FPsDataBaseMapProxy
+struct TPsDataBaseMapProxy
 {
 private:
-	friend struct FPsDataBaseMapProxy<T, true>;
-	friend struct FPsDataBaseMapProxy<T, false>;
+	friend struct TPsDataBaseMapProxy<T, true>;
+	friend struct TPsDataBaseMapProxy<T, false>;
 
 	PsDataTools::TConstValueType<PsDataTools::TDataProperty<TMap<FString, T>>*, bConst> Property;
 
-	static PsDataTools::TDataProperty<TMap<FString, T>>* GetProperty(UPsData* Instance, const FDataField* Field)
-	{
-#if !UE_BUILD_SHIPPING
-		TMap<FString, T>* Output = nullptr;
-		PsDataTools::GetByField<true>(Instance, Field, Output);
-#endif
-
-		return static_cast<PsDataTools::TDataProperty<TMap<FString, T>>*>(PsDataTools::FPsDataFriend::GetProperty(Instance, Field->Index));
-	}
-
-	static const PsDataTools::TDataProperty<TMap<FString, T>>* GetProperty(const UPsData* Instance, const FDataField* Field)
-	{
-#if !UE_BUILD_SHIPPING
-		TMap<FString, T>* Output = nullptr;
-		PsDataTools::GetByField<true>(Instance, Field, Output);
-#endif
-
-		return static_cast<PsDataTools::TDataProperty<TMap<FString, T>>*>(PsDataTools::FPsDataFriend::GetProperty(Instance, Field->Index));
-	}
-
-protected:
-	friend class UPsDataBlueprintMapProxy;
-
-	FPsDataBaseMapProxy()
-		: Property(nullptr)
-	{
-	}
-
 public:
-	template <bool bOtherConst = bConst,
-		typename = typename TEnableIf<!bOtherConst>::Type>
-	FPsDataBaseMapProxy(UPsData* InInstance, const FDataField* InField)
-		: Property(GetProperty(InInstance, InField))
-	{
-	}
+	using FKeyType = FString;
 
-	template <bool bOtherConst = bConst,
-		typename = typename TEnableIf<!bOtherConst>::Type>
-	FPsDataBaseMapProxy(UPsData* InInstance, int32 Hash)
-		: Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
-	{
-	}
-
-	template <bool bOtherConst = bConst,
-		typename = typename TEnableIf<!bOtherConst>::Type>
-	FPsDataBaseMapProxy(PsDataTools::TDataProperty<TMap<FString, T>>* InProperty)
-		: Property(InProperty)
-	{
-	}
-
-	template <bool bOtherConst = bConst,
-		typename = typename TEnableIf<bOtherConst>::Type>
-	FPsDataBaseMapProxy(const UPsData* InInstance, const FDataField* InField)
-		: Property(GetProperty(InInstance, InField))
-	{
-	}
-
-	template <bool bOtherConst = bConst,
-		typename = typename TEnableIf<bOtherConst>::Type>
-	FPsDataBaseMapProxy(const UPsData* InInstance, int32 Hash)
-		: Property(GetProperty(InInstance, PsDataTools::FDataReflection::GetFieldsByClass(InInstance->GetClass())->GetFieldByHashChecked(Hash)))
-	{
-	}
-
-	template <bool bOtherConst = bConst,
-		typename = typename TEnableIf<bOtherConst>::Type>
-	FPsDataBaseMapProxy(const PsDataTools::TDataProperty<TMap<FString, T>>* InProperty)
+	TPsDataBaseMapProxy(PsDataTools::TConstValueType<PsDataTools::TDataProperty<TMap<FString, T>>*, bConst> InProperty)
 		: Property(InProperty)
 	{
 	}
 
 	template <bool bOtherConst,
 		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
-	FPsDataBaseMapProxy(const FPsDataBaseMapProxy<T, bOtherConst>& MapProxy)
-		: Property(MapProxy.Property)
+	TPsDataBaseMapProxy(const TPsDataBaseMapProxy<T, bOtherConst>& Proxy)
 	{
+		Property = Proxy.Property;
 	}
 
 	template <bool bOtherConst,
 		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
-	FPsDataBaseMapProxy(FPsDataBaseMapProxy<T, bOtherConst>&& MapProxy)
-		: Property(MapProxy.Property)
+	TPsDataBaseMapProxy(TPsDataBaseMapProxy<T, bOtherConst>&& Proxy)
 	{
-		MapProxy.Property = nullptr;
+		Property = Proxy.Property;
+		Proxy.Property = nullptr;
 	}
 
 	template <bool bOtherConst,
 		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
-	void operator=(const FPsDataBaseMapProxy<T, bOtherConst>& MapProxy)
+	void operator=(const TPsDataBaseMapProxy<T, bOtherConst>& Proxy)
 	{
-		Property = MapProxy.Property;
+		Property = Proxy.Property;
+	}
+
+	template <bool bOtherConst,
+		typename = typename TEnableIf<bConst == bOtherConst || (bConst && !bOtherConst)>::Type>
+	void operator=(const TPsDataBaseMapProxy<T, bOtherConst>&& Proxy)
+	{
+		Property = Proxy.Property;
+		Proxy.Property = nullptr;
 	}
 
 	const FDataField* GetField() const
 	{
 		return Property->GetField();
-	}
-
-	bool IsValid() const
-	{
-		return Property != nullptr;
 	}
 
 	template <bool bOtherConst = bConst,
@@ -167,10 +107,29 @@ public:
 		Property->GetValue().Reserve(Number);
 	}
 
-	auto Get() const
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
+	const TMap<FString, T>& GetConstRef()
+	{
+		return Property->GetValue();
+	}
+
+	TMap<FString, PsDataTools::TConstValueType<T, bConst>> GetCopy()
 	{
 		auto& Map = Property->GetValue();
 		TMap<FString, PsDataTools::TConstValueType<T, bConst>> Result;
+		Result.Reserve(Map.Num());
+		for (auto& Pair : Map)
+		{
+			Result.Add(Pair.Key, Pair.Value);
+		}
+		return Result;
+	}
+
+	TMap<FString, PsDataTools::TConstValueType<T, true>> GetCopy() const
+	{
+		auto& Map = Property->GetValue();
+		TMap<FString, PsDataTools::TConstValueType<T, true>> Result;
 		Result.Reserve(Map.Num());
 		for (auto& Pair : Map)
 		{
@@ -191,10 +150,22 @@ public:
 		return Result;
 	}
 
-	auto GetValues() const
+	TArray<PsDataTools::TConstValueType<T, bConst>> GetValues()
 	{
 		auto& Map = Property->GetValue();
 		TArray<PsDataTools::TConstValueType<T, bConst>> Result;
+		Result.Reserve(Map.Num());
+		for (auto& Pair : Map)
+		{
+			Result.Add(Pair.Value);
+		}
+		return Result;
+	}
+
+	TArray<PsDataTools::TConstValueType<T, true>> GetValues() const
+	{
+		auto& Map = Property->GetValue();
+		TArray<PsDataTools::TConstValueType<T, true>> Result;
 		Result.Reserve(Map.Num());
 		for (auto& Pair : Map)
 		{
@@ -208,12 +179,22 @@ public:
 		return Property->GetValue().Contains(Key);
 	}
 
-	PsDataTools::TConstRefType<T*, bConst> Find(const FString& Key) const
+	PsDataTools::TConstRefType<T*, bConst> Find(const FString& Key)
 	{
 		return Property->GetValue().Find(Key);
 	}
 
-	PsDataTools::TConstRefType<T, bConst> FindChecked(const FString& Key) const
+	PsDataTools::TConstRefType<T*, true> Find(const FString& Key) const
+	{
+		return Property->GetValue().Find(Key);
+	}
+
+	PsDataTools::TConstRefType<T, bConst> FindChecked(const FString& Key)
+	{
+		return Property->GetValue().FindChecked(Key);
+	}
+
+	PsDataTools::TConstRefType<T, true> FindChecked(const FString& Key) const
 	{
 		return Property->GetValue().FindChecked(Key);
 	}
@@ -240,17 +221,29 @@ public:
 
 	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
 	{
-		PsDataTools::FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
+		PsDataTools::FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate);
 	}
 
 	void Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
 	{
-		PsDataTools::FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate, Property->GetField());
+		PsDataTools::FPsDataFriend::UnbindInternal(Property->GetOwner(), Type, Delegate);
 	}
 
-	PsDataTools::TConstRefType<T, bConst> operator[](const FString& Key) const
+	PsDataTools::TConstRefType<T, bConst> operator[](const FString& Key)
 	{
 		return Property->GetValue().FindChecked(Key);
+	}
+
+	PsDataTools::TConstRefType<T, true> operator[](const FString& Key) const
+	{
+		return Property->GetValue().FindChecked(Key);
+	}
+
+	template <bool bOtherConst = bConst,
+		typename = typename TEnableIf<!bOtherConst>::Type>
+	void operator=(const TMap<FString, T>& NewMap)
+	{
+		Set(NewMap);
 	}
 
 	/***********************************
@@ -272,17 +265,16 @@ public:
 		};
 
 	private:
-		friend struct FPsDataBaseMapProxy;
-
-		FPsDataBaseMapProxy<T, bIteratorConst> Proxy;
+		PsDataTools::TConstValueType<PsDataTools::TDataProperty<TMap<FString, T>>*, bIteratorConst> Property;
 		TArray<TPair> Pairs;
 		int32 Index;
 
-		TProxyIterator(const FPsDataBaseMapProxy<T, bIteratorConst>& InProxy, bool bEnd = false)
-			: Proxy(InProxy)
+	public:
+		explicit TProxyIterator(PsDataTools::TConstValueType<PsDataTools::TDataProperty<TMap<FString, T>>*, bIteratorConst> InProperty, bool bEnd = false)
+			: Property(InProperty)
 			, Index(0)
 		{
-			auto& Map = Proxy.Property->GetValue();
+			auto& Map = Property->GetValue();
 			if (bEnd)
 			{
 				Index = Map.Num();
@@ -297,12 +289,21 @@ public:
 			}
 		}
 
-	public:
 		template <bool bOtherConst = bIteratorConst,
 			typename = typename TEnableIf<!bOtherConst>::Type>
 		bool RemoveCurrent()
 		{
-			return Proxy.Remove(Key());
+			auto& Map = Property->GetValue();
+			const auto& CurrentKey = Key();
+			if (Map.Find(CurrentKey))
+			{
+				auto NewMap = Map;
+				NewMap.Remove(CurrentKey);
+				Property->SetValue(NewMap);
+				return true;
+			}
+
+			return false;
 		}
 
 		TProxyIterator& operator++()
@@ -352,35 +353,35 @@ public:
 		}
 	};
 
-	TProxyIterator<bConst> CreateIterator() const
+	TProxyIterator<false> CreateIterator()
 	{
-		return TProxyIterator<bConst>(*this);
+		return TProxyIterator<false>(Property);
 	}
 
 	TProxyIterator<true> CreateConstIterator() const
 	{
-		return TProxyIterator<true>(*this);
+		return TProxyIterator<true>(Property);
 	}
 
-	TProxyIterator<bConst> begin() { return TProxyIterator<bConst>(*this); }
-	TProxyIterator<bConst> end() { return TProxyIterator<bConst>(*this, true); }
-	TProxyIterator<true> begin() const { return TProxyIterator<true>(*this); }
-	TProxyIterator<true> end() const { return TProxyIterator<true>(*this, true); }
+	TProxyIterator<bConst> begin() { return TProxyIterator<bConst>(Property); }
+	TProxyIterator<bConst> end() { return TProxyIterator<bConst>(Property, true); }
+	TProxyIterator<true> begin() const { return TProxyIterator<true>(Property); }
+	TProxyIterator<true> end() const { return TProxyIterator<true>(Property, true); }
 };
 
-template <class T>
-using FPsDataMapProxy = FPsDataBaseMapProxy<T, false>;
-template <class T>
-using FPsDataConstMapProxy = FPsDataBaseMapProxy<T, true>;
+template <typename T>
+using TPsDataMapProxy = TPsDataBaseMapProxy<T, false>;
+template <typename T>
+using TPsDataConstMapProxy = TPsDataBaseMapProxy<T, true>;
 
 template <typename T, bool bConst>
-struct FPsDataBaseMapProxy<TArray<T>, bConst>
+struct TPsDataBaseMapProxy<TArray<T>, bConst>
 {
 	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
 };
 
 template <typename T, bool bConst>
-struct FPsDataBaseMapProxy<TMap<FString, T>, bConst>
+struct TPsDataBaseMapProxy<TMap<FString, T>, bConst>
 {
 	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
 };

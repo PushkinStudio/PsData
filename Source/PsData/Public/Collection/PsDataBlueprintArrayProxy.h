@@ -16,30 +16,15 @@ class UPsDataBlueprintArrayProxy : public UObject
 	GENERATED_UCLASS_BODY()
 
 private:
-	FPsDataArrayProxy<UPsData*> Proxy;
+	PsDataTools::TDataProperty<TArray<UPsData*>>* Property;
 
 public:
 	/** Initialize */
-	void Init(UPsData* Instance, const FDataField* Field);
+	void Init(PsDataTools::TDataProperty<TArray<UPsData*>>* InProperty);
 
 	/** Is valid */
 	UFUNCTION(BlueprintPure, meta = (Category = "PsData|Collection"))
 	bool IsValid();
-
-	/** Bind */
-	void Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const;
-
-	/** Bind */
-	void Bind(const FString& Type, const FPsDataDelegate& Delegate) const;
-
-	/** Bind */
-	void Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const;
-
-	/** Bind */
-	void Unbind(const FString& Type, const FPsDataDelegate& Delegate) const;
-
-	/** Get const proxy */
-	FPsDataConstArrayProxy<UPsData*> GetProxy();
 
 	/** Blueprint bind */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData|Collection"))
@@ -50,7 +35,7 @@ public:
 	void BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate& Delegate);
 
 protected:
-	/** Blueprint get ref */
+	/** Blueprint get */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Map", Category = "PsData|Collection"))
 	TArray<UPsData*> Get();
 };

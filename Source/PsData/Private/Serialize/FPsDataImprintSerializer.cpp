@@ -43,7 +43,7 @@ void FPsDataImprint::Prepare()
 	Hash = OutputStream.GetHash();
 
 	Children.StableSort([](const FPsDataImprintChild& A, const FPsDataImprintChild& B) {
-		return A.GetData()->GetFullKey() < B.GetData()->GetFullKey();
+		return A.GetData()->GetFullDataKey() < B.GetData()->GetFullDataKey();
 	});
 
 	bValid = true;

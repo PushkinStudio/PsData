@@ -518,7 +518,7 @@ struct TDataPathExecutor
 		const auto Parent = Data->GetParent();
 		if (Parent)
 		{
-			PrependKey(Data->GetFullKey());
+			PrependKey(Data->GetFullDataKey());
 			Field = FDataReflection::GetFieldsByClass(Parent->GetClass())->GetFieldByNameChecked(Data->GetDataKey());
 			Data = Parent;
 			bError = false;

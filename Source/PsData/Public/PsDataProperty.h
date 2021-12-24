@@ -47,6 +47,15 @@ struct TTypeComparator
 };
 
 template <typename T>
+struct TTypeComparator<T*>
+{
+	static bool Compare(const T* Value0, const T* Value1)
+	{
+		return Value0 == Value1;
+	}
+};
+
+template <typename T>
 struct TTypeComparator<TArray<T>>
 {
 	static bool Compare(const TArray<T>& Value0, const TArray<T>& Value1)

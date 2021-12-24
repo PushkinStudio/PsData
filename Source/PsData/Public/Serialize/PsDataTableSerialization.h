@@ -25,9 +25,15 @@ private:
 public:
 	FPsDataTableDeserializer(UDataTable* DataTable, const FString& PropertyName);
 
-	template <typename T, bool bConst>
-	FPsDataTableDeserializer(UDataTable* DataTable, const FPsDataBaseMapProxy<T, bConst>& MapProxy)
-		: FPsDataTableDeserializer(DataTable, MapProxy.GetField()->Name)
+	template <typename T>
+	FPsDataTableDeserializer(UDataTable* DataTable, TPsDataConstMapProxy<T> MapProxy)
+		: FPsDataTableDeserializer(DataTable, MapProxy.GetField()->GetNameForSerialize())
+	{
+	}
+
+	template <typename T>
+	FPsDataTableDeserializer(UDataTable* DataTable, TPsDataMapProxy<T> MapProxy)
+		: FPsDataTableDeserializer(DataTable, MapProxy.GetField()->GetNameForSerialize())
 	{
 	}
 

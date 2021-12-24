@@ -9,54 +9,27 @@ UPsDataBlueprintMapProxy::UPsDataBlueprintMapProxy(const class FObjectInitialize
 {
 }
 
-void UPsDataBlueprintMapProxy::Init(UPsData* Instance, const FDataField* Field)
+void UPsDataBlueprintMapProxy::Init(PsDataTools::TDataProperty<TMap<FString, UPsData*>>* InProperty)
 {
-	check(!Proxy.IsValid());
-	Proxy = FPsDataMapProxy<UPsData*>(Instance, Field);
-	check(IsValid());
+	Property = InProperty;
 }
 
 bool UPsDataBlueprintMapProxy::IsValid()
 {
-	return Proxy.IsValid();
-}
-
-void UPsDataBlueprintMapProxy::Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
-{
-	Proxy.Bind(Type, Delegate);
-}
-
-void UPsDataBlueprintMapProxy::Bind(const FString& Type, const FPsDataDelegate& Delegate) const
-{
-	Proxy.Bind(Type, Delegate);
-}
-
-void UPsDataBlueprintMapProxy::Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
-{
-	Proxy.Unbind(Type, Delegate);
-}
-
-void UPsDataBlueprintMapProxy::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
-{
-	Proxy.Unbind(Type, Delegate);
-}
-
-FPsDataConstMapProxy<UPsData*> UPsDataBlueprintMapProxy::GetProxy()
-{
-	return Proxy;
+	return true;
 }
 
 void UPsDataBlueprintMapProxy::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
 {
-	Proxy.Bind(Type, Delegate);
+	TPsDataMapProxy<UPsData*>(Property).Bind(Type, Delegate);
 }
 
 void UPsDataBlueprintMapProxy::BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
 {
-	Proxy.Unbind(Type, Delegate);
+	TPsDataMapProxy<UPsData*>(Property).Unbind(Type, Delegate);
 }
 
 TMap<FString, UPsData*> UPsDataBlueprintMapProxy::Get()
 {
-	return Proxy.Get();
+	return Property->GetValue();
 }

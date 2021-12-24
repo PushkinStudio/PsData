@@ -9,54 +9,27 @@ UPsDataBlueprintArrayProxy::UPsDataBlueprintArrayProxy(const class FObjectInitia
 {
 }
 
-void UPsDataBlueprintArrayProxy::Init(UPsData* Instance, const FDataField* Field)
+void UPsDataBlueprintArrayProxy::Init(PsDataTools::TDataProperty<TArray<UPsData*>>* InProperty)
 {
-	check(!Proxy.IsValid());
-	Proxy = FPsDataArrayProxy<UPsData*>(Instance, Field);
-	check(IsValid());
+	Property = InProperty;
 }
 
 bool UPsDataBlueprintArrayProxy::IsValid()
 {
-	return Proxy.IsValid();
-}
-
-void UPsDataBlueprintArrayProxy::Bind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
-{
-	Proxy.Bind(Type, Delegate);
-}
-
-void UPsDataBlueprintArrayProxy::Bind(const FString& Type, const FPsDataDelegate& Delegate) const
-{
-	Proxy.Bind(Type, Delegate);
-}
-
-void UPsDataBlueprintArrayProxy::Unbind(const FString& Type, const FPsDataDynamicDelegate& Delegate) const
-{
-	Proxy.Unbind(Type, Delegate);
-}
-
-void UPsDataBlueprintArrayProxy::Unbind(const FString& Type, const FPsDataDelegate& Delegate) const
-{
-	Proxy.Unbind(Type, Delegate);
-}
-
-FPsDataConstArrayProxy<UPsData*> UPsDataBlueprintArrayProxy::GetProxy()
-{
-	return Proxy;
+	return true;
 }
 
 void UPsDataBlueprintArrayProxy::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
 {
-	Proxy.Bind(Type, Delegate);
+	TPsDataArrayProxy<UPsData*>(Property).Bind(Type, Delegate);
 }
 
 void UPsDataBlueprintArrayProxy::BlueprintUnbind(const FString& Type, const FPsDataDynamicDelegate& Delegate)
 {
-	Proxy.Unbind(Type, Delegate);
+	TPsDataArrayProxy<UPsData*>(Property).Unbind(Type, Delegate);
 }
 
 TArray<UPsData*> UPsDataBlueprintArrayProxy::Get()
 {
-	return Proxy.Get();
+	return Property->GetValue();
 }

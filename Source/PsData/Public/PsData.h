@@ -359,8 +359,8 @@ public:
 
 public:
 	/** Blueprint bind */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData|Data", AdvancedDisplay = "bIgnoreFieldMeta, bNonDeferred"))
-	void BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate, bool bIgnoreFieldMeta = false, bool bNonDeferred = false);
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Bind", Category = "PsData|Data", AdvancedDisplay = "bNonDeferred"))
+	void BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate, bool bNonDeferred = false);
 
 	/** Blueprint unbind */
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Unbind", Category = "PsData|Data"))
@@ -423,7 +423,7 @@ public:
 
 	/** Get full key */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
-	const FString& GetFullKey() const;
+	const FString& GetFullDataKey() const;
 
 	/** Get data key */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")

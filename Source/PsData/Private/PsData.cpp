@@ -240,7 +240,10 @@ void UPsData::AddChild(UPsData* Child)
 
 	if (Child->IsBound(UPsDataEvent::Added, true))
 	{
-		Child->Broadcast(UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true));
+		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Added, false);
+		Child->Broadcast(Event);
+		Event->bBubbles = true;
+		Broadcast(Event, Child);
 	}
 }
 
@@ -267,8 +270,9 @@ void UPsData::RemoveChild(UPsData* Child)
 
 	if (bIsBound)
 	{
-		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true);
+		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, false);
 		Child->Broadcast(Event);
+		Event->bBubbles = true;
 		Broadcast(Event, Child);
 	}
 }
@@ -501,16 +505,12 @@ void UPsData::UnbindAll(UObject* Object) const
 	UnbindAllInternal(Object);
 }
 
-void UPsData::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate, bool bIgnoreFieldMeta, bool bNonDeferred)
+void UPsData::BlueprintBind(const FString& Type, const FPsDataDynamicDelegate& Delegate, bool bNonDeferred)
 {
 	EDataBindFlags Flags = EDataBindFlags::Default;
 	if (bNonDeferred)
 	{
 		Flags = Flags | EDataBindFlags::NonDeferred;
-	}
-	if (bIgnoreFieldMeta)
-	{
-		Flags = Flags | EDataBindFlags::IgnoreFieldMeta;
 	}
 	BindInternal(Type, Delegate, Flags);
 }
@@ -826,7 +826,7 @@ void UPsData::DataDeserializeInternal(FPsDataDeserializer* Deserializer)
  * Data property
  ***********************************/
 
-const FString& UPsData::GetFullKey() const
+const FString& UPsData::GetFullDataKey() const
 {
 	return FullKey;
 }
@@ -852,7 +852,7 @@ void UPsData::GetPathFromRoot(FString& OutPath) const
 		}
 	}
 
-	OutPath.Append(GetFullKey());
+	OutPath.Append(GetFullDataKey());
 }
 
 FString UPsData::GetPathFromRoot() const

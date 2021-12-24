@@ -2,6 +2,7 @@
 
 #include "PsDataCore.h"
 
+#include "PsDataRoot.h"
 #include "PsDataUtils.h"
 #include "Types/PsData_FString.h"
 #include "Types/PsData_UPsData.h"

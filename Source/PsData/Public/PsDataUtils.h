@@ -64,26 +64,4 @@ FORCEINLINE bool IsValidKey(const FString& Key)
 	return IsValidKey(Key.GetCharArray().GetData(), Key.Len());
 }
 
-struct PSDATA_API FDataNoncopyable
-{
-protected:
-	FDataNoncopyable() {}
-	~FDataNoncopyable() {}
-
-private:
-	FDataNoncopyable(const FDataNoncopyable&) = delete;
-	FDataNoncopyable& operator=(const FDataNoncopyable&) = delete;
-};
-
-struct PSDATA_API FDataNonmovable
-{
-protected:
-	FDataNonmovable() {}
-	~FDataNonmovable() {}
-
-private:
-	FDataNonmovable(FDataNonmovable&&) = delete;
-	FDataNonmovable& operator=(FDataNonmovable&&) = delete;
-};
-
 } // namespace PsDataTools
