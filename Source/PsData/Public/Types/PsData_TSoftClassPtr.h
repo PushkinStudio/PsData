@@ -1,4 +1,4 @@
-// Copyright 2015-2021 Mail.Ru Group. All Rights Reserved.
+// Copyright 2015-2022 MY.GAMES. All Rights Reserved.
 
 #pragma once
 
