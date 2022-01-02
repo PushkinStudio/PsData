@@ -353,9 +353,9 @@ void UPsDataNode_Variable::UpdatePinByContext(EPsDataVariablePinType PinType, UE
 			Pin->PinFriendlyName = FText::FromString(PropertyName);
 		}
 
-		if (Context->GetUE4Type() != nullptr)
+		if (Context->GetUEType() != nullptr)
 		{
-			UField* UE4Type = Context->GetUE4Type();
+			UField* UE4Type = Context->GetUEType();
 			UEnum* Enum = Cast<UEnum>(UE4Type);
 
 			if (Enum)

@@ -69,7 +69,7 @@ namespace PsDataTools
 template <typename T>
 struct TDataTypeContext<T*> : public TDataTypeContextExtended<T*, UPsDataUPsDataLibrary>
 {
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return StaticClass<T>();
 	}
@@ -94,7 +94,7 @@ struct TDataTypeContext<T*> : public TDataTypeContextExtended<T*, UPsDataUPsData
 template <typename T>
 struct TDataTypeContext<TArray<T*>> : public TDataTypeContextExtended<TArray<T*>, UPsDataUPsDataLibrary>
 {
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return GetClass<T>();
 	}
@@ -119,7 +119,7 @@ struct TDataTypeContext<TArray<T*>> : public TDataTypeContextExtended<TArray<T*>
 template <typename T>
 struct TDataTypeContext<TMap<FString, T*>> : public TDataTypeContextExtended<TMap<FString, T*>, UPsDataUPsDataLibrary>
 {
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return GetClass<T>();
 	}

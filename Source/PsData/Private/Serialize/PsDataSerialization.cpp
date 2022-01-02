@@ -44,6 +44,7 @@ UPsData* FPsDataAllocator::operator()() const
  ***********************************/
 
 FPsDataSerializer::FPsDataSerializer()
+	: bWriteDefaults(false)
 {
 }
 

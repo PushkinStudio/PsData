@@ -12,6 +12,7 @@
 #include "PsDataLink.h"
 #include "PsDataRoot.h"
 #include "PsDataStringView.h"
+#include "PsDataStruct.h"
 #include "PsDataTraits.h"
 #include "Types/PsData_Enum.h"
 #include "Types/PsData_FLinearColor.h"
@@ -755,6 +756,26 @@ public:                                           \
 #define DLINK_ABSTRACT(__ReturnType__, __Name__) \
 public:                                          \
 	const PsDataTools::TDLink<DPropType_##__Name__::Type, __ReturnType__, ThisClass, GetStaticTypeHash(#__Name__), true> LinkByAbstract##__Name__{#__Name__, this};
+
+/***********************************
+ * Macro MAKE_TABLE_ROW
+ ***********************************/
+
+#define MAKE_TABLE_STRUCT(...)                                     \
+protected:                                                         \
+	virtual void InitStructProperties() override                   \
+	{                                                              \
+		Super::InitStructProperties();                             \
+                                                                   \
+		{                                                          \
+			__VA_ARGS__                                            \
+		}                                                          \
+                                                                   \
+		if (!UPsDataStruct::Find(ThisClass::StaticClass()))        \
+			UPsDataStruct::Create(ThisClass::StaticClass(), this); \
+	}                                                              \
+                                                                   \
+public:
 
 /***********************************
  * Macro DEFERRED_EVENT_PROCESSING

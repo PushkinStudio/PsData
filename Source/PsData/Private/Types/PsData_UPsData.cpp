@@ -110,7 +110,7 @@ void UPsDataUPsDataLibrary::TypeSerialize(const UPsData* const Instance, const F
 
 void* UPsDataUPsDataLibrary::TypeDeserialize(UPsData* Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, void* Value)
 {
-	const FPsDataAllocator Allocator(CastChecked<UClass>(Field->Context->GetUE4Type()), Instance);
+	const FPsDataAllocator Allocator(CastChecked<UClass>(Field->Context->GetUEType()), Instance);
 
 	UPsData* NewValue = static_cast<UPsData*>(Value);
 	if (!Deserializer->ReadValue(NewValue, Allocator))
@@ -123,7 +123,7 @@ void* UPsDataUPsDataLibrary::TypeDeserialize(UPsData* Instance, const FDataField
 
 bool UPsDataUPsDataLibrary::IsA(const FAbstractDataTypeContext* LeftContext, const FAbstractDataTypeContext* RightContext)
 {
-	UClass* RClass = Cast<UClass>(RightContext->GetUE4Type());
+	UClass* RClass = Cast<UClass>(RightContext->GetUEType());
 	// if (RClass != nullptr && RClass->IsChildOf(T::StaticClass()))
 	if (RClass != nullptr && RClass->IsChildOf(UPsData::StaticClass()))
 		return true;

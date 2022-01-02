@@ -24,6 +24,7 @@ struct PSDATA_API FDataMetaType
 	static const FDataStringViewChar ReadOnly;
 	static const FDataStringViewChar Deprecated;
 	static const FDataStringViewChar Nullable;
+	static const FDataStringViewChar Hidden;
 };
 
 /***********************************
@@ -76,6 +77,7 @@ struct PSDATA_API FDataFieldMeta
 	bool bReadOnly;
 	bool bAlias;
 	bool bDefault;
+	bool bHidden;
 	FString Alias;
 	FString EventType;
 
@@ -141,7 +143,7 @@ struct PSDATA_API FAbstractDataTypeContext
 	virtual uint32 GetHash() const = 0;
 	virtual FDataFieldFunctions GetUFunctions() const = 0;
 	virtual FDataLinkFunctions GetLinkUFunctions() const = 0;
-	virtual UField* GetUE4Type() const;
+	virtual UField* GetUEType() const;
 
 	virtual bool IsArray() const;
 	virtual bool IsMap() const;

@@ -106,6 +106,7 @@ void UPsDataFTextLibrary::TypeSerialize(const UPsData* const Instance, const FDa
 {
 	static const FString TableIdParam(TEXT("TableId"));
 	static const FString KeyParam(TEXT("Key"));
+	static const FString EmptyParam(TEXT("Empty"));
 
 	if (Value.IsFromStringTable())
 	{
@@ -122,6 +123,14 @@ void UPsDataFTextLibrary::TypeSerialize(const UPsData* const Instance, const FDa
 		Serializer->PopKey(KeyParam);
 		Serializer->PopObject();
 	}
+	else if (Value.IsEmpty())
+	{
+		Serializer->WriteObject();
+		Serializer->WriteKey(EmptyParam);
+		Serializer->WriteValue(true);
+		Serializer->PopKey(EmptyParam);
+		Serializer->PopObject();
+	}
 	else
 	{
 		Serializer->WriteValue(Value.ToString());
@@ -132,11 +141,13 @@ FText UPsDataFTextLibrary::TypeDeserialize(const UPsData* const Instance, const 
 {
 	static const FString TableIdParam(TEXT("TableId"));
 	static const FString KeyParam(TEXT("Key"));
+	static const FString EmptyParam(TEXT("Empty"));
 
 	if (Deserializer->ReadObject())
 	{
-		FName TableIdValue;
+		FString TableIdValue;
 		FString KeyValue;
+		bool EmptyValue = false;
 
 		FString Key;
 		while (Deserializer->ReadKey(Key))
@@ -149,25 +160,33 @@ FText UPsDataFTextLibrary::TypeDeserialize(const UPsData* const Instance, const 
 			{
 				Deserializer->ReadValue(KeyValue);
 			}
+			else if (Key == EmptyParam)
+			{
+				Deserializer->ReadValue(EmptyValue);
+			}
 			Deserializer->PopKey(Key);
 		}
 		Deserializer->PopObject();
 
-		if (TableIdValue == NAME_None || KeyValue.IsEmpty())
+		if (EmptyValue)
 		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\" (Object must have fields: \"%s\" and \"%s\")"), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FText>::Type(), *TableIdParam, *KeyParam)
+			return FText::GetEmpty();
 		}
-
-		return FText::FromStringTable(TableIdValue, KeyValue);
+		else if (!TableIdValue.IsEmpty() && !KeyValue.IsEmpty())
+		{
+			return FText::FromStringTable(*TableIdValue, KeyValue);
+		}
 	}
 	else
 	{
 		FString String;
-		if (!Deserializer->ReadValue(String))
+		if (Deserializer->ReadValue(String))
 		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FText>::Type())
+			return FText::FromString(String);
 		}
-
-		return FText::FromString(String);
 	}
+
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FText>::Type());
+
+	return FText::GetEmpty();
 }

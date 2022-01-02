@@ -50,7 +50,7 @@ TArray<UEnum*> CollectEnums(const UClass* Class)
 	for (const auto Field : PsDataTools::FDataReflection::GetFieldsByClass(Class)->GetFieldsList())
 	{
 		const auto& Context = Field->Context;
-		if (UField* FieldUE4Type = Context->GetUE4Type())
+		if (UField* FieldUE4Type = Context->GetUEType())
 		{
 			if (UEnum* FieldEnum = Cast<UEnum>(FieldUE4Type))
 			{

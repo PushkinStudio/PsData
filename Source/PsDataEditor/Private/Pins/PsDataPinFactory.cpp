@@ -45,7 +45,7 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 
 		if (Field->Context->IsData())
 		{
-			Children.Add(FHelperStruct(Field->Context->GetUE4Type(), Field->Name));
+			Children.Add(FHelperStruct(Field->Context->GetUEType(), Field->Name));
 		}
 	}
 
@@ -70,7 +70,7 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 
 			if (Field->Context->IsData())
 			{
-				Children.Add(FHelperStruct(Field->Context->GetUE4Type(), Path));
+				Children.Add(FHelperStruct(Field->Context->GetUEType(), Path));
 			}
 		}
 	}

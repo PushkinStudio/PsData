@@ -551,7 +551,7 @@ struct TDataProperty<T*> : public FAbstractDataProperty
 
 	virtual void Allocate() override
 	{
-		const FPsDataAllocator Allocator(GetField()->Context->GetUE4Type(), GetOwner());
+		const FPsDataAllocator Allocator(GetField()->Context->GetUEType(), GetOwner());
 		SetValue(static_cast<T*>(static_cast<void*>(Allocator())));
 	}
 

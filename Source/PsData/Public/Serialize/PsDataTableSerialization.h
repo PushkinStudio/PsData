@@ -14,7 +14,7 @@
 class UPsData;
 
 /***********************************
- * FTableDataSerializer
+ * FPsDataTableDeserializer
  ***********************************/
 
 struct PSDATA_API FPsDataTableDeserializer : public FPsDataDeserializer

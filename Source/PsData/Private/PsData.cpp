@@ -48,6 +48,11 @@ void FPsDataFriend::InitProperties(UPsData* Data)
 	Data->PostDeserialize();
 }
 
+void FPsDataFriend::InitStructProperties(UPsData* Data)
+{
+	Data->InitStructProperties();
+}
+
 TArray<FAbstractDataProperty*>& FPsDataFriend::GetProperties(UPsData* Data)
 {
 	return Data->Properties;
@@ -429,6 +434,10 @@ void UPsData::PostDeserialize()
 {
 }
 
+void UPsData::InitStructProperties()
+{
+}
+
 /***********************************
  * Event system
  ***********************************/
@@ -788,7 +797,7 @@ void UPsData::DataSerializeInternal(FPsDataSerializer* Serializer) const
 	for (const auto Property : Properties)
 	{
 		const auto Field = Property->GetField();
-		if (Property->IsDefault() && Field->Meta.bDefault)
+		if ((Field->Meta.bDefault && !Serializer->bWriteDefaults && Property->IsDefault()) || Field->Meta.bHidden)
 		{
 			continue;
 		}

@@ -62,6 +62,9 @@ public:
 	static uint8 TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const uint8& Value);
 
 private:
+	static FString* GetEnumString(UEnum* Enum, uint8 Value);
+	static uint8* GetEnumValue(UEnum* Enum, const FString& String);
+
 	static TMap<UEnum*, TMap<uint8, FString>> EnumValueToString;
 	static TMap<UEnum*, TMap<FString, uint8>> EnumStringToValue;
 };
@@ -83,7 +86,7 @@ struct FEnumDataTypeContext : public TDataTypeContextExtended<T, UPsDataEnumLibr
 {
 	static_assert(std::is_enum<T>::value && sizeof(T) == 1, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
 
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return FindUEnum<T>();
 	}
@@ -112,7 +115,7 @@ struct FEnumDataTypeContext<TArray<T>> : public TDataTypeContextExtended<TArray<
 {
 	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
 
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return FindUEnum<T>();
 	}
@@ -141,7 +144,7 @@ struct FEnumDataTypeContext<TMap<FString, T>> : public TDataTypeContextExtended<
 {
 	static_assert(std::is_enum<T>::value, "Only \"enum class : uint8\" can be described by DESCRIBE_ENUM macros");
 
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return FindUEnum<T>();
 	}

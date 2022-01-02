@@ -178,6 +178,7 @@ struct PSDATA_API FPsDataFriend
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
 	static void Changed(UPsData* Data, const FDataField* Field);
 	static void InitProperties(UPsData* Data);
+	static void InitStructProperties(UPsData* Data);
 	static TArray<FAbstractDataProperty*>& GetProperties(UPsData* Data);
 	static FAbstractDataProperty* GetProperty(UPsData* Data, int32 Index);
 	static const FAbstractDataProperty* GetProperty(const UPsData* Data, int32 Index);
@@ -328,6 +329,9 @@ protected:
 
 	/** Post Deserialize */
 	virtual void PostDeserialize();
+
+	/** Init struct properties */
+	virtual void InitStructProperties();
 
 	/***********************************
 	 * Event system

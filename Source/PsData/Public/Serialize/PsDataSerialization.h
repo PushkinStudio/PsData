@@ -35,6 +35,8 @@ struct PSDATA_API FPsDataSerializer
 public:
 	FPsDataSerializer();
 
+	bool bWriteDefaults;
+
 	virtual void WriteKey(const FString& Key) = 0;
 	virtual void WriteArray() = 0;
 	virtual void WriteObject() = 0;

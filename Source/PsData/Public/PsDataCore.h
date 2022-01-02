@@ -69,6 +69,8 @@ struct PSDATA_API FClassFields
 
 	int32 GetNumLinks() const;
 
+	void CalculateDependencies(UClass* HeadClass, UClass* MainClass, TSet<UClass*>& OutList) const;
+
 private:
 	TArray<FDataField*> FieldsList;
 	TArray<const FDataField*> ConstFieldsList;
@@ -79,6 +81,8 @@ private:
 	TArray<FDataLink*> LinkList;
 	TArray<const FDataLink*> ConstLinkList;
 	TMap<int32, FDataLink*> LinksByHash;
+
+	mutable int32 Recursion;
 };
 
 struct PSDATA_API FDataReflection
@@ -88,7 +92,6 @@ private:
 	static TMap<const FDataField*, FLinkPathFunction> LinkPathFunctionByField;
 	static FDataRawMeta RawMeta;
 	static UClass* DescribedClass;
-
 	static bool bCompiled;
 
 public:
@@ -102,9 +105,10 @@ public:
 	static const FClassFields* GetFieldsByClass(const UClass* Class);
 	static bool HasClass(const UClass* OwnerClass);
 
-	static void Compile();
-
 	static bool IsBaseClass(const UClass* Class);
+
+	static void Compile();
+	static void CompileClass(UClass* Class);
 };
 
 /***********************************

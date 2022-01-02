@@ -3,6 +3,7 @@
 #include "PsDataCore.h"
 
 #include "PsDataRoot.h"
+#include "PsDataStruct.h"
 #include "PsDataUtils.h"
 #include "Types/PsData_FString.h"
 #include "Types/PsData_UPsData.h"
@@ -10,6 +11,7 @@
 namespace PsDataTools
 {
 FClassFields::FClassFields()
+	: Recursion(0)
 {
 }
 
@@ -267,6 +269,38 @@ int32 FClassFields::GetNumLinks() const
 	return LinkList.Num();
 }
 
+void FClassFields::CalculateDependencies(UClass* HeadClass, UClass* MainClass, TSet<UClass*>& OutList) const
+{
+	if (Recursion > 0)
+	{
+		UE_LOG(LogDataReflection, Fatal, TEXT("Cyclic dependency detected! Head: %s Main: %s"), *HeadClass->GetName(), *MainClass->GetName());
+	}
+
+#if !UE_BUILD_SHIPPING
+	check(FDataReflection::GetFieldsByClass(MainClass) == this);
+#endif
+
+	++Recursion;
+	for (const auto Field : FieldsList)
+	{
+		if (Field->Context->IsData())
+		{
+			const auto FieldClass = CastChecked<UClass>(Field->Context->GetUEType());
+			OutList.Add(FieldClass);
+			FDataReflection::GetFieldsByClass(FieldClass)->CalculateDependencies(HeadClass, FieldClass, OutList);
+		}
+	}
+
+	auto ParentClass = MainClass->GetSuperClass();
+	while (!FDataReflection::IsBaseClass(ParentClass))
+	{
+		OutList.Add(ParentClass);
+		ParentClass = ParentClass->GetSuperClass();
+	}
+
+	--Recursion;
+}
+
 TMap<UClass*, FClassFields> FDataReflection::FieldsByClass;
 TMap<const FDataField*, FLinkPathFunction> FDataReflection::LinkPathFunctionByField;
 FDataRawMeta FDataReflection::RawMeta;
@@ -292,7 +326,6 @@ bool FDataReflection::InitProperty(UClass* Class, const char* Name, FAbstractDat
 	const auto PropertyName = ToFString(Name);
 	auto& ClassFields = FieldsByClass.FindChecked(Class);
 
-#if !UE_BUILD_SHIPPING
 	if (!IsValidKey(PropertyName))
 	{
 		UE_LOG(LogDataReflection, Fatal, TEXT("Illegal name for property %s::%s (%d)"), *Class->GetName(), *PropertyName, Hash);
@@ -309,11 +342,9 @@ bool FDataReflection::InitProperty(UClass* Class, const char* Name, FAbstractDat
 	{
 		UE_LOG(LogDataReflection, Fatal, TEXT("Duplicate alias for property %s::%s (%d)"), *Class->GetName(), *PropertyName, Hash);
 	}
-#endif
 
 	OutField = new FDataField(PropertyName, ClassFields.GetNumFields(), Hash, Context, RawMeta);
 
-#if !UE_BUILD_SHIPPING
 	if (!IsValidKey(OutField->GetAliasName()))
 	{
 		UE_LOG(LogDataReflection, Fatal, TEXT("Illegal alias %s for property %s::%s (%d)"), *Class->GetName(), *PropertyName, Hash);
@@ -322,7 +353,6 @@ bool FDataReflection::InitProperty(UClass* Class, const char* Name, FAbstractDat
 	{
 		UE_LOG(LogDataReflection, Fatal, TEXT("Duplicate alias for property %s::%s (%d)"), *Class->GetName(), *PropertyName, Hash);
 	}
-#endif
 
 	ClassFields.AddField(OutField);
 
@@ -343,12 +373,10 @@ bool FDataReflection::InitLinkProperty(UClass* Class, const char* Name, bool bAb
 	const auto Field = ClassFields.GetFieldByNameChecked(PropertyName);
 	const auto Hash = bAbstract ? HashCombine(Field->Hash, PSDATA_ABSTRACT_LINK_SALT) : Field->Hash;
 
-#if !UE_BUILD_SHIPPING
 	if (ClassFields.HasLinkWithHash(Hash))
 	{
 		UE_LOG(LogDataReflection, Fatal, TEXT("Can't generate unique hash for link %s::%s (%d)"), *Class->GetName(), *Field->Name, Hash);
 	}
-#endif
 
 	if (bAbstract)
 	{
@@ -365,12 +393,10 @@ bool FDataReflection::InitLinkProperty(UClass* Class, const char* Name, bool bAb
 	{
 		check(PathFunction != nullptr);
 
-#if !UE_BUILD_SHIPPING
 		if (LinkPathFunctionByField.Contains(Field))
 		{
 			UE_LOG(LogDataReflection, Fatal, TEXT("Attempting to recreate link %s::%s"), *Class->GetName(), *Field->Name, Hash);
 		}
-#endif
 
 		LinkPathFunctionByField.Add(Field, PathFunction);
 	}
@@ -420,12 +446,12 @@ void FDataReflection::PostConstruct(UClass* Class)
 	auto& ClassFields = FieldsByClass.FindChecked(Class);
 	ClassFields.Sort();
 
-	UPsData* Instance = CastChecked<UPsData>(Class->GetDefaultObject(false));
+	UPsData* DefaultObject = CastChecked<UPsData>(Class->GetDefaultObject(false));
 
-	FPsDataFriend::InitProperties(Instance);
+	FPsDataFriend::InitProperties(DefaultObject);
 	for (const auto Field : ClassFields.GetFieldsList())
 	{
-		const auto Property = FPsDataFriend::GetProperty(Instance, Field->Index);
+		const auto Property = FPsDataFriend::GetProperty(DefaultObject, Field->Index);
 		if (!Property->IsDefault() || Field->Meta.bStrict)
 		{
 			UE_LOG(LogDataReflection, VeryVerbose, TEXT("      non-default: %s"), *Field->Name);
@@ -457,43 +483,75 @@ bool FDataReflection::HasClass(const UClass* OwnerClass)
 void FDataReflection::Compile()
 {
 	check(!bCompiled);
-	bCompiled = true;
 
 	check(DescribedClass == nullptr);
 
-	TArray<UField*> ReadOnlyFields;
+	TArray<UClass*> ReadOnlyClasses;
+	TMap<UClass*, TSet<UClass*>> UnresolvedDependencies;
 	for (auto& Pair : FieldsByClass)
 	{
 		for (const auto Field : Pair.Value.GetFieldsList())
 		{
-			if (Field->Meta.bReadOnly)
+			if (Field->Meta.bReadOnly && Field->Context->IsData())
 			{
-				ReadOnlyFields.Add(Field->Context->GetUE4Type());
+				ReadOnlyClasses.Add(CastChecked<UClass>(Field->Context->GetUEType()));
+			}
+		}
+
+		auto& Dependencies = UnresolvedDependencies.Add(Pair.Key);
+		Pair.Value.CalculateDependencies(Pair.Key, Pair.Key, Dependencies);
+	}
+
+	for (const auto ReadOnlyClass : ReadOnlyClasses)
+	{
+		const auto& Dependencies = UnresolvedDependencies.FindChecked(ReadOnlyClass);
+		for (const auto Class : Dependencies)
+		{
+			for (const auto Field : FieldsByClass.FindChecked(Class).GetFieldsList())
+			{
+				Field->Meta.bReadOnly = true;
 			}
 		}
 	}
 
-	while (ReadOnlyFields.Num() > 0)
+	while (UnresolvedDependencies.Num() > 0)
 	{
-		UField* UEField = ReadOnlyFields.Pop();
-		if (const auto Class = Cast<UClass>(UEField))
+		const int32 NumUnresolvedDependencies = UnresolvedDependencies.Num();
+		for (auto ItA = UnresolvedDependencies.CreateIterator(); ItA; ++ItA)
 		{
-			if (const auto ClassFields = FieldsByClass.Find(Class))
+			const auto Class = ItA.Key();
+			auto& ClassDependencies = ItA.Value();
+
+			for (auto ItB = ClassDependencies.CreateIterator(); ItB; ++ItB)
 			{
-				for (const auto Field : ClassFields->GetFieldsList())
+				if (!UnresolvedDependencies.Contains(*ItB))
 				{
-					if (!Field->Meta.bReadOnly)
-					{
-						Field->Meta.bReadOnly = true;
-						if (Field->Context->IsData())
-						{
-							ReadOnlyFields.AddUnique(Field->Context->GetUE4Type());
-						}
-					}
+					ItB.RemoveCurrent();
 				}
 			}
+
+			if (ClassDependencies.Num() == 0)
+			{
+				CompileClass(ItA.Key());
+				ItA.RemoveCurrent();
+			}
+		}
+
+		if (NumUnresolvedDependencies == UnresolvedDependencies.Num())
+		{
+			UE_LOG(LogDataReflection, Fatal, TEXT("Can't resolve dependencies"));
 		}
 	}
+
+	bCompiled = true;
+}
+
+void FDataReflection::CompileClass(UClass* Class)
+{
+	check(!bCompiled);
+
+	UPsData* DefaultObject = CastChecked<UPsData>(Class->GetDefaultObject(false));
+	FPsDataFriend::InitStructProperties(DefaultObject);
 }
 
 bool FDataReflection::IsBaseClass(const UClass* Class)

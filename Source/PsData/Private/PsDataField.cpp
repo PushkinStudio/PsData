@@ -18,6 +18,7 @@ const FDataStringViewChar FDataMetaType::Alias = "alias";
 const FDataStringViewChar FDataMetaType::ReadOnly = "readonly";
 const FDataStringViewChar FDataMetaType::Deprecated = "deprecated";
 const FDataStringViewChar FDataMetaType::Nullable = "nullable";
+const FDataStringViewChar FDataMetaType::Hidden = "hidden";
 
 /***********************************
  * FDataRawMeta
@@ -105,6 +106,7 @@ FDataFieldMeta::FDataFieldMeta()
 	, bReadOnly(false)
 	, bAlias(false)
 	, bDefault(true)
+	, bHidden(false)
 {
 }
 
@@ -205,7 +207,7 @@ UFunction* FDataLinkFunctions::ResolveFunction() const
  * FAbstractDataTypeContext
  ***********************************/
 
-UField* FAbstractDataTypeContext::GetUE4Type() const
+UField* FAbstractDataTypeContext::GetUEType() const
 {
 	return nullptr;
 }
@@ -344,6 +346,14 @@ void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 		PrintApplyMeta(ReadOnly);
 
 		RawMeta.Remove(FDataMetaType::ReadOnly);
+	}
+	if (const auto Hidden = RawMeta.Find(FDataMetaType::Hidden))
+	{
+		Field->Meta.bHidden = true;
+		PrintUnusedMetaValue(Hidden);
+		PrintApplyMeta(Hidden);
+
+		RawMeta.Remove(FDataMetaType::Hidden);
 	}
 
 	if (Field->Meta.bStrict && Field->Meta.bEvent)

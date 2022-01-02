@@ -107,20 +107,10 @@ DEFINE_FUNCTION(UPsDataEnumLibrary::execGetArrayLinkValue)
 
 void UPsDataEnumLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const uint8& Value)
 {
-	UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());
+	UEnum* Enum = Cast<UEnum>(Field->Context->GetUEType());
 	if (Enum)
 	{
-		auto Map = EnumValueToString.Find(Enum);
-		if (!Map)
-		{
-			Map = &EnumValueToString.Add(Enum);
-			for (int32 i = 0; i < Enum->NumEnums(); ++i)
-			{
-				Map->Add(static_cast<uint8>(Enum->GetValueByIndex(i)), Enum->GetNameStringByIndex(i));
-			}
-		}
-
-		if (auto StringValue = Map->Find(Value))
+		if (const auto StringValue = GetEnumString(Enum, Value))
 		{
 			Serializer->WriteValue(*StringValue);
 		}
@@ -137,35 +127,56 @@ void UPsDataEnumLibrary::TypeSerialize(const UPsData* const Instance, const FDat
 
 uint8 UPsDataEnumLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const uint8& Value)
 {
-	UEnum* Enum = Cast<UEnum>(Field->Context->GetUE4Type());
+	UEnum* Enum = Cast<UEnum>(Field->Context->GetUEType());
 	uint8 Result = 0;
 	if (Enum)
 	{
-		auto Map = EnumStringToValue.Find(Enum);
-		if (!Map)
-		{
-			Map = &EnumStringToValue.Add(Enum);
-			for (int32 i = 0; i < Enum->NumEnums(); ++i)
-			{
-				Map->Add(Enum->GetNameStringByIndex(i), static_cast<uint8>(Enum->GetValueByIndex(i)));
-			}
-		}
-
 		FString String;
 		if (Deserializer->ReadValue(String))
 		{
-			if (auto UintValue = Map->Find(String))
+			if (const auto UintValue = GetEnumValue(Enum, String))
 			{
 				Result = *UintValue;
 				return Result;
 			}
 		}
 	}
-	else if (Deserializer->ReadValue(Result))
+
+	if (Deserializer->ReadValue(Result))
 	{
 		return Result;
 	}
 
 	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *Field->Context->GetCppType());
 	return Result;
+}
+
+FString* UPsDataEnumLibrary::GetEnumString(UEnum* Enum, uint8 Value)
+{
+	auto ValueToStringPtr = EnumValueToString.Find(Enum);
+	if (!ValueToStringPtr)
+	{
+		ValueToStringPtr = &EnumValueToString.Add(Enum);
+		for (int32 i = 0; i < Enum->NumEnums(); ++i)
+		{
+			ValueToStringPtr->Add(static_cast<uint8>(Enum->GetValueByIndex(i)), Enum->GetNameStringByIndex(i));
+		}
+	}
+
+	return ValueToStringPtr->Find(Value);
+}
+
+uint8* UPsDataEnumLibrary::GetEnumValue(UEnum* Enum, const FString& String)
+{
+	auto StringToValuePtr = EnumStringToValue.Find(Enum);
+	if (!StringToValuePtr)
+	{
+		StringToValuePtr = &EnumStringToValue.Add(Enum);
+		for (int32 i = 0; i < Enum->NumEnums(); ++i)
+		{
+			StringToValuePtr->Add(Enum->GetNameStringByIndex(i), static_cast<uint8>(Enum->GetValueByIndex(i)));
+		}
+	}
+
+	return StringToValuePtr->Find(String);
 }

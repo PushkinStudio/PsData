@@ -68,7 +68,7 @@ namespace PsDataTools
 template <typename T>
 struct TDataTypeContext<TSoftObjectPtr<T>> : public TDataTypeContextExtended<TSoftObjectPtr<T>, UPsDataTSoftObjectPtrLibrary>
 {
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return GetClass<T>();
 	}
@@ -82,7 +82,7 @@ struct TDataTypeContext<TSoftObjectPtr<T>> : public TDataTypeContextExtended<TSo
 template <typename T>
 struct TDataTypeContext<TArray<TSoftObjectPtr<T>>> : public TDataTypeContextExtended<TArray<TSoftObjectPtr<T>>, UPsDataTSoftObjectPtrLibrary>
 {
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return GetClass<T>();
 	}
@@ -96,7 +96,7 @@ struct TDataTypeContext<TArray<TSoftObjectPtr<T>>> : public TDataTypeContextExte
 template <typename T>
 struct TDataTypeContext<TMap<FString, TSoftObjectPtr<T>>> : public TDataTypeContextExtended<TMap<FString, TSoftObjectPtr<T>>, UPsDataTSoftObjectPtrLibrary>
 {
-	virtual UField* GetUE4Type() const override
+	virtual UField* GetUEType() const override
 	{
 		return GetClass<T>();
 	}
