@@ -581,7 +581,9 @@ void FPsDataFastJsonSerializer::WriteValue(const FString& Value)
 
 void FPsDataFastJsonSerializer::WriteValue(const FName& Value)
 {
-	WriteValue(Value.ToString());
+	FString StringValue = Value.ToString();
+	StringValue.ToLowerInline();
+	WriteValue(StringValue);
 }
 
 void FPsDataFastJsonSerializer::WriteValue(const UPsData* Value)

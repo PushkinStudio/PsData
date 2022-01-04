@@ -104,7 +104,9 @@ void FPsDataJsonSerializer::WriteValue(const FString& Value)
 
 void FPsDataJsonSerializer::WriteValue(const FName& Value)
 {
-	WriteJsonValue(MakeShareable(new FJsonValueString(Value.ToString())));
+	FString StringValue = Value.ToString();
+	StringValue.ToLowerInline();
+	WriteJsonValue(MakeShareable(new FJsonValueString(StringValue)));
 }
 
 void FPsDataJsonSerializer::WriteValue(const UPsData* Value)

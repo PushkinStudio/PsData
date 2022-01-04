@@ -102,20 +102,21 @@ DEFINE_FUNCTION(UPsDataFNameLibrary::execGetArrayLinkValue)
 
 void UPsDataFNameLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FName& Value)
 {
-	Serializer->WriteValue(Value.ToString().ToLower());
+	Serializer->WriteValue(Value);
 }
 
 FName UPsDataFNameLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FName& Value)
 {
-	FString String;
-	if (!Deserializer->ReadValue(String))
+	FName Name;
+	if (!Deserializer->ReadValue(Name))
 	{
 		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FName>::Type())
 	}
-	const FString LowercaseString = String.ToLower();
-	if (LowercaseString == TEXT("none"))
+
+	if (Name == TEXT("none"))
 	{
 		return NAME_None;
 	}
-	return FName(*LowercaseString);
+
+	return Name;
 }

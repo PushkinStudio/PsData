@@ -117,7 +117,7 @@ FProperty* CreateProperty(const FFieldVariant& Owner, FProperty* BaseProperty, c
 void ApplyDataField(UPsDataStruct* Struct, const FDataField* Field)
 {
 	UScriptStruct* SuperStruct = Cast<UScriptStruct>(Struct->GetSuperStruct());
-	if (SuperStruct && SuperStruct->FindPropertyByName(*Field->Name))
+	if (SuperStruct && SuperStruct->FindPropertyByName(*Field->GetNameForSerialize()))
 	{
 		return;
 	}

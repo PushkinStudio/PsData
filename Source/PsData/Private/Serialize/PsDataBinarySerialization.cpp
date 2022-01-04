@@ -72,8 +72,10 @@ void FPsDataBinarySerializer::WriteValue(const FString& Value)
 
 void FPsDataBinarySerializer::WriteValue(const FName& Value)
 {
+	FString StringValue = Value.ToString();
+	StringValue.ToLowerInline();
 	OutputStream->WriteUint8(EBinaryTokens::Value_FName);
-	OutputStream->WriteString(Value.ToString());
+	OutputStream->WriteString(StringValue);
 }
 
 void FPsDataBinarySerializer::WriteValue(const UPsData* Value)
