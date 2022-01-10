@@ -108,15 +108,11 @@ void UPsDataFNameLibrary::TypeSerialize(const UPsData* const Instance, const FDa
 FName UPsDataFNameLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FName& Value)
 {
 	FName Name;
-	if (!Deserializer->ReadValue(Name))
+	if (Deserializer->ReadValue(Name))
 	{
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FName>::Type())
+		return Name;
 	}
 
-	if (Name == TEXT("none"))
-	{
-		return NAME_None;
-	}
-
-	return Name;
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FName>::Type())
+	return NAME_None;
 }

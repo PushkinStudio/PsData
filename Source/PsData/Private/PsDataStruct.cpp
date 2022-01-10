@@ -67,6 +67,11 @@ FProperty* CreateSingleProperty(bool bTypeFromField, const FFieldVariant& Owner,
 			Property->SetFlags(Flags.ObjectFlags);
 			Property->PropertyFlags = Flags.PropertyFlags;
 
+			if (FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
+			{
+				SoftObjectProperty->PropertyClass = CastChecked<UClass>(Field->Context->GetUEType());
+			}
+
 			if (Owner.IsUObject())
 			{
 				CastChecked<UField>(Owner.ToUObject())->AddCppProperty(Property);
