@@ -67,7 +67,12 @@ FProperty* CreateSingleProperty(bool bTypeFromField, const FFieldVariant& Owner,
 			Property->SetFlags(Flags.ObjectFlags);
 			Property->PropertyFlags = Flags.PropertyFlags;
 
-			if (FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
+			if (FSoftClassProperty* SoftClassProperty = CastField<FSoftClassProperty>(Property))
+			{
+				SoftClassProperty->SetMetaClass(CastChecked<UClass>(Field->Context->GetUEType()));
+				SoftClassProperty->PropertyClass = UClass::StaticClass();
+			}
+			else if (FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
 			{
 				SoftObjectProperty->PropertyClass = CastChecked<UClass>(Field->Context->GetUEType());
 			}
