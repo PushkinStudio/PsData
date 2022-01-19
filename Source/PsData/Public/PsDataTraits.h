@@ -92,6 +92,29 @@ template <typename T, bool bConst = true>
 using TConstRefType = typename TConstRef<T, bConst>::Type;
 
 /***********************************
+ * Integer equivalent trait
+ ***********************************/
+
+template <typename K>
+struct TIntegerEquivalent
+{
+};
+
+template <>
+struct TIntegerEquivalent<float>
+{
+	using Type = int32;
+	using UnsignedType = uint32;
+};
+
+template <>
+struct TIntegerEquivalent<double>
+{
+	using Type = int64;
+	using UnsignedType = uint64;
+};
+
+/***********************************
  * Is collection trait
  ***********************************/
 

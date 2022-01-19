@@ -3,6 +3,7 @@
 #include "Serialize/PsDataFastJsonSerialization.h"
 
 #include "PsData.h"
+#include "PsDataUtils.h"
 
 #include <cmath>
 
@@ -188,153 +189,6 @@ void AppendStringAsJsonString(TArray<TCHAR>& JsonStringCharArray, const TCHAR* S
 	JsonStringCharArray.Add('"');
 }
 
-template <uint32 Degree>
-constexpr uint64 PowerOfTen()
-{
-	static_assert(Degree <= std::numeric_limits<uint64>::digits10, "Out of bounds");
-	return 10 * PowerOfTen<Degree - 1>();
-}
-
-template <>
-constexpr uint64 PowerOfTen<0>()
-{
-	return 1;
-}
-
-template <typename T>
-typename TEnableIf<std::is_integral<T>::value, void>::Type
-AppendNumber(TArray<TCHAR>& JsonStringCharArray, T Value)
-{
-	constexpr TCHAR ZeroChar = '0';
-	constexpr bool bCanBeNegative = TNumericLimits<T>::Min() < 0;
-	constexpr int32 Length = (std::numeric_limits<T>::digits10 + 1) + (bCanBeNegative ? 1 : 0);
-
-	int32 Pos = Length;
-	TCHAR CharBuffer[Length];
-
-	const bool bNegative = bCanBeNegative && Value < 0;
-	if (bNegative)
-	{
-		Value *= -1;
-	}
-
-	do
-	{
-		CharBuffer[--Pos] = ZeroChar + (Value % 10);
-		Value /= 10;
-	}
-	while (Value > 0);
-
-	if (bNegative)
-	{
-		CharBuffer[--Pos] = '-';
-	}
-
-	JsonStringCharArray.Append(&CharBuffer[Pos], Length - Pos);
-}
-
-template <typename T, int32 Precision = 6>
-typename TEnableIf<std::is_floating_point<T>::value, void>::Type
-AppendNumber(TArray<TCHAR>& JsonStringCharArray, T Value)
-{
-	constexpr TCHAR ZeroChar = '0';
-
-	auto FloatType = std::fpclassify(Value);
-	if (FloatType == FP_NAN || FloatType == FP_INFINITE)
-	{
-		// ECMA-404
-		JsonStringCharArray.Append(TEXT("null"), 4);
-	}
-	else if (FloatType == FP_ZERO || FloatType == FP_SUBNORMAL)
-	{
-		JsonStringCharArray.Add(ZeroChar);
-	}
-	else
-	{
-		using UintType = typename std::conditional<std::is_base_of<T, float>::value, uint32, uint64>::type;
-		constexpr T MaxUintValue = PowerOfTen<std::numeric_limits<T>::digits10>();
-		constexpr uint32 InvEpsilon = PowerOfTen<Precision>();
-		constexpr T Epsilon = static_cast<T>(1) / static_cast<T>(InvEpsilon);
-
-		/**
-		 * Default buffer size: "±" + A(minimum 10 digits) + "." + B(Precision) ≈ 18
-		 * Scientific notation buffer size: "±" + A(always 1 digit) + "." + B(Precision) + "e±" + E(maximum 4 digits) ≈ 15
-		 */
-		constexpr int32 Length = 1 + (std::numeric_limits<UintType>::digits10 + 1) + 1 + Precision;
-		int32 Pos = Length;
-		TCHAR CharBuffer[Length];
-
-		const bool bNegative = Value < 0;
-		if (bNegative)
-		{
-			Value *= -1;
-		}
-
-		const bool bScientificNotation = (Value < Epsilon || Value > MaxUintValue);
-		if (bScientificNotation)
-		{
-			auto Exp = static_cast<int32>(std::floor(std::log10(Value)));
-			Value = Value * std::pow(10, -Exp);
-
-			const bool bExpNegative = Exp < 0;
-			if (bExpNegative)
-			{
-				Exp *= -1;
-			}
-
-			do
-			{
-				CharBuffer[--Pos] = ZeroChar + (Exp % 10);
-				Exp /= 10;
-			}
-			while (Exp > 0);
-
-			if (bExpNegative)
-			{
-				CharBuffer[--Pos] = '-';
-			}
-
-			CharBuffer[--Pos] = 'e';
-		}
-
-		UintType A = static_cast<UintType>(Value);
-		uint32 B = static_cast<uint32>((Value - A) * InvEpsilon + 0.5);
-
-		if (B > 0)
-		{
-			int32 NumDigits = Precision;
-			while (B % 10 == 0)
-			{
-				B /= 10;
-				--NumDigits;
-			}
-
-			while (NumDigits > 0)
-			{
-				CharBuffer[--Pos] = ZeroChar + (B % 10);
-				B /= 10;
-				--NumDigits;
-			}
-
-			CharBuffer[--Pos] = '.';
-		}
-
-		do
-		{
-			CharBuffer[--Pos] = ZeroChar + (A % 10);
-			A /= 10;
-		}
-		while (A > 0);
-
-		if (bNegative)
-		{
-			CharBuffer[--Pos] = '-';
-		}
-
-		JsonStringCharArray.Append(&CharBuffer[Pos], Length - Pos);
-	}
-}
-
 FString JsonStringToString(const TCHAR* String, int32 StartPosition, int32 Count)
 {
 	FString Result;
@@ -380,57 +234,6 @@ FString JsonStringToString(const TCHAR* String, int32 StartPosition, int32 Count
 	return Result;
 }
 
-bool IsNumeric(const FString& Value)
-{
-	bool bDigit = false;
-	bool bDot = false;
-	bool bSign = false;
-	bool bExp = false;
-
-	for (const auto C : Value)
-	{
-		if (C >= '0' && C <= '9')
-		{
-			bDigit = true;
-		}
-		else if (C == '.')
-		{
-			if (bDot || bExp)
-			{
-				return false;
-			}
-
-			bDigit = true;
-			bDot = true;
-		}
-		else if (C == '+' || C == '-')
-		{
-			if (bSign || bDigit)
-			{
-				return false;
-			}
-
-			bSign = true;
-		}
-		else if (C == 'E' || C == 'e')
-		{
-			if (bExp || !bDigit)
-			{
-				return false;
-			}
-
-			bDigit = false;
-			bSign = false;
-			bExp = true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	return bDigit;
-}
 } // namespace PsDataTools
 
 using namespace PsDataTools;
@@ -529,7 +332,7 @@ void FPsDataFastJsonSerializer::WriteValue(int32 Value)
 	AppendComma();
 	AppendValueSpace();
 
-	AppendNumber(Buffer, Value);
+	PsDataTools::Numbers::ToString(Value, Buffer);
 }
 
 void FPsDataFastJsonSerializer::WriteValue(int64 Value)
@@ -537,7 +340,7 @@ void FPsDataFastJsonSerializer::WriteValue(int64 Value)
 	AppendComma();
 	AppendValueSpace();
 
-	AppendNumber(Buffer, Value);
+	PsDataTools::Numbers::ToString(Value, Buffer);
 }
 
 void FPsDataFastJsonSerializer::WriteValue(uint8 Value)
@@ -545,7 +348,7 @@ void FPsDataFastJsonSerializer::WriteValue(uint8 Value)
 	AppendComma();
 	AppendValueSpace();
 
-	AppendNumber(Buffer, Value);
+	PsDataTools::Numbers::ToString(Value, Buffer);
 }
 
 void FPsDataFastJsonSerializer::WriteValue(float Value)
@@ -553,7 +356,7 @@ void FPsDataFastJsonSerializer::WriteValue(float Value)
 	AppendComma();
 	AppendValueSpace();
 
-	AppendNumber(Buffer, Value);
+	PsDataTools::Numbers::ToString(Value, Buffer);
 }
 
 void FPsDataFastJsonSerializer::WriteValue(bool Value)
@@ -812,12 +615,13 @@ bool FPsDataFastJsonDeserializer::ReadValue(int32& OutValue)
 	}
 
 	const FString& Value = Pointer.GetString(Source);
-	if (!IsNumeric(Value))
+	const auto NumberOpt = PsDataTools::Numbers::ToNumber<int32>(ToStringView(Value));
+	if (!NumberOpt)
 	{
 		return false;
 	}
 
-	OutValue = FCString::Atoi(*Value);
+	OutValue = *NumberOpt;
 	Pointer.Reset();
 
 	++PointerIndex;
@@ -835,12 +639,14 @@ bool FPsDataFastJsonDeserializer::ReadValue(int64& OutValue)
 	}
 
 	const FString& Value = Pointer.GetString(Source);
-	if (!IsNumeric(Value))
+	const auto NumberOpt = PsDataTools::Numbers::ToNumber<int64>(ToStringView(Value));
+	if (!NumberOpt)
 	{
 		return false;
 	}
 
-	OutValue = FCString::Atoi64(*Value);
+	OutValue = *NumberOpt;
+	;
 	Pointer.Reset();
 
 	++PointerIndex;
@@ -858,12 +664,14 @@ bool FPsDataFastJsonDeserializer::ReadValue(uint8& OutValue)
 	}
 
 	const FString& Value = Pointer.GetString(Source);
-	if (!IsNumeric(Value))
+	const auto NumberOpt = PsDataTools::Numbers::ToNumber<uint8>(ToStringView(Value));
+	if (!NumberOpt)
 	{
 		return false;
 	}
 
-	OutValue = FCString::Atoi(*Value);
+	OutValue = *NumberOpt;
+	;
 	Pointer.Reset();
 
 	++PointerIndex;
@@ -881,12 +689,14 @@ bool FPsDataFastJsonDeserializer::ReadValue(float& OutValue)
 	}
 
 	const FString& Value = Pointer.GetString(Source);
-	if (!IsNumeric(Value))
+	const auto NumberOpt = PsDataTools::Numbers::ToNumber<float>(ToStringView(Value));
+	if (!NumberOpt)
 	{
 		return false;
 	}
 
-	OutValue = FCString::Atof(*Value);
+	OutValue = *NumberOpt;
+	;
 	Pointer.Reset();
 
 	++PointerIndex;
@@ -911,10 +721,6 @@ bool FPsDataFastJsonDeserializer::ReadValue(bool& OutValue)
 	else if (Value.Equals(TEXT("false"), ESearchCase::IgnoreCase))
 	{
 		OutValue = false;
-	}
-	else if (IsNumeric(Value))
-	{
-		OutValue = FCString::Atoi(*Value) ? true : false;
 	}
 	else
 	{

@@ -94,131 +94,152 @@ constexpr unsigned int Compute(const TCHAR* Data, uint32 CRC)
 
 } // namespace CRC32
 
-template <typename T>
-struct TDataStringView
+namespace Utils
 {
-private:
-	static constexpr int Clamp(const int Value, const int Min, const int Max)
+template <typename T>
+constexpr T Clamp(T Value, T Min, T Max)
+{
+	return (Value < Min) ? Min : (Value > Max) ? Max
+											   : Value;
+}
+
+template <typename T>
+constexpr int32 GetSize(const T* Data)
+{
+	int32 i = 0;
+	while (*Data++)
 	{
-		return (Value < Min) ? Min : (Value > Max) ? Max
-												   : Value;
+		i++;
 	}
 
-public:
-	static constexpr int GetSize(const T* Data)
-	{
-		int i = 0;
-		while (*Data++)
-		{
-			i++;
-		}
+	return i;
+}
 
-		return i;
+template <typename T>
+constexpr T ToLowerCase(T C)
+{
+	const T Delta = 'Z' - 'z';
+	if (C >= 'A' && C <= 'Z')
+	{
+		return C - Delta;
 	}
+	return C;
+}
 
-	static constexpr T ToLowerCase(T C)
+template <bool bIgnoreCase = false, typename T, typename K>
+constexpr bool Equal(const T* A, const K* B)
+{
+	while (*A || *B)
 	{
-		const T Delta = 'Z' - 'z';
-		if (C >= 'A' && C <= 'Z')
+		if (bIgnoreCase)
 		{
-			return C - Delta;
-		}
-		return C;
-	}
-
-	template <bool bIgnoreCase = false>
-	static constexpr bool Equal(const T* A, const T* B)
-	{
-		while (*A || *B)
-		{
-			if (bIgnoreCase)
+			if (ToLowerCase(*A) != ToLowerCase(*B))
 			{
-				if (ToLowerCase(*A) != ToLowerCase(*B))
-				{
-					return false;
-				}
-
-				++A;
-				++B;
-			}
-			else
-			{
-				if (*A++ != *B++)
-				{
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-
-	template <bool bIgnoreCase = false>
-	static constexpr bool Equal(const T* A, int32 ASize, const T* B, int32 BSize)
-	{
-		if (ASize != BSize)
-		{
-			return false;
-		}
-
-		while (ASize > 0)
-		{
-			if (bIgnoreCase)
-			{
-				if (ToLowerCase(*A) != ToLowerCase(*B))
-				{
-					return false;
-				}
-
-				++A;
-				++B;
-			}
-			else
-			{
-				if (*A++ != *B++)
-				{
-					return false;
-				}
+				return false;
 			}
 
-			--ASize;
+			++A;
+			++B;
 		}
+		else
+		{
+			if (*A++ != *B++)
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
 
-		return true;
+template <bool bIgnoreCase = false, typename T, typename K>
+constexpr bool Equal(const T* A, int32 ASize, const K* B, int32 BSize)
+{
+	if (ASize != BSize)
+	{
+		return false;
 	}
 
-	static constexpr int32 Find(const T* A, int32 ASize, const T* B, int32 BSize)
+	while (ASize > 0)
 	{
-		int32 Index = 0;
-		while (ASize >= BSize)
+		if (bIgnoreCase)
 		{
-			if (Equal(A++, BSize, B, BSize))
+			if (ToLowerCase(*A) != ToLowerCase(*B))
+			{
+				return false;
+			}
+
+			++A;
+			++B;
+		}
+		else
+		{
+			if (*A++ != *B++)
+			{
+				return false;
+			}
+		}
+
+		--ASize;
+	}
+
+	return true;
+}
+
+template <bool bIgnoreCase = false, typename T, typename K>
+constexpr int32 Find(const T* A, int32 ASize, const K* B, int32 BSize)
+{
+	int32 Index = 0;
+	while (ASize >= BSize)
+	{
+		if (Equal<bIgnoreCase>(A++, BSize, B, BSize))
+		{
+			return Index;
+		}
+
+		++Index;
+		--ASize;
+	}
+
+	return INDEX_NONE;
+}
+
+template <bool bIgnoreCase = false, typename T, typename K>
+constexpr int32 Find(const T* A, int32 ASize, K C)
+{
+	if (bIgnoreCase)
+	{
+		C = ToLowerCase(C);
+	}
+
+	int32 Index = 0;
+	while (Index < ASize)
+	{
+		if (bIgnoreCase)
+		{
+			if (ToLowerCase(A[Index]) == C)
 			{
 				return Index;
 			}
-
-			++Index;
-			--ASize;
 		}
-
-		return INDEX_NONE;
-	}
-
-	static constexpr int32 Find(const T* A, int32 ASize, const T C)
-	{
-		int32 Index = 0;
-		while (Index < ASize)
+		else
 		{
 			if (A[Index] == C)
 			{
 				return Index;
 			}
-
-			++Index;
 		}
 
-		return INDEX_NONE;
+		++Index;
 	}
 
+	return INDEX_NONE;
+}
+} // namespace Utils
+
+template <typename T>
+struct TDataStringView
+{
 	constexpr TDataStringView()
 		: Source(nullptr)
 		, Size(0)
@@ -227,7 +248,7 @@ public:
 
 	constexpr TDataStringView(const T* Data)
 		: Source(Data)
-		, Size(GetSize(Data))
+		, Size(Utils::GetSize(Data))
 	{
 	}
 
@@ -237,25 +258,52 @@ public:
 	{
 	}
 
-	template <bool bIgnoreCase = false>
-	constexpr bool Equal(const TDataStringView& Other) const
+	template <bool bIgnoreCase = false, typename K>
+	constexpr bool Equal(const TDataStringView<K>& Other) const
 	{
-		return Equal<bIgnoreCase>(Source, Size, Other.Source, Other.Size);
+		return Utils::Equal<bIgnoreCase>(Source, Size, Other.GetData(), Other.Len());
 	}
 
-	constexpr int Find(const TDataStringView& Other) const
+	template <bool bIgnoreCase = false, typename K>
+	constexpr bool Equal(const K* Other) const
 	{
-		return Find(Source, Size, Other.Source, Other.Size);
+		return Utils::Equal<bIgnoreCase>(Source, Size, Other, Utils::GetSize(Other));
 	}
 
-	constexpr int Find(const T Char) const
+	template <bool bIgnoreCase = false, typename K>
+	constexpr int Find(const TDataStringView<K>& Other) const
 	{
-		return Find(Source, Size, Char);
+		return Utils::Find<bIgnoreCase>(Source, Size, Other.Source, Other.Size);
+	}
+
+	template <bool bIgnoreCase = false, typename K>
+	constexpr int Find(const K* Other) const
+	{
+		return Utils::Find<bIgnoreCase>(Source, Size, Other, Utils::GetSize(Other));
+	}
+
+	constexpr int FindByChar(T Char) const
+	{
+		return Utils::Find(Source, Size, Char);
+	}
+
+	template <typename PredicateType>
+	constexpr int FindByPredicate(PredicateType Predicate) const
+	{
+		for (int32 i = 0; i < Size; ++i)
+		{
+			const T Char = Source[i];
+			if (Predicate(Char))
+			{
+				return i;
+			}
+		}
+		return INDEX_NONE;
 	}
 
 	constexpr TDataStringView Left(int32 CharCount) const
 	{
-		return TDataStringView(Source, Clamp(CharCount, 0, Size));
+		return TDataStringView(Source, Utils::Clamp(CharCount, 0, Size));
 	}
 
 	constexpr void LeftInline(int32 CharCount)
@@ -263,19 +311,19 @@ public:
 		*this = Left(CharCount);
 	}
 
-	constexpr TDataStringView LeftChop(int32 CharCount) const
+	constexpr TDataStringView LeftChop(int32 Position) const
 	{
-		return TDataStringView(Source, Clamp(Size - CharCount, 0, Size));
+		return TDataStringView(Source, Utils::Clamp(Size - Position, 0, Size));
 	}
 
-	constexpr void LeftChopInline(int32 CharCount)
+	constexpr void LeftChopInline(int32 Position)
 	{
-		*this = LeftChop(CharCount);
+		*this = LeftChop(Position);
 	}
 
 	constexpr TDataStringView Right(int32 CharCount) const
 	{
-		const int NewLen = Clamp(CharCount, 0, Size);
+		const int NewLen = Utils::Clamp(CharCount, 0, Size);
 		return TDataStringView(Source + (Size - NewLen), NewLen);
 	}
 
@@ -284,21 +332,21 @@ public:
 		*this = Right(CharCount);
 	}
 
-	constexpr TDataStringView RightChop(int32 CharCount) const
+	constexpr TDataStringView RightChop(int32 Position) const
 	{
-		const int NewLen = Clamp(Size - CharCount, 0, Size);
+		const int NewLen = Utils::Clamp(Size - Position, 0, Size);
 		return TDataStringView(Source + (Size - NewLen), NewLen);
 	}
 
-	constexpr void RightChopInline(int32 CharCount)
+	constexpr void RightChopInline(int32 Position)
 	{
-		*this = RightChop(CharCount);
+		*this = RightChop(Position);
 	}
 
 	constexpr TDataStringView Mid(int32 Position, int32 CharCount) const
 	{
-		Position = Clamp(Position, 0, Size);
-		CharCount = Clamp(CharCount, 0, Size - Position);
+		Position = Utils::Clamp(Position, 0, Size);
+		CharCount = Utils::Clamp(CharCount, 0, Size - Position);
 		return TDataStringView(Source + Position, CharCount);
 	}
 
@@ -309,7 +357,7 @@ public:
 
 	constexpr TDataStringView LeftByChar(T Char) const
 	{
-		const auto CharIndex = Find(Char);
+		const auto CharIndex = FindByChar(Char);
 		if (CharIndex == INDEX_NONE)
 		{
 			return TDataStringView(Source, Size);
@@ -325,7 +373,7 @@ public:
 
 	constexpr TDataStringView RightByChar(T Char) const
 	{
-		const auto CharIndex = Find(Char);
+		const auto CharIndex = FindByChar(Char);
 		if (CharIndex == INDEX_NONE)
 		{
 			return TDataStringView();
@@ -337,6 +385,42 @@ public:
 	constexpr void RightByCharInline(T Char)
 	{
 		*this = RightByChar(Char);
+	}
+
+	template <typename PredicateType>
+	constexpr TDataStringView LeftByPredicate(PredicateType Predicate) const
+	{
+		const auto CharIndex = FindByPredicate(Predicate);
+		if (CharIndex == INDEX_NONE)
+		{
+			return TDataStringView(Source, Size);
+		}
+
+		return Left(CharIndex);
+	}
+
+	template <typename PredicateType>
+	constexpr void LeftByPredicateInline(PredicateType Predicate)
+	{
+		*this = LeftByPredicate(Predicate);
+	}
+
+	template <typename PredicateType>
+	constexpr TDataStringView RightByPredicate(PredicateType Predicate) const
+	{
+		const auto CharIndex = FindByPredicate(Predicate);
+		if (CharIndex == INDEX_NONE)
+		{
+			return TDataStringView();
+		}
+
+		return RightChop(CharIndex);
+	}
+
+	template <typename PredicateType>
+	constexpr void RightByByPredicateInline(PredicateType Predicate)
+	{
+		*this = RightByPredicate(Predicate);
 	}
 
 	constexpr TDataStringView TrimLeft() const
@@ -432,19 +516,28 @@ public:
 		return Source[Index];
 	}
 
-	constexpr bool operator==(const TDataStringView& Other) const
+	template <typename K>
+	constexpr bool operator==(const TDataStringView<K>& Other) const
 	{
 		return Equal(Other);
 	}
 
-	constexpr bool operator==(const T* Other) const
+	template <typename K>
+	constexpr bool operator==(const K* Other) const
 	{
-		return Equal(TDataStringView(Other));
+		return Equal(Other);
 	}
 
-	constexpr bool operator!=(const T* Other) const
+	template <typename K>
+	constexpr bool operator!=(const TDataStringView<K>& Other) const
 	{
-		return !Equal(TDataStringView(Other));
+		return !Equal(Other);
+	}
+
+	template <typename K>
+	constexpr bool operator!=(const K* Other) const
+	{
+		return !Equal(Other);
 	}
 
 private:
@@ -465,115 +558,15 @@ FORCEINLINE FDataStringViewTCHAR ToStringView(const FString& String)
 	return FDataStringViewTCHAR(String.GetCharArray().GetData(), String.Len());
 }
 
-FORCEINLINE FString ToFString(const FDataStringViewChar& StringView)
+FORCEINLINE FString ToString(const FDataStringViewChar& StringView)
 {
 	return FString(StringView.Len(), StringView.GetData());
 }
 
-FORCEINLINE FString ToFString(const FDataStringViewTCHAR& StringView)
+FORCEINLINE FString ToString(const FDataStringViewTCHAR& StringView)
 {
 	return FString(StringView.Len(), StringView.GetData());
 }
-
-template <typename T>
-constexpr bool IsUnsignedInteger(const TDataStringView<T>& Str)
-{
-	const T* Data = Str.GetData();
-	const auto Len = Str.Len();
-
-	if (Len > 0)
-	{
-		for (int32 i = 0; i < Len; ++i)
-		{
-			const auto c = Data[i];
-			if (c < '0' && c > '9')
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	return false;
-}
-
-template <typename T>
-constexpr uint32 ToUnsignedInteger(const TDataStringView<T>& Str)
-{
-	const T* Data = Str.GetData();
-	const auto Len = Str.Len();
-
-	uint32 Result = 0;
-	if (Len > 0)
-	{
-		for (int32 i = Len - 1; i >= 0; --i)
-		{
-			Result *= 10;
-			const auto c = Data[i];
-			if (c >= '0' && c <= '9')
-			{
-				Result += static_cast<uint32>(c - '0');
-			}
-		}
-	}
-	return Result;
-}
-
-template <typename T>
-constexpr bool IsInteger(const TDataStringView<T>& Str)
-{
-	const T* Data = Str.GetData();
-	const auto Len = Str.Len();
-
-	if (Len > 0)
-	{
-		const bool bNegative = Data[0] == '-';
-		for (int32 i = bNegative ? 1 : 0; i < Len; ++i)
-		{
-			const auto c = Str.GetData()[i];
-			if (c < '0' && c > '9')
-			{
-				return false;
-			}
-		}
-
-		return bNegative ? Len > 1 : true;
-	}
-
-	return false;
-}
-
-template <typename T>
-constexpr int32 ToInteger(const TDataStringView<T>& Str)
-{
-	const T* Data = Str.GetData();
-	const auto Len = Str.Len();
-
-	int32 Result = 0;
-	if (Len > 0)
-	{
-		const bool bNegative = (Data[0] == '-');
-		const int32 Last = bNegative ? 1 : 0;
-
-		for (int32 i = Len - 1; i >= Last; --i)
-		{
-			Result *= 10;
-			const auto c = Data[i];
-			if (c >= '0' && c <= '9')
-			{
-				Result += static_cast<int32>(c - '0');
-			}
-		}
-
-		if (bNegative)
-		{
-			Result *= -1;
-		}
-	}
-	return Result;
-}
-
 } // namespace PsDataTools
 
 inline bool operator==(const PsDataTools::FDataStringViewTCHAR& StringView, const FString& String)

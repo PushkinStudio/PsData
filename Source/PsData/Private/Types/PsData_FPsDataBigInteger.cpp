@@ -23,9 +23,9 @@ FPsDataBigInteger UPsDataBigIntegerLibrary::MakeLiteralBigIntegerFromInt(int32 V
 	return {Value};
 }
 
-FPsDataBigInteger UPsDataBigIntegerLibrary::MakeLiteralBigIntegerFromString(FString Value, EPsDataBigIntegerConvertionType ConvertionType)
+FPsDataBigInteger UPsDataBigIntegerLibrary::MakeLiteralBigIntegerFromString(FString Value)
 {
-	return FPsDataBigInteger::FromString(Value, ConvertionType);
+	return FPsDataBigInteger::FromString(Value);
 }
 
 //
@@ -487,20 +487,7 @@ FPsDataBigInteger UPsDataBigIntegerLibrary::TypeDeserialize(const UPsData* const
 	FString StringValue;
 	if (Deserializer->ReadValue(StringValue))
 	{
-		auto a = FPsDataBigInteger(StringValue);
-		return a;
-	}
-
-	int64 Int64Value = 0;
-	if (Deserializer->ReadValue(Int64Value))
-	{
-		return Int64Value;
-	}
-
-	int32 Int32Value = 0;
-	if (Deserializer->ReadValue(Int32Value))
-	{
-		return Int32Value;
+		return FPsDataBigInteger(StringValue);
 	}
 
 	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FPsDataBigInteger>::Type());

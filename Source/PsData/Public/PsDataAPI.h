@@ -14,10 +14,12 @@
 #include "PsDataStringView.h"
 #include "PsDataStruct.h"
 #include "PsDataTraits.h"
+#include "PsDataUtils.h"
 #include "Types/PsData_Enum.h"
 #include "Types/PsData_FLinearColor.h"
 #include "Types/PsData_FName.h"
 #include "Types/PsData_FPsDataBigInteger.h"
+#include "Types/PsData_FPsDataFixedPoint.h"
 #include "Types/PsData_FString.h"
 #include "Types/PsData_FText.h"
 #include "Types/PsData_TSoftClassPtr.h"
@@ -715,7 +717,12 @@ protected:                                                                      
 	using DPropType_##__Name__ = PsDataTools::TDPropSelector<__Type__, ThisClass, GetStaticTypeHash(#__Name__)>; \
                                                                                                                  \
 public:                                                                                                          \
-	DPropType_##__Name__ __Name__{#__Name__, this};
+	DPropType_##__Name__ __Name__{#__Name__, this};                                                              \
+                                                                                                                 \
+	static const FString& Get##__Name__##ChangedEventName()                                                      \
+	{                                                                                                            \
+		return DPropType_##__Name__::StaticField()->GetChangedEventName();                                       \
+	}
 
 /***********************************
  * Macro DPROP_CONST

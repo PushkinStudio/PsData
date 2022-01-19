@@ -323,7 +323,7 @@ bool FDataReflection::InitProperty(UClass* Class, const char* Name, FAbstractDat
 	check(Class && Class == DescribedClass);
 
 	const auto Hash = ToStringView(Name).GetHash();
-	const auto PropertyName = ToFString(Name);
+	const auto PropertyName = ToString(Name);
 	auto& ClassFields = FieldsByClass.FindChecked(Class);
 
 	if (!IsValidKey(PropertyName))
@@ -367,7 +367,7 @@ bool FDataReflection::InitLinkProperty(UClass* Class, const char* Name, bool bAb
 
 	check(Class && Class == DescribedClass);
 
-	const auto PropertyName = ToFString(Name);
+	const auto PropertyName = ToString(Name);
 
 	auto& ClassFields = FieldsByClass.FindChecked(Class);
 	const auto Field = ClassFields.GetFieldByNameChecked(PropertyName);

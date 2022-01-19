@@ -32,7 +32,7 @@ public:
 
 	/** Make BigInteger from string */
 	UFUNCTION(BlueprintPure, Category = "Math|BigInteger")
-	static FPsDataBigInteger MakeLiteralBigIntegerFromString(FString Value, EPsDataBigIntegerConvertionType ConvertionType = EPsDataBigIntegerConvertionType::Dec);
+	static FPsDataBigInteger MakeLiteralBigIntegerFromString(FString Value);
 
 	//
 	// BigInteger & BigInteger

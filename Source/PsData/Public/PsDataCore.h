@@ -7,6 +7,7 @@
 #include "PsDataProperty.h"
 #include "PsDataStringView.h"
 #include "PsDataTraits.h"
+#include "PsDataUtils.h"
 
 #include "CoreMinimal.h"
 #include "UObject/Package.h"
@@ -265,12 +266,12 @@ bool GetByFieldAndKey(UPsData* Instance, const FDataField* Field, const FString&
 		else if (Field->Context->IsArray())
 		{
 			const auto KeyView = ToStringView(Key);
-			if (IsUnsignedInteger(KeyView))
+			if (Numbers::IsUnsignedInteger(KeyView))
 			{
 				TArray<T>* ArrayPtr = nullptr;
 				if (GetByField<bThrowError>(Instance, Field, ArrayPtr))
 				{
-					const auto Index = ToUnsignedInteger(KeyView);
+					const auto Index = *Numbers::ToUnsignedInteger<int32>(KeyView);
 					if (ArrayPtr->IsValidIndex(Index))
 					{
 						OutValue = &(*ArrayPtr)[Index];
@@ -435,7 +436,7 @@ struct TDataPathExecutor
 		while (PathView.Len() > 0)
 		{
 			auto KeyView = PathView.LeftByChar('.');
-			Keys.Add(ToFString(KeyView));
+			Keys.Add(ToString(KeyView));
 
 			PathView.RightChopInline(KeyView.Len() + 1);
 		}

@@ -266,7 +266,7 @@ void PrintUnusedMetaValue(const FDataRawMetaItem* Item)
 {
 	if (!Item->Value.IsEmpty())
 	{
-		UE_LOG(LogDataReflection, Error, TEXT("      ? unused value \"%s\" for meta: \"%s\""), *ToFString(Item->Value), *ToFString(Item->Key));
+		UE_LOG(LogDataReflection, Error, TEXT("      ? unused value \"%s\" for meta: \"%s\""), *ToString(Item->Value), *ToString(Item->Key));
 	}
 }
 
@@ -274,13 +274,13 @@ void PrintMissingMetaValue(const FDataRawMetaItem* Item)
 {
 	if (Item->Value.IsEmpty())
 	{
-		UE_LOG(LogDataReflection, Error, TEXT("      ? missing value for meta: \"%s\""), *ToFString(Item->Key));
+		UE_LOG(LogDataReflection, Error, TEXT("      ? missing value for meta: \"%s\""), *ToString(Item->Key));
 	}
 }
 
 void PrintIrrelevantMeta(const FDataRawMetaItem* Item)
 {
-	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    ? irrelevant meta: \"%s%s%s\""), *ToFString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? *ToFString(Item->Value) : TEXT(""));
+	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    ? irrelevant meta: \"%s%s%s\""), *ToString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? *ToString(Item->Value) : TEXT(""));
 }
 
 void PrintIrrelevantMeta(const FDataRawMeta& RawMeta)
@@ -293,7 +293,7 @@ void PrintIrrelevantMeta(const FDataRawMeta& RawMeta)
 
 void PrintApplyMeta(const FDataRawMetaItem* Item)
 {
-	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    + meta: \"%s%s%s\""), *ToFString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? *ToFString(Item->Value) : TEXT(""));
+	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    + meta: \"%s%s%s\""), *ToString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? *ToString(Item->Value) : TEXT(""));
 }
 
 void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
@@ -325,7 +325,7 @@ void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 	if (const auto Alias = RawMeta.Find(FDataMetaType::Alias))
 	{
 		Field->Meta.bAlias = !Alias->Value.IsEmpty();
-		Field->Meta.Alias = ToFString(Alias->Value);
+		Field->Meta.Alias = ToString(Alias->Value);
 		PrintMissingMetaValue(Alias);
 		PrintApplyMeta(Alias);
 

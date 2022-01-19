@@ -2,21 +2,13 @@
 
 #pragma once
 
+#include "PsDataUtils.h"
+
 #include "CoreMinimal.h"
 
 #include "PsDataBigInteger.generated.h"
 
 using PsDataBigIntegerWordType = uint32;
-
-UENUM(BlueprintType, Blueprintable)
-enum class EPsDataBigIntegerConvertionType : uint8
-{
-	Default = 0,
-	Bin = 2,
-	Oct = 8,
-	Dec = 10,
-	Hex = 16,
-};
 
 USTRUCT(BlueprintType, Blueprintable)
 struct PSDATA_API FPsDataShortBigInteger
@@ -73,7 +65,9 @@ public:
 	FPsDataBigInteger(const FPsDataBigInteger& Other);
 	FPsDataBigInteger(FPsDataBigInteger&& Other) noexcept;
 
-	explicit FPsDataBigInteger(const FString& Value, EPsDataBigIntegerConvertionType ConvertionType = EPsDataBigIntegerConvertionType::Dec);
+	explicit FPsDataBigInteger(const FString& Value);
+	explicit FPsDataBigInteger(const char* Value);
+
 	explicit FPsDataBigInteger(const TArray<PsDataBigIntegerWordType>& InitialWords);
 	explicit FPsDataBigInteger(TArray<PsDataBigIntegerWordType>&& InitialWords);
 
@@ -126,7 +120,7 @@ public:
 	bool IsGreaterOrEqual(const FPsDataBigInteger& Other) const;
 
 	/** To string */
-	FString ToString(EPsDataBigIntegerConvertionType ConvertionType = EPsDataBigIntegerConvertionType::Dec) const;
+	FString ToString() const;
 
 	/** To int32 */
 	int32 ToInt32() const;
@@ -171,10 +165,10 @@ public:
 	int32 AbsAndNormalize();
 
 	/** this += Other */
-	void Add(const FPsDataBigInteger& Value);
+	void Add(FPsDataBigInteger Value);
 
 	/** this -= Other */
-	void Subtract(const FPsDataBigInteger& Value);
+	void Subtract(FPsDataBigInteger Value);
 
 	/** this *= Factor */
 	void Multiply(FPsDataBigInteger Factor);
@@ -186,7 +180,7 @@ public:
 	FPsDataBigInteger DivideWithRemainder(FPsDataBigInteger Divisor);
 
 	/** this %= Other */
-	void Modulo(const FPsDataBigInteger& Divisor);
+	void Modulo(FPsDataBigInteger Divisor);
 
 	/** this <<= BitCount */
 	void ShiftLeft(const int32 BitCount);
@@ -201,13 +195,13 @@ public:
 	void ShiftRightByOne();
 
 	/** Bitwise OR */
-	void BitwiseOr(const FPsDataBigInteger& Value);
+	void BitwiseOr(FPsDataBigInteger Value);
 
 	/** Bitwise AND */
-	void BitwiseAnd(const FPsDataBigInteger& Value);
+	void BitwiseAnd(FPsDataBigInteger Value);
 
 	/** Bitwise XOR */
-	void BitwiseXor(const FPsDataBigInteger& Value);
+	void BitwiseXor(FPsDataBigInteger Value);
 
 	/** Bitwise NOT */
 	void BitwiseNot();
@@ -274,16 +268,7 @@ public:
 	static FPsDataBigInteger Random(int32 NumBytes);
 
 	/** Create big integer from string */
-	static FPsDataBigInteger FromString(const FString& Value, EPsDataBigIntegerConvertionType ConvertionType = EPsDataBigIntegerConvertionType::Dec);
-
-	/** Is scientific notation format */
-	static bool IsScientificNotationFormat(const FString& Value);
-
-	/** Is big integer format */
-	static bool IsBigIntegerFormat(const FString& Value, EPsDataBigIntegerConvertionType ConvertionType = EPsDataBigIntegerConvertionType::Dec);
-
-	/** Big integer test */
-	static void Test();
+	static FPsDataBigInteger FromString(const FString& Value);
 
 private:
 	/** Get extra word */
@@ -301,12 +286,6 @@ private:
 	/** A >> 1 */
 	void ShiftRightByOneInternal();
 
-	/** Deserialize from string */
-	static FPsDataBigInteger Deserialize(const FString& Value, uint8 Divider);
-
-	/** Serialize to string */
-	static FString Serialize(const FPsDataBigInteger& Value, uint8 Divider);
-
 public:
 	/** Override Import/Export to not write out empty structs */
 	bool ExportTextItem(FString& ValueStr, FPsDataBigInteger const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const;
@@ -322,3 +301,97 @@ struct TStructOpsTypeTraits<FPsDataBigInteger> : public TStructOpsTypeTraitsBase
 		WithImportTextItem = true
 	};
 };
+
+namespace PsDataTools
+{
+namespace Numbers
+{
+template <>
+struct TSpecificNumber<FPsDataBigInteger>
+{
+	template <typename T>
+	static TOptional<FPsDataBigInteger> DeserializeUnsignedInteger(const TDataStringView<T>& StringNumber)
+	{
+		constexpr int32 WordDigitsNum = GetDigitsNum<PsDataBigIntegerWordType>();
+		const auto NumWords = (StringNumber.Len() / WordDigitsNum) + 1;
+
+		FPsDataBigInteger Result;
+		Result.Reserve(NumWords);
+
+		int32 Pos = 0;
+		while (Pos < StringNumber.Len())
+		{
+			const auto StringNumberPart = StringNumber.Mid(Pos, WordDigitsNum);
+			if (const auto Word = ToUnsignedInteger<PsDataBigIntegerWordType>(StringNumberPart))
+			{
+				Result = Result * FPsDataBigInteger(Pow10<PsDataBigIntegerWordType>(StringNumberPart.Len())) + FPsDataBigInteger(*Word);
+			}
+			else
+			{
+				return {};
+			}
+
+			Pos += WordDigitsNum;
+		}
+
+		return Result;
+	}
+
+	template <typename T>
+	static void Serialize(FPsDataBigInteger Value, TArray<T>& Buffer)
+	{
+		if (Value.IsZero())
+		{
+			Buffer.Add('0');
+		}
+		else
+		{
+			const bool bNegative = Value < FPsDataBigInteger::Zero;
+			if (bNegative)
+			{
+				Value.Negate();
+			}
+
+			constexpr int32 WordDigitsNum = GetDigitsNum<PsDataBigIntegerWordType>();
+			const FPsDataBigInteger BigDivider = FPsDataBigInteger(Pow10<PsDataBigIntegerWordType>(WordDigitsNum));
+			const auto NumWords = Value.GetNumWords();
+			const auto BufferSize = NumWords * (WordDigitsNum + 1) + 1;
+
+			TArray<TCHAR> LocalBuffer;
+			LocalBuffer.AddUninitialized(BufferSize);
+			const auto LocalBufferPtr = LocalBuffer.GetData();
+			int32 BufferIndex = BufferSize;
+			while (!Value.IsZero())
+			{
+				int32 Num;
+				PsDataBigIntegerWordType Part;
+				if (Value.GetNumWords() > 1)
+				{
+					Part = Value.DivideWithRemainder(BigDivider).GetWord(0);
+					Num = WordDigitsNum;
+				}
+				else
+				{
+					Part = Value.GetWord(0);
+					Value = FPsDataBigInteger::Zero;
+					Num = 0;
+				}
+
+				while (Part > 0 || Num > 0)
+				{
+					LocalBufferPtr[--BufferIndex] = DigitToChar<T>(Part % 10);
+					Part /= 10;
+					--Num;
+				}
+			}
+
+			if (bNegative)
+			{
+				Buffer.Add('-');
+			}
+			Buffer.Append(&LocalBufferPtr[BufferIndex], LocalBuffer.Num() - BufferIndex);
+		}
+	}
+};
+} // namespace Numbers
+} // namespace PsDataTools
