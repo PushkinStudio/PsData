@@ -7,14 +7,12 @@ public class PsData : ModuleRules
 	public PsData(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-				
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				"PsData/Private",
 			}
 		);
-			
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]

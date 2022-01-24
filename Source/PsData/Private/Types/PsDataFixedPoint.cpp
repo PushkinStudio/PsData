@@ -269,12 +269,56 @@ bool FPsDataFixedPoint::ExportTextItem(FString& ValueStr, FPsDataFixedPoint cons
 
 bool FPsDataFixedPoint::ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* Parent, FOutputDevice* ErrorText)
 {
-	auto Result = PsDataTools::Numbers::ToNumber<FPsDataFixedPoint>(PsDataTools::ToStringView(Buffer));
+	const auto BufferView = PsDataTools::ToStringView(Buffer);
+	if (BufferView.Len() == 0)
+	{
+		Set(Zero);
+		return true;
+	}
+
+	auto Result = PsDataTools::Numbers::ToNumber<FPsDataFixedPoint>(BufferView);
 	if (Result)
 	{
-		*this = *Result;
+		Set(*Result);
 		return true;
 	}
 
 	return false;
 }
+
+bool FPsDataFixedPoint::Serialize(FArchive& Ar)
+{
+	Ar << *this;
+	return true;
+}
+
+bool FPsDataFixedPoint::Serialize(FStructuredArchive::FSlot Slot)
+{
+	Slot << *this;
+	return true;
+}
+
+FArchive& operator<<(FArchive& Ar, FPsDataFixedPoint& Value)
+{
+	return Ar << Value.Base;
+}
+
+void operator<<(FStructuredArchive::FSlot Slot, FPsDataFixedPoint& Value)
+{
+	Slot << Value.Base;
+}
+
+template <>
+struct TStructOpsTypeTraits<FPsDataFixedPoint> : public TStructOpsTypeTraitsBase2<FPsDataFixedPoint>
+{
+	enum
+	{
+		WithIdenticalViaEquality = true,
+		WithExportTextItem = true,
+		WithImportTextItem = true,
+		WithZeroConstructor = true,
+		WithSerializer = true,
+		WithStructuredSerializer = true,
+	};
+};
+IMPLEMENT_STRUCT(PsDataFixedPoint);

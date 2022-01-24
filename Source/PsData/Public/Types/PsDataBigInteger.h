@@ -287,19 +287,12 @@ private:
 	void ShiftRightByOneInternal();
 
 public:
-	/** Override Import/Export to not write out empty structs */
 	bool ExportTextItem(FString& ValueStr, FPsDataBigInteger const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const;
 	bool ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* Parent, FOutputDevice* ErrorText);
-};
-
-template <>
-struct TStructOpsTypeTraits<FPsDataBigInteger> : public TStructOpsTypeTraitsBase2<FPsDataBigInteger>
-{
-	enum
-	{
-		WithExportTextItem = true,
-		WithImportTextItem = true
-	};
+	bool Serialize(FArchive& Ar);
+	bool Serialize(FStructuredArchive::FSlot Slot);
+	friend FArchive& operator<<(FArchive& Ar, FPsDataBigInteger& Value);
+	friend void operator<<(FStructuredArchive::FSlot Slot, FPsDataBigInteger& Value);
 };
 
 namespace PsDataTools

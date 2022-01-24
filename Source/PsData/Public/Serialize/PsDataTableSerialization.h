@@ -14,6 +14,18 @@
 class UPsData;
 
 /***********************************
+ * FPsDataTableSerializer
+ ***********************************/
+
+struct PSDATA_API FPsDataTableSerializer
+{
+	static void CreateTableFromJson_Import(UDataTable* DataTable, const TArray<TSharedPtr<FJsonValue>>& JsonArray, TArray<FString>& ImportProblems);
+
+private:
+	static void ReportAboutExtraFields(const UScriptStruct* Struct, FName RowName, const TSharedPtr<FJsonObject>& JsonObject, TArray<FString>& ImportProblems);
+};
+
+/***********************************
  * FPsDataTableDeserializer
  ***********************************/
 
@@ -58,10 +70,10 @@ public:
 	virtual void PopArray() override;
 	virtual void PopObject() override;
 
-private:
 	/***********************************
-	 * DataTable serialize
+	 * Table serialize
 	 ***********************************/
 
-	TSharedPtr<FJsonObject> CreateJsonFromTable(UDataTable* DataTable, const FString& PropertyName);
+	static TSharedPtr<FJsonObject> CreateJsonFromTable(UDataTable* DataTable, const FString& PropertyName);
+	static TArray<TSharedPtr<FJsonValue>> CreateJsonFromTable_Export(UDataTable* DataTable);
 };

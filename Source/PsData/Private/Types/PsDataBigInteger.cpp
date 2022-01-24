@@ -1071,7 +1071,14 @@ bool FPsDataBigInteger::ExportTextItem(FString& ValueStr, FPsDataBigInteger cons
 
 bool FPsDataBigInteger::ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* Parent, FOutputDevice* ErrorText)
 {
-	auto Result = PsDataTools::Numbers::ToNumber<FPsDataBigInteger>(PsDataTools::ToStringView(Buffer));
+	const auto BufferView = PsDataTools::ToStringView(Buffer);
+	if (BufferView.Len() == 0)
+	{
+		Set(0);
+		return true;
+	}
+
+	auto Result = PsDataTools::Numbers::ToNumber<FPsDataBigInteger>(BufferView);
 	if (Result)
 	{
 		*this = *Result;
@@ -1080,3 +1087,39 @@ bool FPsDataBigInteger::ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UO
 
 	return false;
 }
+
+bool FPsDataBigInteger::Serialize(FArchive& Ar)
+{
+	Ar << *this;
+	return true;
+}
+
+bool FPsDataBigInteger::Serialize(FStructuredArchive::FSlot Slot)
+{
+	Slot << *this;
+	return true;
+}
+
+FArchive& operator<<(FArchive& Ar, FPsDataBigInteger& Value)
+{
+	return Ar << Value.Words;
+}
+
+void operator<<(FStructuredArchive::FSlot Slot, FPsDataBigInteger& Value)
+{
+	Slot << Value.Words;
+}
+
+template <>
+struct TStructOpsTypeTraits<FPsDataBigInteger> : public TStructOpsTypeTraitsBase2<FPsDataBigInteger>
+{
+	enum
+	{
+		WithIdenticalViaEquality = true,
+		WithExportTextItem = true,
+		WithImportTextItem = true,
+		WithSerializer = true,
+		WithStructuredSerializer = true,
+	};
+};
+IMPLEMENT_STRUCT(PsDataBigInteger);

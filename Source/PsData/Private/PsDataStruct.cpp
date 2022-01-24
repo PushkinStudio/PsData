@@ -203,7 +203,7 @@ UPsDataStruct* UPsDataStruct::Create(UClass* PsDataClass, UPsData* DefaultData)
 	FPsDataStructSerializer Serializer;
 	DefaultData->DataSerialize(&Serializer);
 
-	NewStruct->Finalize(Serializer.GetRaw(NewStruct));
+	NewStruct->Finalize(Serializer.GetRaw(NewStruct, false));
 
 	return NewStruct;
 }

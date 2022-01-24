@@ -18,7 +18,6 @@ class UPsData;
 struct PSDATA_API FPsDataStructSerializer : public FPsDataSerializer
 {
 private:
-	TMap<FString, FString> KeyMap;
 	FPsDataJsonSerializer JsonSerializer;
 
 public:
@@ -37,16 +36,16 @@ public:
 		bWriteDefaults = true;
 	}
 
-	uint8* GetRaw(UStruct* Struct)
+	uint8* GetRaw(UStruct* Struct, bool bInitialize = true)
 	{
-		return CreateStructFromJson(Struct, JsonSerializer.GetJson().ToSharedRef(), KeyMap);
+		return CreateStructFromJson(Struct, JsonSerializer.GetJson().ToSharedRef(), bInitialize);
 	}
 
 	template <typename T>
-	T GetStruct()
+	T GetStruct(bool bInitialize = true)
 	{
 		T Result;
-		void* Raw = GetRaw(T::StaticStruct());
+		void* Raw = GetRaw(T::StaticStruct(), bInitialize);
 		Result = *static_cast<T*>(Raw);
 		FMemory::Free(Raw);
 		return Result;
@@ -75,13 +74,14 @@ public:
 	 * Struct deserialize
 	 ***********************************/
 public:
-	static uint8* CreateStructFromJson(UStruct* Struct, const TSharedRef<FJsonObject>& JsonObject, TMap<FString, FString>& KeyMap);
+	static uint8* CreateStructFromJson(const UStruct* Struct, const TSharedRef<FJsonObject>& JsonObject, bool bInitialize = true);
+	static uint8* CreateStructFromJson_Import(const UStruct* Struct, const TSharedRef<FJsonObject>& JsonObject, TArray<FString>& ImportProblems);
 
 private:
-	static void PropertyDeserialize(FProperty* Property, uint8* OutDest, const TSharedRef<FJsonValue>& JsonValue, TMap<FString, FString>& KeyMap);
-	static void StructDeserialize(UStruct* Struct, uint8* OutDest, const TSharedRef<FJsonObject>& JsonObject, TMap<FString, FString>& KeyMap);
+	static void PropertyDeserialize(FProperty* Property, uint8* OutDest, const TSharedRef<FJsonValue>& JsonValue);
+	static void StructDeserialize(const UStruct* Struct, uint8* OutDest, const TSharedRef<FJsonObject>& JsonObject, bool bInitialize);
 
-	static TSharedPtr<FJsonValue> FindJsonValueByProperty(const FProperty* Property, const TSharedRef<FJsonObject>& JsonObject, TMap<FString, FString>& KeyMap);
+	static TSharedPtr<FJsonValue> FindJsonValueByProperty(const FProperty* Property, const TSharedRef<FJsonObject>& JsonObject);
 };
 
 /***********************************
@@ -91,20 +91,19 @@ private:
 struct PSDATA_API FPsDataStructDeserializer : public FPsDataDeserializer
 {
 private:
-	TMap<FString, FString> KeyMap;
 	FPsDataJsonDeserializer JsonDeserializer;
 
 public:
 	template <typename T>
 	FPsDataStructDeserializer(const T& Struct)
 		: FPsDataDeserializer()
-		, JsonDeserializer(CreateJsonFromStruct(T::StaticStruct(), &Struct, KeyMap))
+		, JsonDeserializer(CreateJsonFromStruct(T::StaticStruct(), &Struct))
 	{
 	}
 
 	FPsDataStructDeserializer(const UStruct* Struct, const void* Value)
 		: FPsDataDeserializer()
-		, JsonDeserializer(CreateJsonFromStruct(Struct, Value, KeyMap))
+		, JsonDeserializer(CreateJsonFromStruct(Struct, Value))
 	{
 	}
 
@@ -133,13 +132,11 @@ public:
 	 * Struct serialize
 	 ***********************************/
 public:
-	static TSharedPtr<FJsonObject> CreateJsonFromStruct(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap);
+	static TSharedPtr<FJsonObject> CreateJsonFromStruct(const UStruct* Struct, const void* Value);
+	static TSharedPtr<FJsonObject> CreateJsonFromStruct_Export(const UStruct* Struct, const void* Value);
 
 private:
-	static TSharedPtr<FJsonValue> PropertySerialize(FProperty* Property, const void* Value, TMap<FString, FString>& KeyMap);
-	static TSharedPtr<FJsonValue> StructPropertySerialize(FStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap);
-	static TSharedPtr<FJsonValue> StructSerialize(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap);
-
-public:
-	static const FString& GetNormalizedKey(const FString& Key, TMap<FString, FString>& KeyMap);
+	static TSharedPtr<FJsonValue> PropertySerialize(FProperty* Property, const void* Value);
+	static TSharedPtr<FJsonValue> StructPropertySerialize(FStructProperty* StructProperty, const void* Value);
+	static TSharedPtr<FJsonValue> StructSerialize(const UStruct* Struct, const void* Value);
 };

@@ -87,105 +87,55 @@ void FPsDataStructSerializer::PopObject()
  * Struct deserialize
  ***********************************/
 
-uint8* FPsDataStructSerializer::CreateStructFromJson(UStruct* Struct, const TSharedRef<FJsonObject>& JsonObject, TMap<FString, FString>& KeyMap)
+uint8* FPsDataStructSerializer::CreateStructFromJson(const UStruct* Struct, const TSharedRef<FJsonObject>& JsonObject, bool bInitialize)
 {
-	/*
-	FString JsonString;
-	auto Writer = TJsonWriterFactory<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>::Create(&JsonString);
-	FJsonSerializer::Serialize(JsonObject, Writer);
-	UE_LOG(LogData, Warning, TEXT("Json: %s"), *JsonString);
-	*/
-
 	uint8* Dest = static_cast<uint8*>(FMemory::Malloc(Struct->GetStructureSize()));
-	StructDeserialize(Struct, Dest, JsonObject, KeyMap);
+	StructDeserialize(Struct, Dest, JsonObject, bInitialize);
 	return Dest;
 }
 
-void FPsDataStructSerializer::PropertyDeserialize(FProperty* Property, uint8* OutDest, const TSharedRef<FJsonValue>& JsonValue, TMap<FString, FString>& KeyMap)
+uint8* FPsDataStructSerializer::CreateStructFromJson_Import(const UStruct* Struct, const TSharedRef<FJsonObject>& JsonObject, TArray<FString>& ImportProblems)
+{
+	return CreateStructFromJson(Struct, JsonObject, true);
+}
+
+void FPsDataStructSerializer::PropertyDeserialize(FProperty* Property, uint8* OutDest, const TSharedRef<FJsonValue>& JsonValue)
 {
 	if (FTextProperty* TextProperty = CastField<FTextProperty>(Property))
 	{
-		if (JsonValue->Type == EJson::Object)
-		{
-			const auto JsonObject = JsonValue->AsObject();
-			if (JsonObject->HasField("TableId") && JsonObject->HasField("Key"))
-			{
-				const auto TableIdValue = JsonObject->GetStringField("TableId");
-				const auto KeyValue = JsonObject->GetStringField("Key");
-				TextProperty->SetPropertyValue(OutDest, FText::FromStringTable(*TableIdValue, KeyValue));
-				return;
-			}
-			else if (JsonObject->HasField("Empty") && JsonObject->GetBoolField("Empty"))
-			{
-				TextProperty->SetPropertyValue(OutDest, FText::GetEmpty());
-				return;
-			}
-		}
-		else if (JsonValue->Type == EJson::String)
-		{
-			TextProperty->SetPropertyValue(OutDest, FText::FromString(JsonValue->AsString()));
-			return;
-		}
-
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *TextProperty->GetCPPType());
-	}
-	else if (FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
-	{
-		if (JsonValue->Type == EJson::Object)
-		{
-			const auto JsonObject = JsonValue->AsObject();
-			const auto AssetPathNameValue = JsonObject->GetStringField("AssetPathName");
-			const auto SubPathStringValue = JsonObject->GetStringField("SubPathString");
-			SoftObjectProperty->SetPropertyValue(OutDest, FSoftObjectPtr(FSoftObjectPath(*AssetPathNameValue, SubPathStringValue)));
-			return;
-		}
-
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *SoftObjectProperty->GetCPPType(nullptr, 0));
-	}
-	else if (FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
-	{
-		const auto Enum = EnumProperty->GetEnum();
 		if (JsonValue->Type == EJson::String)
 		{
-			const auto Index = Enum->GetIndexByNameString(JsonValue->AsString());
-			if (Index != INDEX_NONE)
-			{
-				const auto Value = Enum->GetValueByIndex(Index);
-				EnumProperty->GetUnderlyingProperty()->SetIntPropertyValue(OutDest, Value);
-				return;
-			}
-		}
-		else if (JsonValue->Type == EJson::Number)
-		{
-			int64 Value = 0;
-			if (JsonValue->TryGetNumber(Value))
-			{
-				EnumProperty->GetUnderlyingProperty()->SetIntPropertyValue(OutDest, Value);
-				return;
-			}
+			FText Text = FText::GetEmpty();
+			FTextStringHelper::ReadFromBuffer(*JsonValue->AsString(), Text);
+			TextProperty->SetPropertyValue(OutDest, Text);
+			return;
 		}
 
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *EnumProperty->GetCPPType(nullptr, 0));
+		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetAuthoredName(), *TextProperty->GetCPPType());
 	}
 	else if (FStructProperty* StructProperty = CastField<FStructProperty>(Property))
 	{
 		if (JsonValue->Type == EJson::Object)
 		{
-			StructDeserialize(StructProperty->Struct, OutDest, JsonValue->AsObject().ToSharedRef(), KeyMap);
+			StructDeserialize(StructProperty->Struct, OutDest, JsonValue->AsObject().ToSharedRef(), true);
 			return;
 		}
-
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetName(), *StructProperty->GetCPPType(nullptr, 0));
 	}
 
 	FJsonObjectConverter::JsonValueToUProperty(JsonValue, Property, OutDest, 0, 0);
 }
 
-void FPsDataStructSerializer::StructDeserialize(UStruct* Struct, uint8* OutDest, const TSharedRef<FJsonObject>& JsonObject, TMap<FString, FString>& KeyMap)
+void FPsDataStructSerializer::StructDeserialize(const UStruct* Struct, uint8* OutDest, const TSharedRef<FJsonObject>& JsonObject, bool bInitialize)
 {
-	for (FProperty* Property = Struct->PropertyLink; Property != nullptr; Property = Property->PropertyLinkNext)
+	if (bInitialize)
 	{
-		auto JsonValue = FindJsonValueByProperty(Property, JsonObject, KeyMap);
+		Struct->InitializeStruct(OutDest);
+	}
+
+	for (TFieldIterator<FProperty> It(Struct); It; ++It)
+	{
+		FProperty* Property = *It;
+		auto JsonValue = FindJsonValueByProperty(Property, JsonObject);
 		auto ValueDest = OutDest + Property->GetOffset_ForInternal();
 		Property->InitializeValue(ValueDest);
 
@@ -202,13 +152,13 @@ void FPsDataStructSerializer::StructDeserialize(UStruct* Struct, uint8* OutDest,
 						ScriptArrayHelper.AddValues(JsonArray.Num());
 						for (int32 i = 0; i < JsonArray.Num(); ++i)
 						{
-							PropertyDeserialize(ArrayProperty->Inner, ScriptArrayHelper.GetRawPtr(i), JsonArray[i].ToSharedRef(), KeyMap);
+							PropertyDeserialize(ArrayProperty->Inner, ScriptArrayHelper.GetRawPtr(i), JsonArray[i].ToSharedRef());
 						}
 					}
 				}
 				else
 				{
-					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetName(), *ArrayProperty->GetCPPType(nullptr, 0));
+					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetAuthoredName(), *ArrayProperty->GetCPPType(nullptr, 0));
 				}
 			}
 			else if (FMapProperty* MapProperty = CastField<FMapProperty>(Property))
@@ -220,27 +170,26 @@ void FPsDataStructSerializer::StructDeserialize(UStruct* Struct, uint8* OutDest,
 					for (auto& Pair : JsonMap->Values)
 					{
 						const auto Index = ScriptMapHelper.AddDefaultValue_Invalid_NeedsRehash();
-						PropertyDeserialize(MapProperty->KeyProp, ScriptMapHelper.GetKeyPtr(Index), MakeShared<FJsonValueString>(Pair.Key), KeyMap);
-						PropertyDeserialize(MapProperty->ValueProp, ScriptMapHelper.GetValuePtr(Index), Pair.Value.ToSharedRef(), KeyMap);
+						PropertyDeserialize(MapProperty->KeyProp, ScriptMapHelper.GetKeyPtr(Index), MakeShared<FJsonValueString>(Pair.Key));
+						PropertyDeserialize(MapProperty->ValueProp, ScriptMapHelper.GetValuePtr(Index), Pair.Value.ToSharedRef());
 					}
 				}
 				else
 				{
-					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetName(), *MapProperty->GetCPPType(nullptr, 0));
+					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetAuthoredName(), *MapProperty->GetCPPType(nullptr, 0));
 				}
 			}
 			else
 			{
-				PropertyDeserialize(Property, ValueDest, JsonValue.ToSharedRef(), KeyMap);
+				PropertyDeserialize(Property, ValueDest, JsonValue.ToSharedRef());
 			}
 		}
 	}
 }
 
-TSharedPtr<FJsonValue> FPsDataStructSerializer::FindJsonValueByProperty(const FProperty* Property, const TSharedRef<FJsonObject>& JsonObject, TMap<FString, FString>& KeyMap)
+TSharedPtr<FJsonValue> FPsDataStructSerializer::FindJsonValueByProperty(const FProperty* Property, const TSharedRef<FJsonObject>& JsonObject)
 {
-	const auto& PropertyName = FPsDataStructDeserializer::GetNormalizedKey(Property->GetName(), KeyMap);
-	if (auto Find = JsonObject->Values.Find(PropertyName))
+	if (auto Find = JsonObject->Values.Find(Property->GetAuthoredName()))
 	{
 		return *Find;
 	}
@@ -336,125 +285,77 @@ void FPsDataStructDeserializer::PopObject()
  * Struct serialize
  ***********************************/
 
-TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap)
+TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct(const UStruct* Struct, const void* Value)
 {
-	const TSharedPtr<FJsonValue> JsonValue = StructSerialize(Struct, Value, KeyMap);
+	const TSharedPtr<FJsonValue> JsonValue = StructSerialize(Struct, Value);
 	check(JsonValue->Type == EJson::Object);
-
-	/*
-	FString JsonString;
-	auto Writer = TJsonWriterFactory<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>::Create(&JsonString);
-	FJsonSerializer::Serialize(JsonValue->AsObject().ToSharedRef(), Writer);
-	UE_LOG(LogData, Warning, TEXT("Json: %s"), *JsonString);
-	*/
-
 	return JsonValue->AsObject();
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(FProperty* Property, const void* Value, TMap<FString, FString>& KeyMap)
+TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct_Export(const UStruct* Struct, const void* Value)
+{
+	return CreateJsonFromStruct(Struct, Value);
+}
+
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(FProperty* Property, const void* Value)
 {
 	if (FStructProperty* StructProperty = CastField<FStructProperty>(Property))
 	{
-		return StructPropertySerialize(StructProperty, Value, KeyMap);
+		return StructPropertySerialize(StructProperty, Value);
 	}
 
 	if (FTextProperty* TextProperty = CastField<FTextProperty>(Property))
 	{
-		const FText& Text = TextProperty->GetPropertyValue(Value);
-		if (Text.IsFromStringTable())
-		{
-			FName TableId;
-			FString Key;
-			FTextInspector::GetTableIdAndKey(Text, TableId, Key);
-			TSharedPtr<FJsonObject> JsonObject(new FJsonObject());
-			JsonObject->Values.Add("TableId", MakeShared<FJsonValueString>(TableId.ToString()));
-			JsonObject->Values.Add("Key", MakeShared<FJsonValueString>(Key));
-			return MakeShared<FJsonValueObject>(JsonObject);
-		}
-		else if (Text.IsEmpty())
-		{
-			TSharedPtr<FJsonObject> JsonObject(new FJsonObject());
-			JsonObject->Values.Add("Empty", MakeShared<FJsonValueBoolean>(true));
-			return MakeShared<FJsonValueObject>(JsonObject);
-		}
-		else
-		{
-			return MakeShared<FJsonValueString>(Text.ToString());
-		}
-	}
-
-	if (FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
-	{
-		const FSoftObjectPtr& SoftObjectPtr = SoftObjectProperty->GetPropertyValue(Value);
-		const FSoftObjectPath& SoftObjectPath = SoftObjectPtr.ToSoftObjectPath();
-		TSharedPtr<FJsonObject> JsonObject(new FJsonObject());
-		JsonObject->Values.Add("AssetPathName", MakeShared<FJsonValueString>(SoftObjectPath.GetAssetPathName().ToString()));
-		JsonObject->Values.Add("SubPathString", MakeShared<FJsonValueString>(SoftObjectPath.GetSubPathString()));
-		return MakeShared<FJsonValueObject>(JsonObject);
-	}
-
-	if (FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
-	{
-		const auto Enum = EnumProperty->GetEnum();
-		const auto EnumValue = EnumProperty->GetUnderlyingProperty()->GetSignedIntPropertyValue(Value);
-		const auto EnumIndex = Enum->GetIndexByValue(EnumValue);
-		if (EnumIndex == INDEX_NONE)
-		{
-			return MakeShared<FJsonValueNumberString>(FString::Printf(TEXT("%lld"), EnumValue));
-		}
-		else
-		{
-			return MakeShared<FJsonValueString>(Enum->GetNameStringByIndex(EnumIndex));
-		}
+		const FText& TextValue = TextProperty->GetPropertyValue(Value);
+		FString ValueStr;
+		FTextStringHelper::WriteToBuffer(ValueStr, TextValue);
+		return MakeShared<FJsonValueString>(ValueStr);
 	}
 
 	return TSharedPtr<FJsonValue>(nullptr);
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructPropertySerialize(FStructProperty* StructProperty, const void* Value, TMap<FString, FString>& KeyMap)
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructPropertySerialize(FStructProperty* StructProperty, const void* Value)
 {
 	if (StructProperty->Struct)
 	{
-		return StructSerialize(StructProperty->Struct, Value, KeyMap);
+		const auto CppStructOps = StructProperty->Struct->GetCppStructOps();
+		if (CppStructOps && CppStructOps->HasExportTextItem() && CppStructOps->HasImportTextItem())
+		{
+			FString ResultString;
+			CppStructOps->ExportTextItem(ResultString, Value, nullptr, nullptr, PPF_None, nullptr);
+			return MakeShared<FJsonValueString>(ResultString);
+		}
+
+		return StructSerialize(StructProperty->Struct, Value);
 	}
 
 	return TSharedPtr<FJsonValue>(nullptr);
 }
 
-TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct* Struct, const void* Value, TMap<FString, FString>& KeyMap)
+TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct* Struct, const void* Value)
 {
 	FJsonObjectConverter::CustomExportCallback CustomCallback;
-	CustomCallback.BindLambda([&KeyMap](FProperty* Property, const void* Ptr) {
-		return PropertySerialize(Property, Ptr, KeyMap);
+	CustomCallback.BindLambda([](FProperty* Property, const void* Ptr) {
+		return PropertySerialize(Property, Ptr);
 	});
 
-	TSharedPtr<FJsonObject> RawJsonObject(new FJsonObject());
-	FJsonObjectConverter::UStructToJsonAttributes(Struct, Value, RawJsonObject->Values, 0, 0, &CustomCallback);
-
-	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
-	for (auto& Pair : RawJsonObject->Values)
+	TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+	for (TFieldIterator<FProperty> It(Struct); It; ++It)
 	{
-		JsonObject->Values.Add(GetNormalizedKey(Pair.Key, KeyMap), Pair.Value);
+		FProperty* Property = *It;
+		const void* PropertyValue = Property->ContainerPtrToValuePtr<uint8>(Value);
+
+		TSharedPtr<FJsonValue> JsonValue = FJsonObjectConverter::UPropertyToJsonValue(Property, PropertyValue, 0, 0, &CustomCallback);
+		if (JsonValue.IsValid())
+		{
+			JsonObject->SetField(Property->GetAuthoredName(), JsonValue);
+		}
+		else
+		{
+			UE_LOG(LogData, Warning, TEXT("Unsupported type \"%s\" for \"%s::%s\""), *Property->GetCPPType(), *Property->Owner.GetName(), *Property->GetAuthoredName());
+		}
 	}
 
 	return MakeShared<FJsonValueObject>(JsonObject);
-}
-
-const FString& FPsDataStructDeserializer::GetNormalizedKey(const FString& Key, TMap<FString, FString>& KeyMap)
-{
-	if (const auto KeyPtr = KeyMap.Find(Key))
-	{
-		return *KeyPtr;
-	}
-
-	static const FRegexPattern PropertyPattern(TEXT("(.+)_\\d+_[A-Z0-9]+"));
-	FRegexMatcher PropertyMatcher(PropertyPattern, Key);
-	if (PropertyMatcher.FindNext())
-	{
-		return KeyMap.Add(Key, PropertyMatcher.GetCaptureGroup(1));
-	}
-	else
-	{
-		return KeyMap.Add(Key, Key);
-	}
 }

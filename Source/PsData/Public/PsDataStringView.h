@@ -553,6 +553,11 @@ constexpr FDataStringViewChar ToStringView(const char* Data)
 	return FDataStringViewChar(Data);
 }
 
+constexpr FDataStringViewTCHAR ToStringView(const TCHAR* Data)
+{
+	return FDataStringViewTCHAR(Data);
+}
+
 FORCEINLINE FDataStringViewTCHAR ToStringView(const FString& String)
 {
 	return FDataStringViewTCHAR(String.GetCharArray().GetData(), String.Len());

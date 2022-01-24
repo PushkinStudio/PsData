@@ -100,60 +100,19 @@ DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execGetArrayLinkValue)
 	P_NATIVE_END;
 }
 
-void UPsDataTSoftObjectPtrLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FSoftObjectPath& SoftObjectPath)
+void UPsDataTSoftObjectPtrLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FSoftObjectPath& Value)
 {
-	static const FString AssetPathNameParam(TEXT("AssetPathName"));
-	static const FString SubPathStringParam(TEXT("SubPathString"));
-
-	Serializer->WriteObject();
-	Serializer->WriteKey(AssetPathNameParam);
-	Serializer->WriteValue(SoftObjectPath.GetAssetPathName());
-	Serializer->PopKey(AssetPathNameParam);
-	Serializer->WriteKey(SubPathStringParam);
-	Serializer->WriteValue(SoftObjectPath.GetSubPathString());
-	Serializer->PopKey(SubPathStringParam);
-	Serializer->PopObject();
+	Serializer->WriteValue(Value.ToString());
 }
 
-FSoftObjectPath UPsDataTSoftObjectPtrLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& SoftObjectPath)
+FSoftObjectPath UPsDataTSoftObjectPtrLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FSoftObjectPath& Value)
 {
-	static const FString AssetPathNameParam(TEXT("AssetPathName"));
-	static const FString SubPathStringParam(TEXT("SubPathString"));
-
-	if (Deserializer->ReadObject())
+	FString String;
+	if (Deserializer->ReadValue(String))
 	{
-		FName AssetPathNameValue;
-		FString SubPathStringValue;
-		bool bHasAssetPathName = false;
-		bool bHasSubPathString = false;
-
-		FString Key;
-		while (Deserializer->ReadKey(Key))
-		{
-			if (Key == AssetPathNameParam)
-			{
-				bHasAssetPathName = true;
-				Deserializer->ReadValue(AssetPathNameValue);
-			}
-			else if (Key == SubPathStringParam)
-			{
-				bHasSubPathString = true;
-				Deserializer->ReadValue(SubPathStringValue);
-			}
-			Deserializer->PopKey(Key);
-		}
-		Deserializer->PopObject();
-
-		if (!bHasAssetPathName || !bHasSubPathString)
-		{
-			UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" (Object must have field: \"%s\")"), *Instance->GetClass()->GetName(), *Field->Name, *AssetPathNameParam);
-		}
-
-		return FSoftObjectPath(AssetPathNameValue, SubPathStringValue);
+		return FSoftObjectPath(String);
 	}
-	else
-	{
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\""), *Instance->GetClass()->GetName(), *Field->Name);
-		return FSoftObjectPath{};
-	}
+
+	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FSoftObjectPath>::Type());
+	return {};
 }

@@ -104,89 +104,21 @@ DEFINE_FUNCTION(UPsDataFTextLibrary::execGetArrayLinkValue)
 
 void UPsDataFTextLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FText& Value)
 {
-	static const FString TableIdParam(TEXT("TableId"));
-	static const FString KeyParam(TEXT("Key"));
-	static const FString EmptyParam(TEXT("Empty"));
-
-	if (Value.IsFromStringTable())
-	{
-		FName TableIdValue;
-		FString KeyValue;
-		FTextInspector::GetTableIdAndKey(Value, TableIdValue, KeyValue);
-
-		Serializer->WriteObject();
-		Serializer->WriteKey(TableIdParam);
-		Serializer->WriteValue(TableIdValue);
-		Serializer->PopKey(TableIdParam);
-		Serializer->WriteKey(KeyParam);
-		Serializer->WriteValue(KeyValue);
-		Serializer->PopKey(KeyParam);
-		Serializer->PopObject();
-	}
-	else if (Value.IsEmpty())
-	{
-		Serializer->WriteObject();
-		Serializer->WriteKey(EmptyParam);
-		Serializer->WriteValue(true);
-		Serializer->PopKey(EmptyParam);
-		Serializer->PopObject();
-	}
-	else
-	{
-		Serializer->WriteValue(Value.ToString());
-	}
+	FString String;
+	FTextStringHelper::WriteToBuffer(String, Value);
+	Serializer->WriteValue(String);
 }
 
 FText UPsDataFTextLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FText& Value)
 {
-	static const FString TableIdParam(TEXT("TableId"));
-	static const FString KeyParam(TEXT("Key"));
-	static const FString EmptyParam(TEXT("Empty"));
-
-	if (Deserializer->ReadObject())
+	FString String;
+	if (Deserializer->ReadValue(String))
 	{
-		FString TableIdValue;
-		FString KeyValue;
-		bool EmptyValue = false;
-
-		FString Key;
-		while (Deserializer->ReadKey(Key))
-		{
-			if (Key == TableIdParam)
-			{
-				Deserializer->ReadValue(TableIdValue);
-			}
-			else if (Key == KeyParam)
-			{
-				Deserializer->ReadValue(KeyValue);
-			}
-			else if (Key == EmptyParam)
-			{
-				Deserializer->ReadValue(EmptyValue);
-			}
-			Deserializer->PopKey(Key);
-		}
-		Deserializer->PopObject();
-
-		if (EmptyValue)
-		{
-			return FText::GetEmpty();
-		}
-		else if (!TableIdValue.IsEmpty() && !KeyValue.IsEmpty())
-		{
-			return FText::FromStringTable(*TableIdValue, KeyValue);
-		}
-	}
-	else
-	{
-		FString String;
-		if (Deserializer->ReadValue(String))
-		{
-			return FText::FromString(String);
-		}
+		FText Text = FText::GetEmpty();
+		FTextStringHelper::ReadFromBuffer(*String, Text);
+		return Text;
 	}
 
 	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FText>::Type());
-
 	return FText::GetEmpty();
 }

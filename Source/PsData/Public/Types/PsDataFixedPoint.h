@@ -76,16 +76,10 @@ public:
 
 	bool ExportTextItem(FString& ValueStr, FPsDataFixedPoint const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const;
 	bool ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* Parent, FOutputDevice* ErrorText);
-};
-
-template <>
-struct TStructOpsTypeTraits<FPsDataFixedPoint> : public TStructOpsTypeTraitsBase2<FPsDataFixedPoint>
-{
-	enum
-	{
-		WithExportTextItem = true,
-		WithImportTextItem = true
-	};
+	bool Serialize(FArchive& Ar);
+	bool Serialize(FStructuredArchive::FSlot Slot);
+	friend FArchive& operator<<(FArchive& Ar, FPsDataFixedPoint& Value);
+	friend void operator<<(FStructuredArchive::FSlot Slot, FPsDataFixedPoint& Value);
 };
 
 namespace PsDataTools

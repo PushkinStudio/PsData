@@ -47,6 +47,8 @@ namespace UnrealBuildTool.Rules
 					"RenderCore",
 					"Slate",
 					"SlateCore",
+					"DesktopPlatform",
+					"ToolMenus"
 				}
 			);
 		}
