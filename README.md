@@ -1,7 +1,5 @@
 # PsData
 
-[![statusIcon](https://teamcity.ufna.dev/app/rest/builds/buildType:(id:Pushkin_PsData_ClangFormatCheck)/statusIcon.svg)](https://teamcity.ufna.dev/viewType.html?buildTypeId=Pushkin_PsData_ClangFormatCheck&guest=1)
-
 Flexible data model plugin for Unreal Engine 4
 
 ## Examples
