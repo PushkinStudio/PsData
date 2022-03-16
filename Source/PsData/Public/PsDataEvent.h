@@ -29,6 +29,14 @@ private:
 
 class UPsData;
 
+UENUM(BlueprintType, Blueprintable)
+enum class EPsDataEventStopType : uint8
+{
+	None = 0,
+	Stop = 1,
+	StopImmediate = 2,
+};
+
 UCLASS(BlueprintType, Blueprintable)
 class PSDATA_API UPsDataEvent : public UObject
 {
@@ -81,13 +89,13 @@ protected:
 	UPsData* Target;
 
 	UPROPERTY()
+	UPsDataEvent* ParentEvent;
+
+	UPROPERTY()
 	bool bBubbles;
 
 	UPROPERTY()
-	bool bStopImmediate;
-
-	UPROPERTY()
-	bool bStop;
+	EPsDataEventStopType StopType;
 
 public:
 	/* Const target for c++ */
@@ -100,10 +108,16 @@ public:
 	bool IsBubbles() const;
 
 	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
+	void StopPropagation();
+
+	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
 	void StopImmediatePropagation();
 
 	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
-	void StopPropagation();
+	bool IsStopped() const;
+
+	UFUNCTION(BlueprintCallable, Category = "PsData|Event")
+	bool IsStoppedImmediately() const;
 };
 
 UCLASS(meta = (CustomThunkTemplates = "FCustomThunkTemplates_PsDataEvent"))

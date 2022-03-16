@@ -60,9 +60,9 @@ UPsDataEvent::UPsDataEvent(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, Type(TEXT("Unknown"))
 	, Target(nullptr)
+	, ParentEvent(nullptr)
 	, bBubbles(false)
-	, bStopImmediate(false)
-	, bStop(false)
+	, StopType(EPsDataEventStopType::None)
 {
 }
 
@@ -96,15 +96,30 @@ bool UPsDataEvent::IsBubbles() const
 	return bBubbles;
 }
 
-void UPsDataEvent::StopImmediatePropagation()
-{
-	bStopImmediate = true;
-	bStop = true;
-}
-
 void UPsDataEvent::StopPropagation()
 {
-	bStop = true;
+	if (StopType < EPsDataEventStopType::Stop)
+	{
+		StopType = EPsDataEventStopType::Stop;
+	}
+}
+
+void UPsDataEvent::StopImmediatePropagation()
+{
+	if (StopType < EPsDataEventStopType::StopImmediate)
+	{
+		StopType = EPsDataEventStopType::StopImmediate;
+	}
+}
+
+bool UPsDataEvent::IsStopped() const
+{
+	return StopType >= EPsDataEventStopType::Stop || (ParentEvent && ParentEvent->IsStopped());
+}
+
+bool UPsDataEvent::IsStoppedImmediately() const
+{
+	return StopType >= EPsDataEventStopType::StopImmediate || (ParentEvent && ParentEvent->IsStoppedImmediately());
 }
 
 DEFINE_FUNCTION(UPsDataEventFunctionLibrary::execGetEventTarget)

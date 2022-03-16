@@ -247,8 +247,11 @@ void UPsData::AddChild(UPsData* Child)
 	{
 		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Added, false);
 		Child->Broadcast(Event);
-		Event->bBubbles = true;
-		Broadcast(Event, Child);
+
+		const auto BubbleEvent = UPsDataEvent::ConstructEvent(UPsDataEvent::Added, true);
+		BubbleEvent->Target = Child;
+		BubbleEvent->ParentEvent = Event;
+		Broadcast(BubbleEvent, Child);
 	}
 }
 
@@ -277,8 +280,11 @@ void UPsData::RemoveChild(UPsData* Child)
 	{
 		const auto Event = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, false);
 		Child->Broadcast(Event);
-		Event->bBubbles = true;
-		Broadcast(Event, Child);
+
+		const auto BubbleEvent = UPsDataEvent::ConstructEvent(UPsDataEvent::Removed, true);
+		BubbleEvent->Target = Child;
+		BubbleEvent->ParentEvent = Event;
+		Broadcast(BubbleEvent, Child);
 	}
 }
 
@@ -589,7 +595,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous, ED
 {
 	++BroadcastInProgress;
 
-	if (!Event->bStopImmediate)
+	if (!Event->IsStoppedImmediately())
 	{
 		TArray<TSharedRef<FDelegateWrapper>> Copy;
 		if (const auto Find = Delegates.Find(Event->Type))
@@ -639,7 +645,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous, ED
 				{
 					Wrapper->DynamicDelegate.ExecuteIfBound(Event);
 					Wrapper->Delegate.ExecuteIfBound(Event);
-					if (Event->bStopImmediate)
+					if (Event->IsStoppedImmediately())
 					{
 						break;
 					}
@@ -649,7 +655,7 @@ void UPsData::BroadcastInternal(UPsDataEvent* Event, const UPsData* Previous, ED
 		}
 	}
 
-	if (!Event->bStop && Event->bBubbles)
+	if (!Event->IsStopped() && Event->bBubbles)
 	{
 		if (Parent)
 		{
