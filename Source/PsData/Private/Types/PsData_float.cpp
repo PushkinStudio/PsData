@@ -2,6 +2,8 @@
 
 #include "Types/PsData_float.h"
 
+#include "PsDataDefines.h"
+
 DEFINE_FUNCTION(UPsDataFloatLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);

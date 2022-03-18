@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "PsDataDefines.h"
+
 #include "CoreMinimal.h"
 #include "Engine/UserDefinedStruct.h"
 

@@ -94,7 +94,7 @@ struct TSpecificNumber<FPsDataFixedPoint>
 	{
 		if (auto UnsignedInteger = ToUnsignedInteger<PsDataFixedPointBaseType>(StringNumber))
 		{
-			return FPsDataFixedPoint(*UnsignedInteger);
+			return FPsDataFixedPoint(UnsignedInteger.GetValue());
 		}
 
 		return {};

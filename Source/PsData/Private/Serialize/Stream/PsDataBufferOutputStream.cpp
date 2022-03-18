@@ -92,15 +92,9 @@ void FPsDataBufferOutputStream::WriteTCHAR(TCHAR Value)
 
 void FPsDataBufferOutputStream::WriteString(const FString& Value)
 {
-	const uint32 Len = static_cast<uint32>(Value.Len());
-	WriteUint32(Len);
-	if (Len > 0)
-	{
-		for (uint32 i = 0; i < Len; ++i)
-		{
-			WriteTCHAR(Value[i]);
-		}
-	}
+	const auto Converter = FTCHARToUTF8(*Value, Value.Len());
+	WriteUint32(Converter.Length());
+	Buffer.Append(reinterpret_cast<const uint8*>(Converter.Get()), Converter.Length());
 }
 
 void FPsDataBufferOutputStream::WriteBuffer(const TArray<uint8>& Value)

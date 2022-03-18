@@ -2,6 +2,8 @@
 
 #include "Types/PsData_FLinearColor.h"
 
+#include "PsDataDefines.h"
+
 DEFINE_FUNCTION(UPsDataFLinearColorLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);

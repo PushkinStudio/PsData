@@ -110,6 +110,7 @@ public:
 
 	static void Compile();
 	static void CompileClass(UClass* Class);
+	static void CompileClassInstance(UPsData* Instance, bool bGenerateStruct);
 };
 
 /***********************************
@@ -271,7 +272,7 @@ bool GetByFieldAndKey(UPsData* Instance, const FDataField* Field, const FString&
 				TArray<T>* ArrayPtr = nullptr;
 				if (GetByField<bThrowError>(Instance, Field, ArrayPtr))
 				{
-					const auto Index = *Numbers::ToUnsignedInteger<int32>(KeyView);
+					const auto Index = Numbers::ToUnsignedInteger<int32>(KeyView).GetValue();
 					if (ArrayPtr->IsValidIndex(Index))
 					{
 						OutValue = &(*ArrayPtr)[Index];
@@ -500,16 +501,20 @@ struct TDataPathExecutor
 
 	FString GetPath() const
 	{
+		if (Keys.Num() == 1)
+		{
+			return Keys[0];
+		}
+
 		FString Result;
-		for (const auto& Key : Keys)
+		for (int32 i = 0; i < Keys.Num(); ++i)
 		{
 			if (!Result.IsEmpty())
 			{
 				Result.AppendChar('.');
 			}
-			Result.Append(Key);
+			Result.Append(Keys[i]);
 		}
-
 		return Result;
 	}
 
@@ -663,6 +668,27 @@ struct TDataPathExecutor
 		}
 
 		OutValue = nullptr;
+		return false;
+	}
+
+	bool Execute(FAbstractDataProperty*& OutProperty)
+	{
+		if (Execute())
+		{
+			const auto NumKeys = Keys.Num();
+			if (NumKeys <= 1)
+			{
+				OutProperty = FPsDataFriend::GetProperty(Data, Field->Index);
+				return true;
+			}
+		}
+
+		if (bThrowError)
+		{
+			UE_LOG(LogData, Fatal, TEXT("Can't execute %s::%s with path: \"%s\""), *Data->GetClass()->GetName(), *Field->Name, *GetPath());
+		}
+
+		OutProperty = nullptr;
 		return false;
 	}
 

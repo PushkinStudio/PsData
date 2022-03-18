@@ -5,6 +5,7 @@
 #include "PsDataRoot.h"
 #include "PsDataStruct.h"
 #include "PsDataUtils.h"
+#include "PsNetworkData.h"
 #include "Types/PsData_FString.h"
 #include "Types/PsData_UPsData.h"
 
@@ -17,20 +18,8 @@ FClassFields::FClassFields()
 
 FClassFields::~FClassFields()
 {
-	for (int32 i = 0; i < FieldsList.Num(); ++i)
-	{
-		auto Field = FieldsList[i];
-		delete Field;
-	}
-
 	FieldsList.Empty();
 	ConstFieldsList.Empty();
-
-	for (int32 i = 0; i < LinkList.Num(); ++i)
-	{
-		auto Link = LinkList[i];
-		delete Link;
-	}
 
 	LinkList.Empty();
 	ConstLinkList.Empty();
@@ -550,13 +539,48 @@ void FDataReflection::CompileClass(UClass* Class)
 {
 	check(!bCompiled);
 
-	UPsData* DefaultObject = CastChecked<UPsData>(Class->GetDefaultObject(false));
-	FPsDataFriend::InitStructProperties(DefaultObject);
+	const auto Instance = NewObject<UPsData>(GetTransientPackage(), Class);
+	CompileClassInstance(Instance, FPsDataFriend::ShouldBeGenerateStruct(Instance));
+}
+
+void FDataReflection::CompileClassInstance(UPsData* Instance, bool bGenerateStruct)
+{
+	FPsDataFriend::InitProperties(Instance);
+
+	for (const auto Property : FPsDataFriend::GetProperties(Instance))
+	{
+		const auto Field = Property->GetField();
+		if (Field->Context->IsData() && !Field->Context->IsContainer())
+		{
+			UPsData** ChildPtr = nullptr;
+			GetByField<true>(Instance, Field, ChildPtr);
+
+			if (*ChildPtr == nullptr)
+			{
+				Property->Allocate();
+				check(*ChildPtr);
+			}
+
+			CompileClassInstance(*ChildPtr, bGenerateStruct);
+		}
+	}
+
+	if (bGenerateStruct && !FPsDataFriend::ShouldBeGenerateStruct(Instance))
+	{
+		if (!UPsDataStruct::Find(Instance->GetClass()))
+		{
+			UPsDataStruct::Create(Instance->GetClass(), Instance);
+		}
+	}
+	else
+	{
+		FPsDataFriend::InitStructProperties(Instance);
+	}
 }
 
 bool FDataReflection::IsBaseClass(const UClass* Class)
 {
-	return UPsData::StaticClass() == Class || UPsDataRoot::StaticClass() == Class || UObject::StaticClass() == Class;
+	return UPsData::StaticClass() == Class || UPsDataRoot::StaticClass() == Class || UObject::StaticClass() == Class || UPsNetworkData::StaticClass() == Class;
 }
 
 } // namespace PsDataTools

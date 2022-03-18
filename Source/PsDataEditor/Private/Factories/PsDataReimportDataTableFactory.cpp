@@ -19,9 +19,9 @@ UPsDataDataTableImportFactory::UPsDataDataTableImportFactory(const FObjectInitia
 {
 }
 
-void ImportAsJson(TArray<FString>& ImportProblems, const FCSVImportSettings& InImportSettings, UDataTable* DataTable)
+void ImportAsJson(TArray<FString>& ImportProblems, const FString& DataToImport, UDataTable* DataTable)
 {
-	if (InImportSettings.DataToImport.IsEmpty())
+	if (DataToImport.IsEmpty())
 	{
 		ImportProblems.Add(TEXT("Input data is empty."));
 		return;
@@ -34,7 +34,7 @@ void ImportAsJson(TArray<FString>& ImportProblems, const FCSVImportSettings& InI
 	}
 
 	TArray<TSharedPtr<FJsonValue>> JsonArray;
-	const TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(InImportSettings.DataToImport);
+	const TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(DataToImport);
 	if (!FJsonSerializer::Deserialize(JsonReader, JsonArray) || JsonArray.Num() == 0)
 	{
 		ImportProblems.Add(FString::Printf(TEXT("Failed to parse the JSON data. Error: %s"), *JsonReader->GetErrorMessage()));
@@ -45,18 +45,33 @@ void ImportAsJson(TArray<FString>& ImportProblems, const FCSVImportSettings& InI
 	DataTable->Modify(true);
 }
 
-TArray<FString> UPsDataDataTableImportFactory::DoImportDataTable(const FCSVImportSettings& InImportSettings, UDataTable* TargetDataTable)
+#if OLD_CSV_IMPORT_FACTORY
+TArray<FString> UPsDataDataTableImportFactory::DoImportDataTable(class UDataTable* TargetDataTable, const FString& DataToImport)
 {
 	const bool bIsJSON = CurrentFilename.EndsWith(TEXT(".json"));
 	if (bIsJSON)
 	{
 		TArray<FString> ImportProblems;
-		ImportAsJson(ImportProblems, InImportSettings, TargetDataTable);
+		ImportAsJson(ImportProblems, DataToImport, TargetDataTable);
 		return ImportProblems;
 	}
 
-	return TargetDataTable->CreateTableFromCSVString(InImportSettings.DataToImport);
+	return TargetDataTable->CreateTableFromCSVString(DataToImport);
 }
+#else
+TArray<FString> UPsDataDataTableImportFactory::DoImportDataTable(const FCSVImportSettings& ImportSettings, class UDataTable* TargetDataTable)
+{
+	const bool bIsJSON = CurrentFilename.EndsWith(TEXT(".json"));
+	if (bIsJSON)
+	{
+		TArray<FString> ImportProblems;
+		ImportAsJson(ImportProblems, ImportSettings.DataToImport, TargetDataTable);
+		return ImportProblems;
+	}
+
+	return TargetDataTable->CreateTableFromCSVString(ImportSettings.DataToImport);
+}
+#endif
 
 /***********************************
  * UPsDataDataReimportDataTableFactory

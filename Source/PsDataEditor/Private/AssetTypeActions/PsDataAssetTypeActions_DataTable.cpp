@@ -2,6 +2,7 @@
 
 #include "AssetTypeActions/PsDataAssetTypeActions_DataTable.h"
 
+#include "PsDataDefines.h"
 #include "Serialize/PsDataTableSerialization.h"
 
 #include "AssetToolsModule.h"
@@ -213,9 +214,14 @@ void FPsDataAssetTypeActions_DataTable::PerformAssetDiff(UObject* OldAsset, UObj
 	FString RelNewTempFileName = FString::Printf(TEXT("%sTemp%s-%s.csv"), *FPaths::DiffDir(), *NewAsset->GetName(), *NewRevision.Revision);
 	FString AbsoluteNewTempFileName = FPaths::ConvertRelativePathToFull(RelNewTempFileName);
 
-	// save temp files
-	bool OldResult = FFileHelper::SaveStringToFile(OldDataTable->GetTableAsCSV(EDataTableExportFlags::UseSimpleText), *AbsoluteOldTempFileName);
-	bool NewResult = FFileHelper::SaveStringToFile(NewDataTable->GetTableAsCSV(EDataTableExportFlags::UseSimpleText), *AbsoluteNewTempFileName);
+#if OLD_CSV_IMPORT_FACTORY
+	auto const DefaultExportFlags = EDataTableExportFlags::None;
+#else
+	auto const DefaultExportFlags = EDataTableExportFlags::UseSimpleText;
+#endif
+
+	bool OldResult = FFileHelper::SaveStringToFile(OldDataTable->GetTableAsCSV(DefaultExportFlags), *AbsoluteOldTempFileName);
+	bool NewResult = FFileHelper::SaveStringToFile(NewDataTable->GetTableAsCSV(DefaultExportFlags), *AbsoluteNewTempFileName);
 
 	if (OldResult && NewResult)
 	{

@@ -7,6 +7,11 @@
 
 #include "UObject/Class.h"
 
+#if WITH_EDITORONLY_DATA
+#include "EdGraphSchema_K2.h"
+#include "UserDefinedStructure/UserDefinedStructEditorData.h"
+#endif
+
 namespace PsDataTools
 {
 
@@ -34,7 +39,11 @@ struct FDataPropertyFlags
 	}
 };
 
+#if OLD_PROPERTY_STYLE
+FProperty* CreateSingleProperty(bool bTypeFromField, UField* Owner, FProperty* BaseProperty, const FDataField* Field, FDataPropertyFlags Flags, const FString& Postfix = TEXT(""))
+#else
 FProperty* CreateSingleProperty(bool bTypeFromField, const FFieldVariant& Owner, FProperty* BaseProperty, const FDataField* Field, FDataPropertyFlags Flags, const FString& Postfix = TEXT(""))
+#endif
 {
 	const FString CompleteName = Postfix.IsEmpty() ? Field->GetNameForSerialize() : FString::Printf(TEXT("%s_%s"), *Field->GetNameForSerialize(), *Postfix);
 
@@ -48,50 +57,59 @@ FProperty* CreateSingleProperty(bool bTypeFromField, const FFieldVariant& Owner,
 			UE_LOG(LogDataReflection, Fatal, TEXT("Attempting to use uncreated structure. Use macro \"MAKE_TABLE_STRUCT\" for %s"), *FieldClass->GetName());
 		}
 
-		FStructProperty* StructProperty = new FStructProperty(Owner, *CompleteName, Flags.ObjectFlags, 0, Flags.PropertyFlags, FieldStruct);
+		FStructProperty* StructProperty = NewProperty<FStructProperty>(Owner, *CompleteName, Flags.ObjectFlags, Flags.PropertyFlags);
+		StructProperty->Struct = FieldStruct;
 		Property = StructProperty;
 	}
 	else
 	{
 		if (Field->Context->IsEnum())
 		{
-			FEnumProperty* EnumProperty = new FEnumProperty(Owner, *CompleteName, Flags.ObjectFlags, 0, Flags.PropertyFlags, CastChecked<UEnum>(Field->Context->GetUEType()));
-			FNumericProperty* UnderlyingProp = new FByteProperty(EnumProperty, TEXT("UnderlyingType"), Flags.ObjectFlags);
+			FEnumProperty* EnumProperty = NewProperty<FEnumProperty>(Owner, *CompleteName, Flags.ObjectFlags, Flags.PropertyFlags);
+			EnumProperty->SetEnum(CastChecked<UEnum>(Field->Context->GetUEType()));
+
+			FNumericProperty* UnderlyingProp = NewProperty<FByteProperty>(EnumProperty, TEXT("UnderlyingType"), Flags.ObjectFlags);
 			EnumProperty->AddCppProperty(UnderlyingProp);
 
 			Property = EnumProperty;
 		}
 		else
 		{
-			Property = CastFieldChecked<FProperty>(FField::Duplicate(BaseProperty, Owner, *CompleteName, Flags.ObjectFlags));
-			Property->SetFlags(Flags.ObjectFlags);
-			Property->PropertyFlags = Flags.PropertyFlags;
+			Property = DuplicateProperty(BaseProperty, Owner, *CompleteName, Flags.ObjectFlags, Flags.PropertyFlags);
 
-			if (FSoftClassProperty* SoftClassProperty = CastField<FSoftClassProperty>(Property))
+			if (const auto SoftClassProperty = CastField<FSoftClassProperty>(Property))
 			{
 				SoftClassProperty->SetMetaClass(CastChecked<UClass>(Field->Context->GetUEType()));
 				SoftClassProperty->PropertyClass = UClass::StaticClass();
 			}
-			else if (FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
+			else if (const auto SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
 			{
 				SoftObjectProperty->PropertyClass = CastChecked<UClass>(Field->Context->GetUEType());
-			}
-
-			if (Owner.IsUObject())
-			{
-				CastChecked<UField>(Owner.ToUObject())->AddCppProperty(Property);
-			}
-			else
-			{
-				Owner.ToField()->AddCppProperty(Property);
 			}
 		}
 	}
 
+#if OLD_PROPERTY_STYLE
+	Owner->AddCppProperty(Property);
+#else
+	if (Owner.IsUObject())
+	{
+		CastChecked<UField>(Owner.ToUObject())->AddCppProperty(Property);
+	}
+	else
+	{
+		Owner.ToField()->AddCppProperty(Property);
+	}
+#endif
+
 	return Property;
 }
 
+#if OLD_PROPERTY_STYLE
+FProperty* CreateProperty(UField* Owner, FProperty* BaseProperty, const FDataField* Field)
+#else
 FProperty* CreateProperty(const FFieldVariant& Owner, FProperty* BaseProperty, const FDataField* Field)
+#endif
 {
 	FDataPropertyFlags Flags = FDataPropertyFlags(RF_Public, CPF_Edit | CPF_BlueprintVisible);
 
@@ -99,14 +117,14 @@ FProperty* CreateProperty(const FFieldVariant& Owner, FProperty* BaseProperty, c
 	if (Field->Context->IsArray())
 	{
 		FArrayProperty* BaseArrayProperty = CastFieldChecked<FArrayProperty>(BaseProperty);
-		FArrayProperty* ArrayProperty = new FArrayProperty(Owner, *Field->GetNameForSerialize(), Flags.ObjectFlags, 0, Flags.PropertyFlags, EArrayPropertyFlags::None);
+		FArrayProperty* ArrayProperty = NewProperty<FArrayProperty>(Owner, *Field->GetNameForSerialize(), Flags.ObjectFlags, Flags.PropertyFlags);
 		CreateSingleProperty(true, ArrayProperty, BaseArrayProperty->Inner, Field, RF_Public, TEXT("Value"));
 		Property = ArrayProperty;
 	}
 	else if (Field->Context->IsMap())
 	{
 		FMapProperty* BaseMapProperty = CastFieldChecked<FMapProperty>(BaseProperty);
-		FMapProperty* MapProperty = new FMapProperty(Owner, *Field->GetNameForSerialize(), Flags.ObjectFlags, 0, Flags.PropertyFlags, EMapPropertyFlags::None);
+		FMapProperty* MapProperty = NewProperty<FMapProperty>(Owner, *Field->GetNameForSerialize(), Flags.ObjectFlags, Flags.PropertyFlags);
 		CreateSingleProperty(false, MapProperty, BaseMapProperty->KeyProp, Field, RF_Public, TEXT("Key"));
 		CreateSingleProperty(true, MapProperty, BaseMapProperty->ValueProp, Field, RF_Public, TEXT("Value"));
 		Property = MapProperty;
@@ -136,8 +154,22 @@ void ApplyDataField(UPsDataStruct* Struct, const FDataField* Field)
 	FProperty* BaseProperty = Function->FindPropertyByName(TEXT("Out"));
 	check(BaseProperty);
 
-	CreateProperty(Struct, BaseProperty, Field);
+	const auto Property = CreateProperty(Struct, BaseProperty, Field);
+
+#if WITH_EDITORONLY_DATA
+	FEdGraphPinType PinType;
+	GetDefault<UEdGraphSchema_K2>()->ConvertPropertyToPinType(Property, PinType);
+
+	const auto EditorData = CastChecked<UUserDefinedStructEditorData>(Struct->EditorData);
+	FStructVariableDescription VariableDescription;
+	VariableDescription.VarName = *Field->GetNameForSerialize();
+	VariableDescription.FriendlyName = Field->GetNameForSerialize();
+	VariableDescription.SetPinType(PinType);
+	VariableDescription.VarGuid = FGuid(GetTypeHash(Struct->GetName()), GetTypeHash(Field->GetNameForSerialize()), GetTypeHash(Struct->GetName() + TEXT("_") + Field->GetNameForSerialize()), 0);
+	EditorData->VariablesDescriptions.Add(VariableDescription);
+#endif
 }
+
 } // namespace PsDataTools
 
 FString UPsDataStruct::GetStructName(UClass* PsDataClass)
@@ -186,6 +218,10 @@ UPsDataStruct* UPsDataStruct::Create(UClass* PsDataClass, UPsData* DefaultData)
 		return A.Index > B.Index;
 	});
 
+#if WITH_EDITORONLY_DATA
+	NewStruct->EditorData = NewObject<UUserDefinedStructEditorData>(NewStruct, NAME_None, RF_Transient);
+#endif
+
 	for (const auto Field : Fields)
 	{
 		if (!Field->Meta.bHidden)
@@ -204,7 +240,6 @@ UPsDataStruct* UPsDataStruct::Create(UClass* PsDataClass, UPsData* DefaultData)
 	DefaultData->DataSerialize(&Serializer);
 
 	NewStruct->Finalize(Serializer.GetRaw(NewStruct, false));
-
 	return NewStruct;
 }
 

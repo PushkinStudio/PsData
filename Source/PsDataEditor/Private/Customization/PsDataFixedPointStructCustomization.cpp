@@ -111,7 +111,7 @@ void FPsDataFixedPointStructCustomization::HandleTextBoxTextCommited(const FText
 	const auto FixedPointOpt = PsDataTools::Numbers::ToNumber<FPsDataFixedPoint>(PsDataTools::ToStringView(NewText.ToString()));
 	if (FixedPointOpt)
 	{
-		SetFixedPointValue(*FixedPointOpt);
+		SetFixedPointValue(FixedPointOpt.GetValue());
 	}
 }
 

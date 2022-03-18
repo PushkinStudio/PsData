@@ -2,6 +2,8 @@
 
 #include "Types/PsData_FPsDataBigInteger.h"
 
+#include "PsDataDefines.h"
+
 #define ZERO_DIVIDE_PROTECTION(Dividend, Divisor)                                                                                                                                   \
 	if (Divisor == 0)                                                                                                                                                               \
 	{                                                                                                                                                                               \

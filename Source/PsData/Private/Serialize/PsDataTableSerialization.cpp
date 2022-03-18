@@ -65,10 +65,10 @@ void FPsDataTableSerializer::ReportAboutExtraFields(const UScriptStruct* Struct,
 	for (const auto& Pair : JsonObject->Values)
 	{
 		FName PropName = DataTableUtils::MakeValidName(Pair.Key);
-		FProperty* ColumnProp = FindFProperty<FProperty>(Struct, PropName);
+		FProperty* ColumnProp = Struct->FindPropertyByName(PropName);
 		for (TFieldIterator<FProperty> It(Struct); It && !ColumnProp; ++It)
 		{
-			DataTableUtils::GetPropertyImportNames(*It, Names);
+			Names.Append(DataTableUtils::GetPropertyImportNames(*It));
 			ColumnProp = Names.Contains(Pair.Key) ? *It : nullptr;
 		}
 

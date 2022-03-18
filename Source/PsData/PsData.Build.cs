@@ -23,8 +23,16 @@ public class PsData : ModuleRules
 				"Slate",
 				"SlateCore",
 				"Json",
-				"JsonUtilities",
+				"JsonUtilities"
 			}
 		);
+
+		if (Target.bBuildEditor)
+		{
+			PublicDependencyModuleNames.AddRange(new string[] {
+				"BlueprintGraph",
+				"UnrealEd"
+			});
+		}
 	}
 }

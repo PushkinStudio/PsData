@@ -2,6 +2,8 @@
 
 #include "Types/PsData_TSoftObjectPtr.h"
 
+#include "PsDataDefines.h"
+
 DEFINE_FUNCTION(UPsDataTSoftObjectPtrLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);

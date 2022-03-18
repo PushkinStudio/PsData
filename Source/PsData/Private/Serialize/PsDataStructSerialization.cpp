@@ -101,7 +101,7 @@ uint8* FPsDataStructSerializer::CreateStructFromJson_Import(const UStruct* Struc
 
 void FPsDataStructSerializer::PropertyDeserialize(FProperty* Property, uint8* OutDest, const TSharedRef<FJsonValue>& JsonValue)
 {
-	if (FTextProperty* TextProperty = CastField<FTextProperty>(Property))
+	if (const auto TextProperty = CastField<FTextProperty>(Property))
 	{
 		if (JsonValue->Type == EJson::String)
 		{
@@ -111,15 +111,37 @@ void FPsDataStructSerializer::PropertyDeserialize(FProperty* Property, uint8* Ou
 			return;
 		}
 
-		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetAuthoredName(), *TextProperty->GetCPPType());
+		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s\" as \"%s\""), *Property->GetAuthoredName(), *TextProperty->GetCPPType());
 	}
-	else if (FStructProperty* StructProperty = CastField<FStructProperty>(Property))
+	else if (const auto SoftClassProperty = CastField<FSoftClassProperty>(Property))
+	{
+		if (JsonValue->Type == EJson::String)
+		{
+			SoftClassProperty->SetPropertyValue(OutDest, FSoftObjectPtr(FSoftClassPath(JsonValue->AsString())));
+			return;
+		}
+
+		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s\" as \"%s\""), *Property->GetAuthoredName(), *SoftClassProperty->GetCPPType(nullptr, 0));
+	}
+	else if (const auto SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
+	{
+		if (JsonValue->Type == EJson::String)
+		{
+			SoftObjectProperty->SetPropertyValue(OutDest, FSoftObjectPtr(FSoftObjectPath(JsonValue->AsString())));
+			return;
+		}
+
+		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s\" as \"%s\""), *Property->GetAuthoredName(), *SoftObjectProperty->GetCPPType(nullptr, 0));
+	}
+	else if (const auto StructProperty = CastField<FStructProperty>(Property))
 	{
 		if (JsonValue->Type == EJson::Object)
 		{
 			StructDeserialize(StructProperty->Struct, OutDest, JsonValue->AsObject().ToSharedRef(), true);
 			return;
 		}
+
+		UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s\" as \"%s\""), *Property->GetAuthoredName(), *StructProperty->GetCPPType(nullptr, 0));
 	}
 
 	FJsonObjectConverter::JsonValueToUProperty(JsonValue, Property, OutDest, 0, 0);
@@ -136,12 +158,12 @@ void FPsDataStructSerializer::StructDeserialize(const UStruct* Struct, uint8* Ou
 	{
 		FProperty* Property = *It;
 		auto JsonValue = FindJsonValueByProperty(Property, JsonObject);
-		auto ValueDest = OutDest + Property->GetOffset_ForInternal();
+		auto ValueDest = Property->ContainerPtrToValuePtr<uint8>(OutDest);
 		Property->InitializeValue(ValueDest);
 
 		if (JsonValue.IsValid())
 		{
-			if (FArrayProperty* ArrayProperty = CastField<FArrayProperty>(Property))
+			if (const auto ArrayProperty = CastField<FArrayProperty>(Property))
 			{
 				if (JsonValue->Type == EJson::Array)
 				{
@@ -158,10 +180,10 @@ void FPsDataStructSerializer::StructDeserialize(const UStruct* Struct, uint8* Ou
 				}
 				else
 				{
-					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetAuthoredName(), *ArrayProperty->GetCPPType(nullptr, 0));
+					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s\" as \"%s\""), *Property->GetAuthoredName(), *ArrayProperty->GetCPPType(nullptr, 0));
 				}
 			}
-			else if (FMapProperty* MapProperty = CastField<FMapProperty>(Property))
+			else if (const auto MapProperty = CastField<FMapProperty>(Property))
 			{
 				if (JsonValue->Type == EJson::Object)
 				{
@@ -176,7 +198,7 @@ void FPsDataStructSerializer::StructDeserialize(const UStruct* Struct, uint8* Ou
 				}
 				else
 				{
-					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Property->Owner.GetName(), *Property->GetAuthoredName(), *MapProperty->GetCPPType(nullptr, 0));
+					UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s\" as \"%s\""), *Property->GetAuthoredName(), *MapProperty->GetCPPType(nullptr, 0));
 				}
 			}
 			else
@@ -299,17 +321,29 @@ TSharedPtr<FJsonObject> FPsDataStructDeserializer::CreateJsonFromStruct_Export(c
 
 TSharedPtr<FJsonValue> FPsDataStructDeserializer::PropertySerialize(FProperty* Property, const void* Value)
 {
-	if (FStructProperty* StructProperty = CastField<FStructProperty>(Property))
+	if (const auto StructProperty = CastField<FStructProperty>(Property))
 	{
 		return StructPropertySerialize(StructProperty, Value);
 	}
 
-	if (FTextProperty* TextProperty = CastField<FTextProperty>(Property))
+	if (const auto TextProperty = CastField<FTextProperty>(Property))
 	{
 		const FText& TextValue = TextProperty->GetPropertyValue(Value);
 		FString ValueStr;
 		FTextStringHelper::WriteToBuffer(ValueStr, TextValue);
 		return MakeShared<FJsonValueString>(ValueStr);
+	}
+
+	if (const auto SoftClassProperty = CastField<FSoftClassProperty>(Property))
+	{
+		const auto& SoftClassPtr = SoftClassProperty->GetPropertyValue(Value);
+		return MakeShared<FJsonValueString>(SoftClassPtr.ToString());
+	}
+
+	if (const auto SoftObjectProperty = CastField<FSoftObjectProperty>(Property))
+	{
+		const auto& SoftObjectPtr = SoftObjectProperty->GetPropertyValue(Value);
+		return MakeShared<FJsonValueString>(SoftObjectPtr.ToString());
 	}
 
 	return TSharedPtr<FJsonValue>(nullptr);
@@ -353,7 +387,7 @@ TSharedPtr<FJsonValue> FPsDataStructDeserializer::StructSerialize(const UStruct*
 		}
 		else
 		{
-			UE_LOG(LogData, Warning, TEXT("Unsupported type \"%s\" for \"%s::%s\""), *Property->GetCPPType(), *Property->Owner.GetName(), *Property->GetAuthoredName());
+			UE_LOG(LogData, Warning, TEXT("Unsupported type \"%s\" for \"%s\""), *Property->GetCPPType(), *Property->GetAuthoredName());
 		}
 	}
 

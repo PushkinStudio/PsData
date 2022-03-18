@@ -19,6 +19,7 @@ const FDataStringViewChar FDataMetaType::ReadOnly = "readonly";
 const FDataStringViewChar FDataMetaType::Deprecated = "deprecated";
 const FDataStringViewChar FDataMetaType::Nullable = "nullable";
 const FDataStringViewChar FDataMetaType::Hidden = "hidden";
+const FDataStringViewChar FDataMetaType::CustomType = "customtype";
 
 /***********************************
  * FDataRawMeta
@@ -107,6 +108,7 @@ FDataFieldMeta::FDataFieldMeta()
 	, bAlias(false)
 	, bDefault(true)
 	, bHidden(false)
+	, bCustomType(false)
 {
 }
 
@@ -293,7 +295,7 @@ void PrintIrrelevantMeta(const FDataRawMeta& RawMeta)
 
 void PrintApplyMeta(const FDataRawMetaItem* Item)
 {
-	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    + meta: \"%s%s%s\""), *ToString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? *ToString(Item->Value) : TEXT(""));
+	UE_LOG(LogDataReflection, VeryVerbose, TEXT("    + meta: \"%s%s%s\""), *ToString(Item->Key), Item->Value.IsEmpty() ? TEXT("") : TEXT(" = "), Item->Value.IsEmpty() ? TEXT("") : *ToString(Item->Value));
 }
 
 void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
@@ -309,7 +311,11 @@ void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 	if (const auto Event = RawMeta.Find(FDataMetaType::Event))
 	{
 		Field->Meta.bEvent = true;
-		PrintUnusedMetaValue(Event);
+		if (Event->Value.Len() > 0)
+		{
+			Field->Meta.EventType = ToString(Event->Value);
+		}
+
 		PrintApplyMeta(Event);
 
 		RawMeta.Remove(FDataMetaType::Event);
@@ -355,6 +361,14 @@ void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 
 		RawMeta.Remove(FDataMetaType::Hidden);
 	}
+	if (const auto CustomType = RawMeta.Find(FDataMetaType::CustomType))
+	{
+		Field->Meta.bCustomType = true;
+		PrintUnusedMetaValue(CustomType);
+		PrintApplyMeta(CustomType);
+
+		RawMeta.Remove(FDataMetaType::Hidden);
+	}
 
 	if (Field->Meta.bStrict && Field->Meta.bEvent)
 	{
@@ -395,7 +409,10 @@ FDataField::FDataField(const FString& InName, int32 InIndex, int32 InHash, FAbst
 	, Context(InContext)
 {
 	ApplyMeta<FDataField>(this, RawMeta);
-	Meta.EventType = FString::Printf(TEXT("%sChanged"), *Name);
+	if (Meta.EventType.IsEmpty())
+	{
+		Meta.EventType = FString::Printf(TEXT("%sChanged"), *Name);
+	}
 }
 
 const FString& FDataField::GetChangedEventName() const

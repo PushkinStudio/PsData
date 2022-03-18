@@ -97,15 +97,14 @@ TCHAR FPsDataBufferInputStream::ReadTCHAR()
 FString FPsDataBufferInputStream::ReadString()
 {
 	const int32 RealPrevIndex = Index;
+
 	const uint32 Len = ReadUint32();
 	FString Result;
 	if (Len > 0)
 	{
-		Result.Reserve(Len);
-		for (uint32 i = 0; i < Len; ++i)
-		{
-			Result.AppendChar(ReadTCHAR());
-		}
+		const auto Converter = FUTF8ToTCHAR(reinterpret_cast<const ANSICHAR*>(&Buffer[Index]), Len);
+		Result = FString(Converter.Length(), Converter.Get());
+		Index += Len;
 	}
 	PrevIndex = RealPrevIndex;
 	return Result;

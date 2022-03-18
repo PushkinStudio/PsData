@@ -621,7 +621,7 @@ bool FPsDataFastJsonDeserializer::ReadValue(int32& OutValue)
 		return false;
 	}
 
-	OutValue = *NumberOpt;
+	OutValue = NumberOpt.GetValue();
 	Pointer.Reset();
 
 	++PointerIndex;
@@ -645,8 +645,7 @@ bool FPsDataFastJsonDeserializer::ReadValue(int64& OutValue)
 		return false;
 	}
 
-	OutValue = *NumberOpt;
-	;
+	OutValue = NumberOpt.GetValue();
 	Pointer.Reset();
 
 	++PointerIndex;
@@ -670,8 +669,7 @@ bool FPsDataFastJsonDeserializer::ReadValue(uint8& OutValue)
 		return false;
 	}
 
-	OutValue = *NumberOpt;
-	;
+	OutValue = NumberOpt.GetValue();
 	Pointer.Reset();
 
 	++PointerIndex;
@@ -695,8 +693,7 @@ bool FPsDataFastJsonDeserializer::ReadValue(float& OutValue)
 		return false;
 	}
 
-	OutValue = *NumberOpt;
-	;
+	OutValue = NumberOpt.GetValue();
 	Pointer.Reset();
 
 	++PointerIndex;

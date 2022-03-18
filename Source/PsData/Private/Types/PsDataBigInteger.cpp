@@ -89,7 +89,7 @@ FPsDataBigInteger::FPsDataBigInteger(const FString& Value)
 {
 	if (auto Result = PsDataTools::Numbers::ToNumber<FPsDataBigInteger>(PsDataTools::ToStringView(Value)))
 	{
-		*this = *Result;
+		*this = Result.GetValue();
 	}
 	else
 	{
@@ -101,7 +101,7 @@ FPsDataBigInteger::FPsDataBigInteger(const char* Value)
 {
 	if (auto Result = PsDataTools::Numbers::ToNumber<FPsDataBigInteger>(PsDataTools::ToStringView(Value)))
 	{
-		*this = *Result;
+		*this = Result.GetValue();
 	}
 	else
 	{
@@ -956,7 +956,7 @@ FPsDataBigInteger FPsDataBigInteger::FromString(const FString& Value)
 {
 	if (auto Result = PsDataTools::Numbers::ToNumber<FPsDataBigInteger>(PsDataTools::ToStringView(Value)))
 	{
-		return *Result;
+		return Result.GetValue();
 	}
 
 	UE_LOG(LogDataUtils, Warning, TEXT("Can't deserialize \"%s\" to FPsDataBigInteger"), *Value);
@@ -1055,7 +1055,7 @@ FString FPsDataShortBigInteger::ToScientificNotation() const
 	PsDataTools::Numbers::ToString(Base, Result);
 	Result.Add('e');
 	PsDataTools::Numbers::ToString(PowerOfTen, Result);
-	return FString(std::move(Result));
+	return FString(Result.Num(), Result.GetData());
 }
 
 FPsDataShortBigInteger FPsDataShortBigInteger::FromString(const FString& String, int32 NumDigits)
@@ -1081,7 +1081,7 @@ bool FPsDataBigInteger::ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UO
 	auto Result = PsDataTools::Numbers::ToNumber<FPsDataBigInteger>(BufferView);
 	if (Result)
 	{
-		*this = *Result;
+		*this = Result.GetValue();
 		return true;
 	}
 

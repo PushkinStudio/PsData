@@ -326,7 +326,7 @@ ToInteger(const TDataStringView<T>& StringNumber)
 		{
 			if (const auto UnsignedInteger = ToUnsignedInteger<K>(StringNumber.RightChop(1)))
 			{
-				return -*UnsignedInteger;
+				return -UnsignedInteger.GetValue();
 			}
 
 			return {};
@@ -371,7 +371,7 @@ ToInteger(const TDataStringView<T>& StringNumber)
 		{
 			if (const auto UnsignedInteger = ToUnsignedInteger<K>(StringNumber.RightChop(1)))
 			{
-				return -*UnsignedInteger;
+				return -UnsignedInteger.GetValue();
 			}
 
 			return {};
@@ -425,7 +425,7 @@ TOptional<K> ToNumber(const TDataStringView<T>& StringNumber)
 				const auto CStr = StringNumber.RightChop(ExpPos + 1);
 				if (const auto C = ToInteger<int32>(CStr))
 				{
-					return Pow10x<K>(*A, *C);
+					return Pow10x<K>(A.GetValue(), C.GetValue());
 				}
 			}
 		}
@@ -440,13 +440,13 @@ TOptional<K> ToNumber(const TDataStringView<T>& StringNumber)
 				const auto BStr = StringNumber.RightChop(DotPos + 1);
 				if (const auto B = ToUnsignedInteger<K>(BStr))
 				{
-					if (*A < 0)
+					if (A.GetValue() < 0)
 					{
-						return *A - Pow10x<K>(*B, -BStr.Len());
+						return A.GetValue() - Pow10x<K>(B.GetValue(), -BStr.Len());
 					}
 					else
 					{
-						return *A + Pow10x<K>(*B, -BStr.Len());
+						return A.GetValue() + Pow10x<K>(B.GetValue(), -BStr.Len());
 					}
 				}
 			}
@@ -462,13 +462,13 @@ TOptional<K> ToNumber(const TDataStringView<T>& StringNumber)
 					const auto CStr = StringNumber.RightChop(ExpPos + 1);
 					if (const auto C = ToInteger<int32>(CStr))
 					{
-						if (*A < 0)
+						if (A.GetValue() < 0)
 						{
-							return Pow10x<K>(*A, *C) - Pow10x<K>(*B, *C - BStr.Len());
+							return Pow10x<K>(A.GetValue(), C.GetValue()) - Pow10x<K>(B.GetValue(), C.GetValue() - BStr.Len());
 						}
 						else
 						{
-							return Pow10x<K>(*A, *C) + Pow10x<K>(*B, *C - BStr.Len());
+							return Pow10x<K>(A.GetValue(), C.GetValue()) + Pow10x<K>(B.GetValue(), C.GetValue() - BStr.Len());
 						}
 					}
 				}
@@ -607,7 +607,7 @@ FString ToString(K Value)
 {
 	TArray<TCHAR> Buffer;
 	ToString(Value, Buffer);
-	return FString(std::move(Buffer));
+	return FString(Buffer.Num(), Buffer.GetData());
 }
 
 } // namespace Numbers

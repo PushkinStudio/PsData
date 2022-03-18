@@ -317,7 +317,7 @@ struct TSpecificNumber<FPsDataBigInteger>
 			const auto StringNumberPart = StringNumber.Mid(Pos, WordDigitsNum);
 			if (const auto Word = ToUnsignedInteger<PsDataBigIntegerWordType>(StringNumberPart))
 			{
-				Result = Result * FPsDataBigInteger(Pow10<PsDataBigIntegerWordType>(StringNumberPart.Len())) + FPsDataBigInteger(*Word);
+				Result = Result * FPsDataBigInteger(Pow10<PsDataBigIntegerWordType>(StringNumberPart.Len())) + FPsDataBigInteger(Word.GetValue());
 			}
 			else
 			{

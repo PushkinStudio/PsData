@@ -2,6 +2,8 @@
 
 #include "Types/PsData_FText.h"
 
+#include "PsDataDefines.h"
+
 #include "UObject/TextProperty.h"
 
 DEFINE_FUNCTION(UPsDataFTextLibrary::execSetMapProperty)

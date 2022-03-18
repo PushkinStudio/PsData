@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "PsDataDefines.h"
+
 #include "CoreMinimal.h"
 #include "EditorReimportHandler.h"
 #include "Factories/CSVImportFactory.h"
@@ -18,7 +20,11 @@ class UPsDataDataTableImportFactory : public UCSVImportFactory
 	GENERATED_UCLASS_BODY()
 
 protected:
+#if OLD_CSV_IMPORT_FACTORY
+	virtual TArray<FString> DoImportDataTable(class UDataTable* TargetDataTable, const FString& DataToImport) override;
+#else
 	virtual TArray<FString> DoImportDataTable(const FCSVImportSettings& ImportSettings, class UDataTable* TargetDataTable) override;
+#endif
 };
 
 /***********************************

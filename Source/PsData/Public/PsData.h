@@ -23,6 +23,8 @@ DECLARE_DELEGATE(FPsDataAsyncSerializeDelegate);
 
 class UPsData;
 class UPsDataRoot;
+class UPsNetworkData;
+
 struct FAbstractDataProperty;
 struct FAbstractDataLinkProperty;
 
@@ -35,7 +37,7 @@ class PSDATA_API FDataDelegates
 {
 public:
 	static FSimpleMulticastDelegate OnPostDataModuleInit;
-	static TPsDataSimplePromise PostDataModuleInitPromise;
+	static FPsDataSimplePromise PostDataModuleInitPromise;
 
 private:
 	// This class is only for namespace use
@@ -178,6 +180,7 @@ struct PSDATA_API FPsDataFriend
 	static void RemoveChild(UPsData* Parent, UPsData* Data);
 	static void Changed(UPsData* Data, const FDataField* Field);
 	static void InitProperties(UPsData* Data);
+	static bool ShouldBeGenerateStruct(UPsData* Data);
 	static void InitStructProperties(UPsData* Data);
 	static TArray<FAbstractDataProperty*>& GetProperties(UPsData* Data);
 	static FAbstractDataProperty* GetProperty(UPsData* Data, int32 Index);
@@ -204,7 +207,7 @@ struct PSDATA_API FAbstractDataProperty
 {
 	FAbstractDataProperty() {}
 	virtual ~FAbstractDataProperty() {}
-	virtual void Serialize(FPsDataSerializer* Serializer) = 0;
+	virtual void Serialize(FPsDataSerializer* Serializer) const = 0;
 	virtual void Deserialize(FPsDataDeserializer* Deserializer) = 0;
 	virtual void Reset() = 0;
 	virtual bool IsDefault() const = 0;
@@ -261,9 +264,13 @@ private:
 	UPROPERTY()
 	UPsData* Parent;
 
-	/** Parent */
+	/** Root */
 	UPROPERTY()
 	UPsDataRoot* Root;
+
+	/** Network */
+	UPROPERTY()
+	UPsNetworkData* Network;
 
 	/** Children */
 	UPROPERTY()
@@ -329,6 +336,9 @@ protected:
 
 	/** Post Deserialize */
 	virtual void PostDeserialize();
+
+	/** Has struct properties */
+	virtual bool ShouldBeGenerateStruct() const;
 
 	/** Init struct properties */
 	virtual void InitStructProperties();
@@ -437,8 +447,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")
 	const FString& GetCollectionKey() const;
 
-	/** Get data path from root */
-	void GetPathFromRoot(FString& OutPath) const;
+	/** Get data path from data */
+	void GetPathFromData(const UPsData* Data, FString& OutPath) const;
+
+	/** Get data path from data */
+	FString GetPathFromData(const UPsData* Data) const;
 
 	/** Get data path from root */
 	UFUNCTION(BlueprintCallable, Category = "PsData|Data")

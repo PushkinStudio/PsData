@@ -43,7 +43,7 @@ FPsDataFixedPoint::FPsDataFixedPoint(const FString& Value)
 	const auto View = PsDataTools::ToStringView(Value);
 	if (auto Result = PsDataTools::Numbers::ToNumber<FPsDataFixedPoint>(View))
 	{
-		Set(*Result);
+		Set(Result.GetValue());
 	}
 	else
 	{
@@ -56,7 +56,7 @@ FPsDataFixedPoint::FPsDataFixedPoint(const char* Value)
 	const auto View = PsDataTools::ToStringView(Value);
 	if (auto Result = PsDataTools::Numbers::ToNumber<FPsDataFixedPoint>(View))
 	{
-		Set(*Result);
+		Set(Result.GetValue());
 	}
 	else
 	{
@@ -246,7 +246,7 @@ FPsDataFixedPoint FPsDataFixedPoint::FromString(const FString& Value)
 {
 	if (auto Result = PsDataTools::Numbers::ToNumber<FPsDataFixedPoint>(PsDataTools::ToStringView(Value)))
 	{
-		return *Result;
+		return Result.GetValue();
 	}
 
 	UE_LOG(LogDataUtils, Warning, TEXT("Can't deserialize \"%s\" to FPsDataFixedPoint"), *Value);
@@ -279,7 +279,7 @@ bool FPsDataFixedPoint::ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UO
 	auto Result = PsDataTools::Numbers::ToNumber<FPsDataFixedPoint>(BufferView);
 	if (Result)
 	{
-		Set(*Result);
+		Set(Result.GetValue());
 		return true;
 	}
 

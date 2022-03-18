@@ -5,6 +5,7 @@
 #include "PsDataCore.h"
 #include "PsDataDeferredTask.h"
 #include "PsDataRoot.h"
+#include "PsNetworkData.h"
 #include "Serialize/PsDataBinarySerialization.h"
 #include "Serialize/Stream/PsDataBufferInputStream.h"
 #include "Serialize/Stream/PsDataBufferOutputStream.h"
@@ -14,7 +15,7 @@
 #include "Async/Async.h"
 
 FSimpleMulticastDelegate FDataDelegates::OnPostDataModuleInit;
-TPsDataSimplePromise FDataDelegates::PostDataModuleInitPromise;
+FPsDataSimplePromise FDataDelegates::PostDataModuleInitPromise;
 
 /***********************************
  * PsData friend
@@ -46,6 +47,11 @@ void FPsDataFriend::InitProperties(UPsData* Data)
 {
 	Data->InitProperties();
 	Data->PostDeserialize();
+}
+
+bool FPsDataFriend::ShouldBeGenerateStruct(UPsData* Data)
+{
+	return Data->ShouldBeGenerateStruct();
 }
 
 void FPsDataFriend::InitStructProperties(UPsData* Data)
@@ -184,6 +190,7 @@ UPsData::UPsData(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, Parent(nullptr)
 	, Root(nullptr)
+	, Network(nullptr)
 	, BroadcastInProgress(0)
 	, bChanged(false)
 	, SerializeBufferSize(1024)
@@ -253,6 +260,11 @@ void UPsData::AddChild(UPsData* Child)
 		BubbleEvent->ParentEvent = Event;
 		Broadcast(BubbleEvent, Child);
 	}
+
+	if (Network && Network->HasAuthority())
+	{
+		Network->CommitAddedEvent(Child);
+	}
 }
 
 void UPsData::RemoveChild(UPsData* Child)
@@ -261,6 +273,11 @@ void UPsData::RemoveChild(UPsData* Child)
 	{
 		UE_LOG(LogData, Fatal, TEXT("Child not added"));
 		return;
+	}
+
+	if (Network && Network->HasAuthority())
+	{
+		Network->CommitRemovingEvent(Child);
 	}
 
 	const auto bIsBound = Child->IsBound(UPsDataEvent::Removed, true);
@@ -331,6 +348,11 @@ void UPsData::Changed(const FDataField* Field)
 			}
 		});
 	}
+
+	if (Network && Network->HasAuthority())
+	{
+		Network->CommitChanges(this, Field);
+	}
 }
 
 void UPsData::AddToRootData()
@@ -338,6 +360,15 @@ void UPsData::AddToRootData()
 	if (Parent->Root)
 	{
 		Root = Parent->Root;
+
+		if (IsA(UPsNetworkData::StaticClass()))
+		{
+			Network = Cast<UPsNetworkData>(this);
+		}
+		else
+		{
+			Network = Parent->Network;
+		}
 
 		if (IsBound(UPsDataEvent::AddedToRoot, false))
 		{
@@ -356,6 +387,7 @@ void UPsData::RemoveFromRootData()
 	if (Root)
 	{
 		Root = nullptr;
+		Network = nullptr;
 
 		if (IsBound(UPsDataEvent::RemovedFromRoot, false))
 		{
@@ -438,6 +470,11 @@ void UPsData::InitProperties()
 
 void UPsData::PostDeserialize()
 {
+}
+
+bool UPsData::ShouldBeGenerateStruct() const
+{
+	return false;
 }
 
 void UPsData::InitStructProperties()
@@ -856,11 +893,16 @@ const FString& UPsData::GetCollectionKey() const
 	return CollectionKey;
 }
 
-void UPsData::GetPathFromRoot(FString& OutPath) const
+void UPsData::GetPathFromData(const UPsData* Data, FString& OutPath) const
 {
+	if (this == Data)
+	{
+		return;
+	}
+
 	if (Parent)
 	{
-		Parent->GetPathFromRoot(OutPath);
+		Parent->GetPathFromData(Data, OutPath);
 		if (OutPath.Len() > 0)
 		{
 			OutPath.AppendChar('.');
@@ -870,10 +912,17 @@ void UPsData::GetPathFromRoot(FString& OutPath) const
 	OutPath.Append(GetFullDataKey());
 }
 
+FString UPsData::GetPathFromData(const UPsData* Data) const
+{
+	FString Result;
+	GetPathFromData(Data, Result);
+	return Result;
+}
+
 FString UPsData::GetPathFromRoot() const
 {
 	FString Result;
-	GetPathFromRoot(Result);
+	GetPathFromData(nullptr, Result);
 	return Result;
 }
 

@@ -2,6 +2,8 @@
 
 #include "Types/PsData_bool.h"
 
+#include "PsDataDefines.h"
+
 DEFINE_FUNCTION(UPsDataBoolLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);

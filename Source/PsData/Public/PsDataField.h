@@ -25,6 +25,7 @@ struct PSDATA_API FDataMetaType
 	static const FDataStringViewChar Deprecated;
 	static const FDataStringViewChar Nullable;
 	static const FDataStringViewChar Hidden;
+	static const FDataStringViewChar CustomType;
 };
 
 /***********************************
@@ -78,6 +79,7 @@ struct PSDATA_API FDataFieldMeta
 	bool bAlias;
 	bool bDefault;
 	bool bHidden;
+	bool bCustomType;
 	FString Alias;
 	FString EventType;
 

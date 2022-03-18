@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "PsDataDefines.h"
 #include "Serialize/PsDataJsonSerialization.h"
 #include "Serialize/PsDataSerialization.h"
 

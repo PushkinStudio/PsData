@@ -320,7 +320,7 @@ struct TDataProperty : public FAbstractDataProperty
 
 	virtual ~TDataProperty() override {}
 
-	virtual void Serialize(FPsDataSerializer* Serializer) override
+	virtual void Serialize(FPsDataSerializer* Serializer) const override
 	{
 		TTypeSerializer<T>::Serialize(GetOwner(), GetField(), Serializer, GetValue());
 	}
@@ -380,7 +380,7 @@ struct TDataProperty<TArray<T>> : public FAbstractDataProperty
 
 	virtual ~TDataProperty() override {}
 
-	virtual void Serialize(FPsDataSerializer* Serializer) override
+	virtual void Serialize(FPsDataSerializer* Serializer) const override
 	{
 		TTypeSerializer<TArray<T>>::Serialize(GetOwner(), GetField(), Serializer, GetValue());
 	}
@@ -442,7 +442,7 @@ struct TDataProperty<TMap<FString, T>> : public FAbstractDataProperty
 
 	virtual ~TDataProperty() override {}
 
-	virtual void Serialize(FPsDataSerializer* Serializer) override
+	virtual void Serialize(FPsDataSerializer* Serializer) const override
 	{
 		TTypeSerializer<TMap<FString, T>>::Serialize(GetOwner(), GetField(), Serializer, GetValue());
 	}
@@ -527,7 +527,7 @@ struct TDataProperty<T*> : public FAbstractDataProperty
 
 	virtual ~TDataProperty() override {}
 
-	virtual void Serialize(FPsDataSerializer* Serializer) override
+	virtual void Serialize(FPsDataSerializer* Serializer) const override
 	{
 		TTypeSerializer<T*>::Serialize(GetOwner(), GetField(), Serializer, GetValue());
 	}
@@ -617,7 +617,7 @@ struct TDataProperty<TArray<T*>> : public FAbstractDataProperty
 
 	virtual ~TDataProperty() override {}
 
-	virtual void Serialize(FPsDataSerializer* Serializer) override
+	virtual void Serialize(FPsDataSerializer* Serializer) const override
 	{
 		TTypeSerializer<TArray<T*>>::Serialize(GetOwner(), GetField(), Serializer, GetValue());
 	}
@@ -703,7 +703,7 @@ struct TDataProperty<TMap<FString, T*>> : public FAbstractDataProperty
 
 	virtual ~TDataProperty() override {}
 
-	virtual void Serialize(FPsDataSerializer* Serializer) override
+	virtual void Serialize(FPsDataSerializer* Serializer) const override
 	{
 		TTypeSerializer<TMap<FString, T*>>::Serialize(GetOwner(), GetField(), Serializer, GetValue());
 	}

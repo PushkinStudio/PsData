@@ -2,6 +2,8 @@
 
 #include "Types/PsData_FString.h"
 
+#include "PsDataDefines.h"
+
 DEFINE_FUNCTION(UPsDataFStringLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);

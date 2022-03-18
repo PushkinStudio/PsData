@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Delegates/Delegate.h"
 
+#include <utility>
+
 template <typename T>
 class PSDATA_API TPsDataPromise
 {
@@ -44,11 +46,13 @@ public:
 
 	void Bind(const FPsDataPromiseDelegate& Delegate)
 	{
-		Delegates.Add(Delegate);
-
 		if (Value.IsSet())
 		{
 			ExecuteSingle(Delegate);
+		}
+		else
+		{
+			Delegates.Add(Delegate);
 		}
 	}
 
@@ -66,10 +70,13 @@ public:
 private:
 	void Execute()
 	{
-		auto Copy = Delegates;
-		for (const auto& Delegate : Copy)
+		while (Delegates.Num() > 0)
 		{
-			BroadcastSingle(Delegate);
+			TArray<FSimpleDelegate> DelegatesArray = std::move(Delegates);
+			for (const auto& Delegate : DelegatesArray)
+			{
+				ExecuteSingle(Delegate);
+			}
 		}
 	}
 
@@ -82,15 +89,15 @@ private:
 	TArray<FPsDataPromiseDelegate> Delegates;
 };
 
-class PSDATA_API TPsDataSimplePromise
+class PSDATA_API FPsDataSimplePromise
 {
 public:
-	TPsDataSimplePromise()
+	FPsDataSimplePromise()
 		: bResolved(false)
 	{
 	}
 
-	TPsDataSimplePromise(bool bInResolved)
+	FPsDataSimplePromise(bool bInResolved)
 		: bResolved(bInResolved)
 	{
 	}
@@ -108,11 +115,13 @@ public:
 
 	void Bind(const FSimpleDelegate& Delegate)
 	{
-		Delegates.Add(Delegate);
-
 		if (bResolved)
 		{
 			ExecuteSingle(Delegate);
+		}
+		else
+		{
+			Delegates.Add(Delegate);
 		}
 	}
 
@@ -130,10 +139,13 @@ public:
 private:
 	void Execute()
 	{
-		auto Copy = Delegates;
-		for (const auto& Delegate : Copy)
+		while (Delegates.Num() > 0)
 		{
-			ExecuteSingle(Delegate);
+			TArray<FSimpleDelegate> DelegatesArray = std::move(Delegates);
+			for (const auto& Delegate : DelegatesArray)
+			{
+				ExecuteSingle(Delegate);
+			}
 		}
 	}
 

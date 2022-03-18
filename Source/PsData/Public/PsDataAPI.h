@@ -770,6 +770,11 @@ public:                                          \
 
 #define MAKE_TABLE_STRUCT(...)                                     \
 protected:                                                         \
+	virtual bool ShouldBeGenerateStruct() const override           \
+	{                                                              \
+		return true;                                               \
+	}                                                              \
+                                                                   \
 	virtual void InitStructProperties() override                   \
 	{                                                              \
 		Super::InitStructProperties();                             \

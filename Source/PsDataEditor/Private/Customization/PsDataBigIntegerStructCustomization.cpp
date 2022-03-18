@@ -111,7 +111,7 @@ void FPsDataBigIntegerStructCustomization::HandleTextBoxTextCommited(const FText
 	const auto BigIntegerOpt = PsDataTools::Numbers::ToNumber<FPsDataBigInteger>(PsDataTools::ToStringView(NewText.ToString()));
 	if (BigIntegerOpt)
 	{
-		SetBigIntegerValue(*BigIntegerOpt);
+		SetBigIntegerValue(BigIntegerOpt.GetValue());
 	}
 }
 

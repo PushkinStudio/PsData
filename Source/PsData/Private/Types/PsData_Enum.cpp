@@ -2,6 +2,7 @@
 
 #include "Types/PsData_Enum.h"
 
+#include "PsDataDefines.h"
 #include "Types/PsData_uint8.h"
 
 TMap<UEnum*, TMap<uint8, FString>> UPsDataEnumLibrary::EnumValueToString;

@@ -2,6 +2,8 @@
 
 #include "Types/PsData_int64.h"
 
+#include "PsDataDefines.h"
+
 DEFINE_FUNCTION(UPsDataInt64Library::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);

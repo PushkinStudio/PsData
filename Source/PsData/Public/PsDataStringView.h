@@ -379,7 +379,7 @@ struct TDataStringView
 			return TDataStringView();
 		}
 
-		return RightChop(CharIndex);
+		return RightChop(CharIndex + 1);
 	}
 
 	constexpr void RightByCharInline(T Char)
@@ -586,8 +586,7 @@ inline bool operator==(const FString& String, const PsDataTools::FDataStringView
 
 inline uint32 GetTypeHash(const PsDataTools::FDataStringViewTCHAR& StringView)
 {
-	// @see GetTypeHash(const FString&)
-	return FCrc::Strihash_DEPRECATED(StringView.Len(), StringView.GetData());
+	return GetTypeHash(PsDataTools::ToString(StringView));
 }
 
 template <typename T>

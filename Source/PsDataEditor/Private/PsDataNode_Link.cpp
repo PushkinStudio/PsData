@@ -3,6 +3,7 @@
 #include "PsDataNode_Link.h"
 
 #include "PsDataAPI.h"
+#include "PsDataDefines.h"
 
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"

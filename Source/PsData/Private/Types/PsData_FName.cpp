@@ -2,6 +2,8 @@
 
 #include "Types/PsData_FName.h"
 
+#include "PsDataDefines.h"
+
 DEFINE_FUNCTION(UPsDataFNameLibrary::execSetMapProperty)
 {
 	P_GET_OBJECT(UPsData, Target);
