@@ -615,7 +615,8 @@ void UPsNetworkData::Apply(const FPsNetworkEventBundle& Events)
 
 	DEFERRED_EVENT_PROCESSING();
 
-	for (const auto Event : Events.GetBundle())
+	const auto EventsList = Events.GetBundle();
+	for (const auto& Event : EventsList)
 	{
 		TDataPathExecutor<true, true> PathExecutor(this, Event.Path);
 
