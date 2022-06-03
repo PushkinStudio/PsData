@@ -228,14 +228,16 @@ private:
 		Link->PathFunction(Owner, LinkPath);
 		if (LinkPath.Len() == 0)
 		{
-			OutResult.Add(FString::Printf(TEXT("Link %s::%s has empty path"), *Owner->GetClass()->GetName(), *Link->Field->Name));
+			const FString FieldPath = Owner->GetPathFromRoot() + TEXT(".") + Link->Field->Name;
+			OutResult.Add(FString::Printf(TEXT("Link %s has empty path"), *FieldPath));
 			return;
 		}
 
 		auto Executor = TDataPathExecutor<false, false>(Owner->GetRoot(), LinkPath);
 		if (!Executor.Execute())
 		{
-			OutResult.Add(FString::Printf(TEXT("Link %s::%s has broken path: %s"), *Owner->GetClass()->GetName(), *Link->Field->Name, *LinkPath));
+			const FString FieldPath = Owner->GetPathFromRoot() + TEXT(".") + Link->Field->Name;
+			OutResult.Add(FString::Printf(TEXT("Link %s has broken path: %s"), *FieldPath, *LinkPath));
 			return;
 		}
 
@@ -246,7 +248,8 @@ private:
 		{
 			if (!Link->Meta.bNullable)
 			{
-				OutResult.Add(FString::Printf(TEXT("Link %s::%s has empty key without Nullable meta"), *Owner->GetClass()->GetName(), *Link->Field->Name));
+				const FString FieldPath = Owner->GetPathFromRoot() + TEXT(".") + Link->Field->Name;
+				OutResult.Add(FString::Printf(TEXT("Link %s has empty key without Nullable meta"), *FieldPath));
 			}
 			return;
 		}
@@ -322,7 +325,8 @@ private:
 		DataValueType* ValuePtr = nullptr;
 		if (!KeyExecutor.Execute(ValuePtr))
 		{
-			OutResult.Add(FString::Printf(TEXT("Link %s::%s has invalid key: %s (%s.%s)"), *Owner->GetClass()->GetName(), *Link->Field->Name, *Key, *Path, *Key));
+			const FString FieldPath = Owner->GetPathFromRoot() + TEXT(".") + Link->Field->Name;
+			OutResult.Add(FString::Printf(TEXT("Link %s has invalid key: %s (%s.%s)"), *FieldPath, *Key, *Path, *Key));
 		}
 	}
 
@@ -412,7 +416,8 @@ private:
 			DataValueType* ValuePtr = nullptr;
 			if (!KeyExecutor.Execute(ValuePtr))
 			{
-				OutResult.Add(FString::Printf(TEXT("Link %s::%s has invalid key: %s (%s.%s)"), *Owner->GetClass()->GetName(), *Link->Field->Name, *Key, *Path, *Key));
+				const FString FieldPath = Owner->GetPathFromRoot() + TEXT(".") + Link->Field->Name;
+				OutResult.Add(FString::Printf(TEXT("Link %s has invalid key: %s (%s.%s)"), *FieldPath, *Key, *Path, *Key));
 			}
 		}
 	}
