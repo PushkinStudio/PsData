@@ -863,3 +863,22 @@ public:                                                                         
 #define DMAP_OLD(__Type__, __Name__) DPROP_OLD(TMap<FString COMMA __Type__>, __Name__);
 
 #endif
+
+/***********************************
+ *
+ ***********************************/
+
+namespace Algo
+{
+template <typename T, class OwnerClass, int32 Hash, typename PredicateType>
+FORCEINLINE auto FindByPredicate(PsDataTools::TDPropProxy<T, OwnerClass, Hash>& PropProxy, const PredicateType& Predicate)
+{
+	return PropProxy.Get().FindByPredicate(Predicate);
+}
+
+template <typename T, class OwnerClass, int32 Hash, typename PredicateType>
+FORCEINLINE auto FindByPredicate(const PsDataTools::TDPropProxy<T, OwnerClass, Hash>& PropProxy, const PredicateType& Predicate)
+{
+	return PropProxy.Get().FindByPredicate(Predicate);
+}
+} // namespace Algo

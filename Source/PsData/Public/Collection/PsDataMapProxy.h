@@ -199,6 +199,38 @@ public:
 		return Property->GetValue().FindChecked(Key);
 	}
 
+	template <typename PredicateType>
+	PsDataTools::TConstRefType<T*, bConst> FindByPredicate(const PredicateType& Predicate)
+	{
+		auto& Map = Property->GetValue();
+		for (auto& Pair : Map)
+		{
+			PsDataTools::TConstRefType<T, true> Item = Pair.Value;
+			if (Predicate(Item))
+			{
+				return &Pair.Value;
+			}
+		}
+
+		return nullptr;
+	}
+
+	template <typename PredicateType>
+	PsDataTools::TConstRefType<T*, true> FindByPredicate(const PredicateType& Predicate) const
+	{
+		auto& Map = Property->GetValue();
+		for (auto& Pair : Map)
+		{
+			PsDataTools::TConstRefType<T, true> Item = Pair.Value;
+			if (Predicate(Item))
+			{
+				return &Pair.Value;
+			}
+		}
+
+		return nullptr;
+	}
+
 	int32 Num() const
 	{
 		return Property->GetValue().Num();
@@ -385,3 +417,18 @@ struct TPsDataBaseMapProxy<TMap<FString, T>, bConst>
 {
 	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
 };
+
+namespace Algo
+{
+template <typename T, bool bConst, typename PredicateType>
+FORCEINLINE PsDataTools::TConstRefType<T*, bConst> FindByPredicate(TPsDataBaseMapProxy<T, bConst> Proxy, const PredicateType& Predicate)
+{
+	return Proxy.FindByPredicate(Predicate);
+}
+
+template <typename T, typename PredicateType>
+FORCEINLINE PsDataTools::TConstRefType<T*, true> FindByPredicate(const TPsDataBaseMapProxy<T, true> Proxy, const PredicateType& Predicate)
+{
+	return Proxy.FindByPredicate(Predicate);
+}
+} // namespace Algo
