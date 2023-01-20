@@ -1,4 +1,4 @@
-// Copyright 2015-2022 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
 
 #include "PsDataCore.h"
 
@@ -258,11 +258,12 @@ int32 FClassFields::GetNumLinks() const
 	return LinkList.Num();
 }
 
-void FClassFields::CalculateDependencies(UClass* HeadClass, UClass* MainClass, TSet<UClass*>& OutList) const
+void FClassFields::CalculateDependencies(UClass* HeadClass, UClass* MainClass, TSet<UClass*>& OutList, bool& bOutHasCycDep) const
 {
 	if (Recursion > 0)
 	{
-		UE_LOG(LogDataReflection, Fatal, TEXT("Cyclic dependency detected! Head: %s Main: %s"), *HeadClass->GetName(), *MainClass->GetName());
+		bOutHasCycDep = true;
+		return;
 	}
 
 #if !UE_BUILD_SHIPPING
@@ -275,8 +276,13 @@ void FClassFields::CalculateDependencies(UClass* HeadClass, UClass* MainClass, T
 		if (Field->Context->IsData())
 		{
 			const auto FieldClass = CastChecked<UClass>(Field->Context->GetUEType());
+			if (HeadClass == FieldClass && Field->Meta.bStrict)
+			{
+				UE_LOG(LogDataReflection, Fatal, TEXT("Cyclic allocation detected (strict meta detected) for field: %s Head: %s Main: %s"), *Field->Name, *HeadClass->GetName(), *MainClass->GetName());
+			}
+
 			OutList.Add(FieldClass);
-			FDataReflection::GetFieldsByClass(FieldClass)->CalculateDependencies(HeadClass, FieldClass, OutList);
+			FDataReflection::GetFieldsByClass(FieldClass)->CalculateDependencies(HeadClass, FieldClass, OutList, bOutHasCycDep);
 		}
 	}
 
@@ -475,6 +481,7 @@ void FDataReflection::Compile()
 
 	check(DescribedClass == nullptr);
 
+	TSet<UClass*> ClassesWithCycDep;
 	TArray<UClass*> ReadOnlyClasses;
 	TMap<UClass*, TSet<UClass*>> UnresolvedDependencies;
 	for (auto& Pair : FieldsByClass)
@@ -488,7 +495,14 @@ void FDataReflection::Compile()
 		}
 
 		auto& Dependencies = UnresolvedDependencies.Add(Pair.Key);
-		Pair.Value.CalculateDependencies(Pair.Key, Pair.Key, Dependencies);
+
+		bool bHasCycDep = false;
+		Pair.Value.CalculateDependencies(Pair.Key, Pair.Key, Dependencies, bHasCycDep);
+
+		if (bHasCycDep)
+		{
+			ClassesWithCycDep.Add(Pair.Key);
+		}
 	}
 
 	for (const auto ReadOnlyClass : ReadOnlyClasses)
@@ -509,7 +523,13 @@ void FDataReflection::Compile()
 		for (auto ItA = UnresolvedDependencies.CreateIterator(); ItA; ++ItA)
 		{
 			const auto Class = ItA.Key();
+			const auto bHasCycDep = ClassesWithCycDep.Contains(Class);
 			auto& ClassDependencies = ItA.Value();
+
+			if (bHasCycDep)
+			{
+				ClassDependencies.Remove(Class);
+			}
 
 			for (auto ItB = ClassDependencies.CreateIterator(); ItB; ++ItB)
 			{
@@ -521,7 +541,7 @@ void FDataReflection::Compile()
 
 			if (ClassDependencies.Num() == 0)
 			{
-				CompileClass(ItA.Key());
+				CompileClass(Class, bHasCycDep);
 				ItA.RemoveCurrent();
 			}
 		}
@@ -535,12 +555,21 @@ void FDataReflection::Compile()
 	bCompiled = true;
 }
 
-void FDataReflection::CompileClass(UClass* Class)
+void FDataReflection::CompileClass(UClass* Class, bool bHasCycDep)
 {
 	check(!bCompiled);
 
 	const auto Instance = NewObject<UPsData>(GetTransientPackage(), Class);
-	CompileClassInstance(Instance, FPsDataFriend::ShouldBeGenerateStruct(Instance));
+	const bool bGenerateStruct = FPsDataFriend::ShouldBeGenerateStruct(Instance);
+	if (bGenerateStruct && bHasCycDep)
+	{
+		UE_LOG(LogDataReflection, Fatal, TEXT("Can't generate struct for class %s with cyclic dependency"), *Class->GetName());
+	}
+
+	if (!bHasCycDep)
+	{
+		CompileClassInstance(Instance, bGenerateStruct);
+	}
 }
 
 void FDataReflection::CompileClassInstance(UPsData* Instance, bool bGenerateStruct)

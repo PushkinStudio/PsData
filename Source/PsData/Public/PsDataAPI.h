@@ -1,4 +1,4 @@
-// Copyright 2015-2022 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
 
 #pragma once
 
@@ -30,8 +30,6 @@
 #include "Types/PsData_int32.h"
 #include "Types/PsData_int64.h"
 #include "Types/PsData_uint8.h"
-
-#define PSDATA_OLD_MACRO 1
 
 namespace PsDataTools
 {
@@ -796,74 +794,6 @@ public:
 #define DEFERRED_EVENT_PROCESSING() \
 	FPsDataEventScopeGuard EventScopeGuard;
 
-#if PSDATA_OLD_MACRO
-
-/***********************************
- * Macro DPROP_OLD
- ***********************************/
-
-#define DPROP_OLD(__Type__, __Name__)                                                                            \
-protected:                                                                                                       \
-	using DPropType_##__Name__ = PsDataTools::TDPropSelector<__Type__, ThisClass, GetStaticTypeHash(#__Name__)>; \
-	DPropType_##__Name__ DProp_##__Name__{#__Name__, this};                                                      \
-                                                                                                                 \
-public:                                                                                                          \
-	void Set##__Name__(typename DPropType_##__Name__::TValueType<false> Value)                                   \
-	{                                                                                                            \
-		DProp_##__Name__.Set(Value);                                                                             \
-	}                                                                                                            \
-                                                                                                                 \
-	typename DPropType_##__Name__::TReturnType<false> Get##__Name__()                                            \
-	{                                                                                                            \
-		return DProp_##__Name__;                                                                                 \
-	}                                                                                                            \
-                                                                                                                 \
-	typename DPropType_##__Name__::TReturnType<true> Get##__Name__() const                                       \
-	{                                                                                                            \
-		return DProp_##__Name__;                                                                                 \
-	}                                                                                                            \
-                                                                                                                 \
-	static const FString& Get##__Name__##ChangedEventName()                                                      \
-	{                                                                                                            \
-		return DPropType_##__Name__::StaticField()->GetChangedEventName();                                       \
-	}                                                                                                            \
-                                                                                                                 \
-	FPsDataBind Bind_##__Name__##Changed(const FPsDataDelegate& Delegate) const                                  \
-	{                                                                                                            \
-		return DProp_##__Name__.Bind(Delegate);                                                                  \
-	}
-
-/***********************************
- * Macro DPROP_CONST_OLD
- ***********************************/
-
-#define DPROP_CONST_OLD(__Type__, __Name__, __Friend__)                    \
-	DPROP_CONST(__Type__, __Name__, __Friend__)                            \
-                                                                           \
-	typename DPropType_##__Name__::TReturnType<true> Get##__Name__() const \
-	{                                                                      \
-		return __Name__.Get();                                             \
-	}                                                                      \
-                                                                           \
-	typename DPropType_##__Name__::TReturnType<true> Get##__Name__()       \
-	{                                                                      \
-		return __Name__.Get();                                             \
-	}
-
-/***********************************
- * Macro DARRAY_OLD
- ***********************************/
-
-#define DARRAY_OLD(__Type__, __Name__) DPROP_OLD(TArray<__Type__>, __Name__);
-
-/***********************************
- * Macro DMAP_OLD
- ***********************************/
-
-#define DMAP_OLD(__Type__, __Name__) DPROP_OLD(TMap<FString COMMA __Type__>, __Name__);
-
-#endif
-
 /***********************************
  *
  ***********************************/
@@ -871,13 +801,13 @@ public:                                                                         
 namespace Algo
 {
 template <typename T, class OwnerClass, int32 Hash, typename PredicateType>
-FORCEINLINE auto FindByPredicate(PsDataTools::TDPropProxy<T, OwnerClass, Hash>& PropProxy, const PredicateType& Predicate)
+FORCEINLINE auto FindByPredicate(PsDataTools::TDPropProxy<T, OwnerClass, Hash>& PropProxy, PredicateType Predicate)
 {
 	return PropProxy.Get().FindByPredicate(Predicate);
 }
 
 template <typename T, class OwnerClass, int32 Hash, typename PredicateType>
-FORCEINLINE auto FindByPredicate(const PsDataTools::TDPropProxy<T, OwnerClass, Hash>& PropProxy, const PredicateType& Predicate)
+FORCEINLINE auto FindByPredicate(const PsDataTools::TDPropProxy<T, OwnerClass, Hash>& PropProxy, PredicateType Predicate)
 {
 	return PropProxy.Get().FindByPredicate(Predicate);
 }

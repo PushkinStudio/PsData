@@ -1,4 +1,4 @@
-// Copyright 2015-2022 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
 
 #pragma once
 
@@ -298,7 +298,7 @@ public:
 	{
 	private:
 		PsDataTools::TConstValueType<PsDataTools::TDataProperty<TArray<T>>*, bIteratorConst> Property;
-		TArray<T> Items;
+		TArray<PsDataTools::TConstValueType<T, bIteratorConst>> Items;
 		int32 Index;
 
 	public:
@@ -313,7 +313,7 @@ public:
 			}
 			else
 			{
-				Items = Array;
+				Items.Append(Array);
 			}
 		}
 
@@ -375,7 +375,7 @@ public:
 			return Lhs.Index != Rhs.Index;
 		}
 
-		PsDataTools::TConstRefType<T, bIteratorConst> operator*() const
+		const auto& operator*()
 		{
 			return Items[Index];
 		}
@@ -413,3 +413,18 @@ struct TPsDataBaseArrayProxy<TMap<FString, T>, bConst>
 {
 	static_assert(PsDataTools::TAlwaysFalse<T>::value, "Unsupported type");
 };
+
+namespace Algo
+{
+template <typename T, bool bConst, typename PredicateType>
+FORCEINLINE PsDataTools::TConstRefType<T*, bConst> FindByPredicate(TPsDataBaseArrayProxy<T, bConst> Proxy, const PredicateType& Predicate)
+{
+	return Proxy.FindByPredicate(Predicate);
+}
+
+template <typename T, typename PredicateType>
+FORCEINLINE PsDataTools::TConstRefType<T*, true> FindByPredicate(const TPsDataBaseArrayProxy<T, true> Proxy, const PredicateType& Predicate)
+{
+	return Proxy.FindByPredicate(Predicate);
+}
+} // namespace Algo
