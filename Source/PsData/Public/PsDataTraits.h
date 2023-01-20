@@ -1,4 +1,4 @@
-// Copyright 2015-2022 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
 
 #pragma once
 
@@ -90,6 +90,25 @@ struct TConstRef<T**, bConst>
 
 template <typename T, bool bConst = true>
 using TConstRefType = typename TConstRef<T, bConst>::Type;
+
+/***********************************
+ * TConstRefR trait
+ ***********************************/
+
+template <typename T, bool bConst>
+struct TConstRefR
+{
+	using Type = const T&;
+};
+
+template <typename T, bool bConst>
+struct TConstRefR<T*, bConst>
+{
+	using Type = typename TSelector<T const* const&, T* const&, bConst>::Value;
+};
+
+template <typename T, bool bConst = true>
+using TConstRefRType = typename TConstRefR<T, bConst>::Type;
 
 /***********************************
  * Integer equivalent trait

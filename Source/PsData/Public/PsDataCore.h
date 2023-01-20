@@ -1,4 +1,4 @@
-// Copyright 2015-2022 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
 
 #pragma once
 
@@ -70,7 +70,7 @@ struct PSDATA_API FClassFields
 
 	int32 GetNumLinks() const;
 
-	void CalculateDependencies(UClass* HeadClass, UClass* MainClass, TSet<UClass*>& OutList) const;
+	void CalculateDependencies(UClass* HeadClass, UClass* MainClass, TSet<UClass*>& OutList, bool& bOutHasCycDep) const;
 
 private:
 	TArray<FDataField*> FieldsList;
@@ -109,7 +109,7 @@ public:
 	static bool IsBaseClass(const UClass* Class);
 
 	static void Compile();
-	static void CompileClass(UClass* Class);
+	static void CompileClass(UClass* Class, bool bHasCycDep);
 	static void CompileClassInstance(UPsData* Instance, bool bGenerateStruct);
 };
 
