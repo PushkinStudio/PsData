@@ -78,7 +78,10 @@ docs/                        user documentation; docs/dev/ is for contributors; 
    `PsData.Serialization.Translate`): the shorter one silently stops running. Check the count.
 9. **Docs are part of the change.** Public API or behaviour changes update the matching page in
    `docs/` and, if user-visible, `CHANGELOG.md`. Code samples in docs must compile against the
-   plugin — the safest source for a sample is a test.
+   plugin — the safest source for a sample is a test. In Markdown code blocks indent with four
+   spaces (GitHub draws a tab eight wide), put comments above the line they explain — `/** */`
+   over a property, `//` over a statement — and keep lines within 90 characters, which is what
+   GitHub shows without a scrollbar.
 10. **New source files** start with the repository's copyright line
     (`// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.`) like their neighbours.
 

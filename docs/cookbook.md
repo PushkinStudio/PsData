@@ -14,29 +14,38 @@ view to everyone else — the compiler enforces who writes what.
 UCLASS()
 class UFooRootData : public UPsDataRoot
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	DPROP_CONST(UFooConfigData*, ConfigData, class FFooConfigDataAccessor);  // static data
-	DPROP_CONST(UFooWorldData*, WorldData, class FFooWorldDataAccessor);     // static data
-	DPROP_CONST(UFooUserData*, UserData, class FFooUserDataAccessor);        // server-authoritative profile
-	DPROP_CONST(UFooBattleData*, BattleData, class FFooBattleDataAccessor);  // match state
+    /** Static data */
+    DPROP_CONST(UFooConfigData*, ConfigData, class FFooConfigDataAccessor);
 
-	DMETA(Strict)
-	DPROP(UFooSettingsData*, SettingsData);                                  // anyone may change settings
+    /** Static data */
+    DPROP_CONST(UFooWorldData*, WorldData, class FFooWorldDataAccessor);
 
-	DMETA(Strict)
-	DPROP(UFooRuntimeData*, RuntimeData);                                    // client-only scratch state
+    /** The server-authoritative profile */
+    DPROP_CONST(UFooUserData*, UserData, class FFooUserDataAccessor);
+
+    /** Match state */
+    DPROP_CONST(UFooBattleData*, BattleData, class FFooBattleDataAccessor);
+
+    /** Anyone may change settings */
+    DMETA(Strict)
+    DPROP(UFooSettingsData*, SettingsData);
+
+    /** Client-only scratch state */
+    DMETA(Strict)
+    DPROP(UFooRuntimeData*, RuntimeData);
 };
 
 class FFooWorldDataAccessor
 {
 private:
-	friend class UFooDataSubsystem;  // the only writer of static data
+    friend class UFooDataSubsystem;  // the only writer of static data
 
-	static UFooWorldData* GetMutable(UFooRootData* RootData)
-	{
-		return *RootData->WorldData.Mutable;
-	}
+    static UFooWorldData* GetMutable(UFooRootData* RootData)
+    {
+        return *RootData->WorldData.Mutable;
+    }
 };
 ```
 
@@ -51,25 +60,28 @@ PsData is ready, and links from live state into it.
 ```cpp
 void UFooDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	Super::Initialize(Collection);
-	FDataDelegates::PostDataModuleInitPromise.Bind(FSimpleDelegate::CreateUObject(this, &UFooDataSubsystem::LoadStaticData));
+    Super::Initialize(Collection);
+    FDataDelegates::PostDataModuleInitPromise.Bind(
+        FSimpleDelegate::CreateUObject(this, &UFooDataSubsystem::LoadStaticData));
 }
 
 void UFooDataSubsystem::LoadStaticData()
 {
-	RootData = NewObject<UFooRootData>(this);
-	const auto World = FFooWorldDataAccessor::GetMutable(RootData);
+    RootData = NewObject<UFooRootData>(this);
+    const auto World = FFooWorldDataAccessor::GetMutable(RootData);
 
-	FPsDataTableDeserializer Weapons(WeaponsTable.LoadSynchronous(), World->Weapons.Get());
-	World->DataDeserialize(&Weapons, true);
+    FPsDataTableDeserializer Weapons(
+        WeaponsTable.LoadSynchronous(), World->Weapons.Get());
+    World->DataDeserialize(&Weapons, true);
 
-	FPsDataTableDeserializer Characters(CharactersTable.LoadSynchronous(), World->Characters.Get());
-	World->DataDeserialize(&Characters, true);
+    FPsDataTableDeserializer Characters(
+        CharactersTable.LoadSynchronous(), World->Characters.Get());
+    World->DataDeserialize(&Characters, true);
 
-	for (const FString& Error : RootData->Validation())
-	{
-		UE_LOG(LogFoo, Error, TEXT("Static data: %s"), *Error);
-	}
+    for (const FString& Error : RootData->Validation())
+    {
+        UE_LOG(LogFoo, Error, TEXT("Static data: %s"), *Error);
+    }
 }
 ```
 
@@ -84,32 +96,34 @@ hash keeps a burst of edits — or an edit and its undo — from touching the di
 ```cpp
 void UFooSettingsSubsystem::Load()
 {
-	if (const auto SaveGame = UFooSettingsSaveGame::Load())
-	{
-		FPsDataFastJsonDeserializer Deserializer(SaveGame->SettingsJson);
-		Settings->DataDeserialize(&Deserializer);
-	}
-	LastSavedHash = Settings->GetHashInt32();
+    if (const auto SaveGame = UFooSettingsSaveGame::Load())
+    {
+        FPsDataFastJsonDeserializer Deserializer(SaveGame->SettingsJson);
+        Settings->DataDeserialize(&Deserializer);
+    }
+    LastSavedHash = Settings->GetHashInt32();
 
-	Binds.Add(Settings->Bind(UPsDataEvent::Changed, FPsDataDelegate::CreateUObject(this, &UFooSettingsSubsystem::OnSettingsChanged)));
-	Binds.Add(Settings->MasterVolume.Bind(FPsDataDelegate::CreateUObject(this, &UFooSettingsSubsystem::ApplyAudio)));
+    Binds.Add(Settings->Bind(UPsDataEvent::Changed,
+        FPsDataDelegate::CreateUObject(this, &UFooSettingsSubsystem::OnSettingsChanged)));
+    Binds.Add(Settings->MasterVolume.Bind(
+        FPsDataDelegate::CreateUObject(this, &UFooSettingsSubsystem::ApplyAudio)));
 }
 
 void UFooSettingsSubsystem::OnSettingsChanged(UPsDataEvent* Event)
 {
-	const int32 Hash = Settings->GetHashInt32();
-	if (Hash == LastSavedHash)
-	{
-		return;
-	}
-	LastSavedHash = Hash;
+    const int32 Hash = Settings->GetHashInt32();
+    if (Hash == LastSavedHash)
+    {
+        return;
+    }
+    LastSavedHash = Hash;
 
-	FPsDataFastJsonSerializer Serializer;
-	Settings->DataSerialize(&Serializer);
+    FPsDataFastJsonSerializer Serializer;
+    Settings->DataSerialize(&Serializer);
 
-	const auto SaveGame = UFooSettingsSaveGame::Create();
-	SaveGame->SettingsJson = Serializer.GetJsonString();
-	SaveGame->Save();
+    const auto SaveGame = UFooSettingsSaveGame::Create();
+    SaveGame->SettingsJson = Serializer.GetJsonString();
+    SaveGame->Save();
 }
 ```
 
@@ -133,11 +147,11 @@ ClientSyncRoom(FBase64::Encode(Output->GetBuffer()));
 // client
 void AFooPlayerController::ClientSyncRoom_Implementation(const FString& Snapshot)
 {
-	TArray<uint8> Bytes;
-	FBase64::Decode(Snapshot, Bytes);
+    TArray<uint8> Bytes;
+    FBase64::Decode(Snapshot, Bytes);
 
-	FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(Bytes));
-	BattleData->Room->DataDeserialize(&Deserializer);
+    FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(Bytes));
+    BattleData->Room->DataDeserialize(&Deserializer);
 }
 ```
 
@@ -153,19 +167,20 @@ them into JSON and back, so a new endpoint is a pair of class declarations.
 template <typename T>
 TSharedPtr<FJsonObject> ToJson(const T* Value)
 {
-	FPsDataJsonSerializer Serializer;
-	Serializer.bWriteDefaults = true;  // the backend sees every field, not just the non-default ones
-	Value->DataSerialize(&Serializer);
-	return Serializer.GetJson();
+    FPsDataJsonSerializer Serializer;
+    // The backend sees every field, not just the non-default ones
+    Serializer.bWriteDefaults = true;
+    Value->DataSerialize(&Serializer);
+    return Serializer.GetJson();
 }
 
 template <typename T>
 T* FromJson(const TSharedPtr<FJsonObject>& Json)
 {
-	const auto Data = NewObject<T>();
-	FPsDataJsonDeserializer Deserializer(Json);
-	Data->DataDeserialize(&Deserializer);
-	return Data;
+    const auto Data = NewObject<T>();
+    FPsDataJsonDeserializer Deserializer(Json);
+    Data->DataDeserialize(&Deserializer);
+    return Data;
 }
 ```
 
@@ -180,18 +195,18 @@ one into the class that owns it:
 UCLASS()
 class UFooNotifyData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMAP(FPsDataJson, UpdateItems);    // item id -> the item as the server sees it now
-	DMAP(FPsDataJson, UpdateFriends);
+    DMAP(FPsDataJson, UpdateItems);    // item id -> the item as the server sees it now
+    DMAP(FPsDataJson, UpdateFriends);
 };
 
 for (const auto& Pair : Notify->UpdateItems)
 {
-	UFooItemData* Item = UserData->Items[Pair.Key];
-	FPsDataFastJsonDeserializer Deserializer(Pair.Value.GetJsonString());
-	Item->DataDeserialize(&Deserializer, true);   // patch: only what changed fires events
+    UFooItemData* Item = UserData->Items[Pair.Key];
+    FPsDataFastJsonDeserializer Deserializer(Pair.Value.GetJsonString());
+    Item->DataDeserialize(&Deserializer, true);   // patch: only what changed fires events
 }
 ```
 `FPsDataSchemaJson::Get()` describes every class for code generation on the backend side.
@@ -204,20 +219,22 @@ the data up in the local tree on each side, bind, and let the data's lifetime dr
 ```cpp
 void AFooBomb::OnBombDataReady(const UFooBombData* InBombData)
 {
-	BombData = InBombData;
-	Binds.Add(BombData->Bind(UPsDataEvent::Removed, FPsDataDelegate::CreateUObject(this, &AFooBomb::OnBombRemoved)));
-	Binds.Add(BombData->State.Bind(FPsDataDelegate::CreateUObject(this, &AFooBomb::OnStateChanged)));
+    BombData = InBombData;
+    Binds.Add(BombData->Bind(UPsDataEvent::Removed,
+        FPsDataDelegate::CreateUObject(this, &AFooBomb::OnBombRemoved)));
+    Binds.Add(BombData->State.Bind(
+        FPsDataDelegate::CreateUObject(this, &AFooBomb::OnStateChanged)));
 }
 
 void AFooBomb::OnBombRemoved(UPsDataEvent* Event)
 {
-	Destroy();  // the data left the tree, so the actor goes too
+    Destroy();  // the data left the tree, so the actor goes too
 }
 
 void AFooBomb::EndPlay(const EEndPlayReason::Type Reason)
 {
-	Binds.Unbind();
-	Super::EndPlay(Reason);
+    Binds.Unbind();
+    Super::EndPlay(Reason);
 }
 ```
 
@@ -236,15 +253,15 @@ DMAP(UFooEffectData*, Effects);  // holds UFooStunEffectData, UFooBurnEffectData
 template <class T>
 TArray<const T*> GetEffects() const
 {
-	TArray<const T*> Result;
-	for (const auto& Pair : Effects)
-	{
-		if (const auto Effect = Cast<T>(Pair.Value))
-		{
-			Result.Add(Effect);
-		}
-	}
-	return Result;
+    TArray<const T*> Result;
+    for (const auto& Pair : Effects)
+    {
+        if (const auto Effect = Cast<T>(Pair.Value))
+        {
+            Result.Add(Effect);
+        }
+    }
+    return Result;
 }
 ```
 
@@ -270,7 +287,8 @@ Systems start in an order you do not fully control. A promise turns "is it ready
 this when it is", with no special case for "already happened":
 
 ```cpp
-FPsDataSimplePromise SubmodulesReady;  // resolved by the game instance once every subsystem started
+// Resolved by the game instance once every subsystem has started
+FPsDataSimplePromise SubmodulesReady;
 
 SubmodulesReady.Bind(FSimpleDelegate::CreateUObject(this, &UFooHud::Subscribe));
 ```

@@ -18,7 +18,7 @@ git clone https://github.com/PushkinStudio/PsData.git
 
 ```json
 "Plugins": [
-	{ "Name": "PsData", "Enabled": true }
+    { "Name": "PsData", "Enabled": true }
 ]
 ```
 
@@ -26,7 +26,8 @@ and depend on the runtime module from every module that declares or uses data cl
 
 ```csharp
 // <YourModule>.Build.cs
-PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "PsData" });
+PublicDependencyModuleNames.AddRange(
+    new string[] { "Core", "CoreUObject", "Engine", "PsData" });
 ```
 
 One include brings in the whole API:
@@ -56,47 +57,47 @@ A data class is a `UCLASS` deriving from `UPsData`. Its members are declared wit
 UENUM(BlueprintType)
 enum class EFooTeam : uint8
 {
-	None = 0,
-	Red = 1,
-	Blue = 2,
+    None = 0,
+    Red = 1,
+    Blue = 2,
 };
 DESCRIBE_ENUM(EFooTeam);
 
 UCLASS()
 class UFooWeaponProto : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DPROP(int32, Damage);
+    DPROP(int32, Damage);
 
-	DPROP(FPsDataFixedPoint, FireRate);
+    DPROP(FPsDataFixedPoint, FireRate);
 };
 
 UCLASS()
 class UFooCharacterData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DPROP(FString, Name);
+    DPROP(FString, Name);
 
-	DMETA(Event)
-	DPROP(int32, Health);
+    DMETA(Event)
+    DPROP(int32, Health);
 
-	DMETA(Event)
-	DPROP(EFooTeam, Team);
+    DMETA(Event)
+    DPROP(EFooTeam, Team);
 
-	DARRAY(FString, Tags);
+    DARRAY(FString, Tags);
 
-	DPROP(FString, Weapon);
-	DLINK(UFooWeaponProto*, Weapon, World.Weapons);
+    DPROP(FString, Weapon);
+    DLINK(UFooWeaponProto*, Weapon, World.Weapons);
 
 protected:
-	virtual void InitProperties() override
-	{
-		Health = 100;
-	}
+    virtual void InitProperties() override
+    {
+        Health = 100;
+    }
 };
 ```
 
@@ -118,32 +119,32 @@ Links resolve from a root, and the root is what ties static data and live state 
 UCLASS()
 class UFooWorldData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMAP(UFooWeaponProto*, Weapons);
+    DMAP(UFooWeaponProto*, Weapons);
 };
 
 UCLASS()
 class UFooBattleData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMAP(UFooCharacterData*, Characters);
+    DMAP(UFooCharacterData*, Characters);
 };
 
 UCLASS()
 class UFooRootData : public UPsDataRoot
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMETA(Strict)
-	DPROP(UFooWorldData*, World);
+    DMETA(Strict)
+    DPROP(UFooWorldData*, World);
 
-	DMETA(Strict)
-	DPROP(UFooBattleData*, Battle);
+    DMETA(Strict)
+    DPROP(UFooBattleData*, Battle);
 };
 ```
 
@@ -159,25 +160,26 @@ starts the game instance inside `GEngine->Init`, before the engine loop broadcas
 ```cpp
 void UFooDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	Super::Initialize(Collection);
+    Super::Initialize(Collection);
 
-	// Runs at once if PsData is already initialised, otherwise when it is
-	FDataDelegates::PostDataModuleInitPromise.Bind(FSimpleDelegate::CreateUObject(this, &UFooDataSubsystem::BuildModel));
+    // Runs at once if PsData is already initialised, otherwise when it is
+    FDataDelegates::PostDataModuleInitPromise.Bind(
+        FSimpleDelegate::CreateUObject(this, &UFooDataSubsystem::BuildModel));
 }
 
 void UFooDataSubsystem::BuildModel()
 {
-	RootData = NewObject<UFooRootData>(this);
+    RootData = NewObject<UFooRootData>(this);
 
-	const auto Rifle = NewObject<UFooWeaponProto>();
-	Rifle->Damage = 30;
-	Rifle->FireRate = FPsDataFixedPoint(TEXT("10.5"));
-	RootData->World->Weapons->Add(TEXT("rifle"), Rifle);
+    const auto Rifle = NewObject<UFooWeaponProto>();
+    Rifle->Damage = 30;
+    Rifle->FireRate = FPsDataFixedPoint(TEXT("10.5"));
+    RootData->World->Weapons->Add(TEXT("rifle"), Rifle);
 
-	const auto Alice = NewObject<UFooCharacterData>();
-	Alice->Name = TEXT("Alice");
-	Alice->Weapon = TEXT("rifle");
-	RootData->Battle->Characters->Add(TEXT("alice"), Alice);
+    const auto Alice = NewObject<UFooCharacterData>();
+    Alice->Name = TEXT("Alice");
+    Alice->Weapon = TEXT("rifle");
+    RootData->Battle->Characters->Add(TEXT("alice"), Alice);
 }
 ```
 
@@ -197,7 +199,8 @@ const UFooWeaponProto* Weapon = Alice->LinkByWeapon.Get(); // the link resolves 
 const int32 Damage = *Weapon->Damage;
 
 // Health has Event meta: this runs synchronously on every change
-Binds.Add(Alice->Health.Bind(FPsDataDelegate::CreateUObject(this, &UFooHealthBar::OnHealthChanged)));
+Binds.Add(Alice->Health.Bind(
+    FPsDataDelegate::CreateUObject(this, &UFooHealthBar::OnHealthChanged)));
 ```
 
 `Binds` is an `FPsDataBindCollection` member: it unbinds everything it holds when it is destroyed
