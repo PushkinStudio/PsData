@@ -17,7 +17,7 @@ engine version, so switching engines never rebuilds from scratch), copies the pl
 `Plugins/PsData`, builds `PsDataHostEditor`, runs `Automation RunTests PsData` headless and prints
 one line per test. The exit code is non-zero if anything failed to build or any test failed.
 
-Measured on Linux with this tree: UE 5.8.1 and UE 5.6.1, 15 tests each, all passing; a warm editor
+Measured on Linux with this tree: UE 5.8.1 and UE 5.6.1, 17 tests each, all passing; a warm editor
 build is ~25 s. `--game` compiles the engine's modules for the host once (~10 minutes cold).
 
 Why a copy and not a symlink: Unreal Build Accelerator tracks the symlinked path and the real path
@@ -60,12 +60,18 @@ test file covers one area:
 | `PsData.Events.*` | field events, `EventStorage`, `IgnoreFieldMeta`, bubbling, `StopPropagation`, collection `Added`/`Removed`, the deferred `Changed`, `DEFERRED_EVENT_PROCESSING`, promises |
 | `PsData.Tree`, `PsData.Collections` | keys and paths, parents and roots, map and array proxies, `Copy` |
 | `PsData.Links` | resolution, re-resolution on key change, `Nullable`, dangling keys, `Validation` |
-| `PsData.Serialization`, `PsData.Hash` | JSON DOM, fast JSON, binary round trips, aliases on the wire, patch vs replace, content hash |
+| `PsData.Serialization.RoundTrip`, `PsData.Hash` | JSON DOM, fast JSON, binary round trips, aliases on the wire, patch vs replace, content hash |
+| `PsData.Serialization.Translate` | binary and JSON DOM documents translated to fast JSON without the model |
+| `PsData.Types.Json` | `FPsDataJson` through every format and `Copy`: objects, arrays and scalars at the top level, int64 and 17-digit doubles, patch, change events |
 | `PsData.DataTable` | `MAKE_TABLE_STRUCT` row struct generation and DataTable import |
 | `PsData.Numbers.*` | `FPsDataFixedPoint`, `FPsDataBigInteger` |
 
 Not covered: the Blueprint nodes (the editor module is built, not exercised), `UPsNetworkData`
 replication, `DataSerializeAsync`, `FPsDataOptimizedBinarySerializer`.
+
+**A test name must not be the prefix of another.** `PsData.Serialization` silently stopped running
+the moment `PsData.Serialization.Translate` existed: the automation tree treats the shorter name as
+the group. Give every test a leaf name (`PsData.Serialization.RoundTrip`) and check the count.
 
 **A test is evidence once it has been seen to fail.** When a test pins down a fix, revert the fix,
 watch that test fail, restore it. Two defects fixed in 2.1 were found exactly this way: a

@@ -21,6 +21,7 @@
 #include "Types/PsData_FName.h"
 #include "Types/PsData_FPsDataBigInteger.h"
 #include "Types/PsData_FPsDataFixedPoint.h"
+#include "Types/PsData_FPsDataJson.h"
 #include "Types/PsData_FRuntimeFloatCurve.h"
 #include "Types/PsData_FString.h"
 #include "Types/PsData_FText.h"

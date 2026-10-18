@@ -147,6 +147,16 @@ bool FPsDataTableDeserializer::ReadValue(FName& OutValue)
 	return JsonDeserializer.ReadValue(OutValue);
 }
 
+bool FPsDataTableDeserializer::ReadValue(double& OutValue)
+{
+	return JsonDeserializer.ReadValue(OutValue);
+}
+
+EPsDataDeserializedValueType FPsDataTableDeserializer::NextValueType()
+{
+	return JsonDeserializer.NextValueType();
+}
+
 bool FPsDataTableDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator)
 {
 	return JsonDeserializer.ReadValue(OutValue, Allocator);

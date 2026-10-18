@@ -39,9 +39,20 @@ those are not re-verified here.
 
 ### Added
 
-- `PsDataTests`, a `DeveloperTool` module with 15 automation tests (`PsData.*`) over a miniature
-  game model: reflection, properties, events, tree, collections, links, serialization, hashing,
-  DataTable import, fixed-point and big-integer numbers.
+- `FPsDataJson`, a property type for any JSON value whose shape the model does not own (server
+  notifications, free-form attributes). Kept as compact text, written as real JSON in JSON documents
+  and as structure in binary; whole numbers up to 18 digits travel as `int64`, others as `double`
+  at full precision. Brought over from the copy of PsData that DAWG ships, with its fast-JSON array
+  handling fixed (an array inside a payload was read as an object there).
+- `FPsDataDeserializer::Translate(FPsDataSerializer*)` copies a value with everything nested in it
+  between any two formats without a model class, on top of a new `NextValueType()`.
+- `double` in every serializer, deserializer and stream (`WriteValue(double)`, `ReadValue(double&)`,
+  `WriteDouble`/`ReadDouble`). The new virtuals have default implementations, so serializers and
+  streams written outside the plugin keep compiling.
+- The JSON schema marks `FPsDataJson` fields with `IsDynamic`.
+- `PsDataTests`, a `DeveloperTool` module with 17 automation tests (`PsData.*`) over a miniature
+  game model: reflection, properties, events, tree, collections, links, serialization, translation,
+  `FPsDataJson`, hashing, DataTable import, fixed-point and big-integer numbers.
 - `Tools/test.sh`: builds the plugin in a generated host project for any engine and runs the suite.
 - Documentation: `docs/` (getting started, model reference, events, serialization, Blueprints,
   cookbook), `docs/ai-guide.md` for AI agents using the plugin, `AGENTS.md` for agents working on

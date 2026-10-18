@@ -98,6 +98,7 @@ Meta is read once per class and shared by all instances. A tag the parser does n
 | Enums | any `UENUM` with `DESCRIBE_ENUM` — serialized by name |
 | Engine structs | `FVector`, `FIntVector`, `FLinearColor`, `FRuntimeFloatCurve` |
 | Assets | `TSoftObjectPtr<T>`, `TSoftClassPtr<T>` |
+| Free-form JSON | `FPsDataJson` — any JSON value, kept as text and written as real JSON ([`serialization.md`](serialization.md#free-form-json-fpsdatajson)) |
 | Data | `UFooData*` for any `UPsData` subclass |
 | Containers | `TArray<T>` via `DARRAY`, `TMap<FString, T>` via `DMAP`, for any `T` above |
 

@@ -93,6 +93,11 @@ void FPsDataJsonSerializer::WriteValue(float Value)
 	WriteJsonValue(MakeShareable(new FJsonValueNumber(Value)));
 }
 
+void FPsDataJsonSerializer::WriteValue(double Value)
+{
+	WriteJsonValue(MakeShareable(new FJsonValueNumber(Value)));
+}
+
 void FPsDataJsonSerializer::WriteValue(bool Value)
 {
 	WriteJsonValue(MakeShareable(new FJsonValueBoolean(Value)));
@@ -304,6 +309,33 @@ bool FPsDataJsonDeserializer::ReadValue(float& OutValue)
 	const bool bResult = ReadJsonValue()->TryGetNumber(Out);
 	OutValue = static_cast<float>(Out);
 	return bResult;
+}
+
+bool FPsDataJsonDeserializer::ReadValue(double& OutValue)
+{
+	return ReadJsonValue()->TryGetNumber(OutValue);
+}
+
+EPsDataDeserializedValueType FPsDataJsonDeserializer::NextValueType()
+{
+	const TSharedPtr<FJsonValue> Value = ReadJsonValue();
+	switch (Value->Type)
+	{
+	case EJson::Null: return EPsDataDeserializedValueType::Null;
+	case EJson::String: return EPsDataDeserializedValueType::String;
+	case EJson::Boolean: return EPsDataDeserializedValueType::Boolean;
+	case EJson::Array: return EPsDataDeserializedValueType::Array;
+	case EJson::Object: return EPsDataDeserializedValueType::Object;
+	case EJson::Number:
+	{
+		// The DOM stores every number as a double; whole numbers a double holds exactly travel as int64
+		constexpr double MaxExactInteger = 9007199254740992.0; // 2^53
+		const double Number = Value->AsNumber();
+		const bool bExactInteger = FMath::IsFinite(Number) && FMath::Abs(Number) <= MaxExactInteger && Number == FMath::FloorToDouble(Number);
+		return bExactInteger ? EPsDataDeserializedValueType::Int64 : EPsDataDeserializedValueType::Double;
+	}
+	default: return EPsDataDeserializedValueType::None;
+	}
 }
 
 bool FPsDataJsonDeserializer::ReadValue(bool& OutValue)

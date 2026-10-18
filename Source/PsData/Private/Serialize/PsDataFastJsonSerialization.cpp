@@ -98,8 +98,10 @@ bool IsEmpty(const TCHAR* String, int32 StartPosition, int32 EndPosition)
 	return true;
 }
 
-void Trim(const TCHAR* String, int32& StartPosition, int32& EndPosition)
+void Trim(const TCHAR* String, int32& StartPosition, int32& EndPosition, bool& bOutQuoted)
 {
+	bOutQuoted = false;
+
 	while (StartPosition <= EndPosition)
 	{
 		if (IsSpace(String[StartPosition]))
@@ -132,6 +134,7 @@ void Trim(const TCHAR* String, int32& StartPosition, int32& EndPosition)
 		{
 			++StartPosition;
 			--EndPosition;
+			bOutQuoted = true;
 		}
 	}
 }
@@ -371,6 +374,26 @@ void FPsDataFastJsonSerializer::WriteValue(float Value)
 	PsDataTools::Numbers::ToString(Value, Buffer);
 }
 
+void FPsDataFastJsonSerializer::WriteValue(double Value)
+{
+	AppendComma();
+	AppendSpace();
+
+	if (!FMath::IsFinite(Value))
+	{
+		Buffer.Append(TEXT("null"), 4); // ECMA-404.8
+		return;
+	}
+
+	// The shorter of 15 and 17 significant digits that reads back as the same double
+	FString String = FString::Printf(TEXT("%.15g"), Value);
+	if (FCString::Atod(*String) != Value)
+	{
+		String = FString::Printf(TEXT("%.17g"), Value);
+	}
+	Buffer.Append(*String, String.Len());
+}
+
 void FPsDataFastJsonSerializer::WriteValue(bool Value)
 {
 	AppendComma();
@@ -458,6 +481,7 @@ FPsDataFastJsonPointer::FPsDataFastJsonPointer(EPsDataFastJsonToken InToken, int
 	, StartPosition(InStartPosition)
 	, EndPosition(InEndPosition)
 	, bHasString(false)
+	, bQuoted(false)
 {
 }
 
@@ -468,12 +492,18 @@ const FString& FPsDataFastJsonPointer::GetString(const TCHAR* Source)
 		bHasString = true;
 		if (!IsEmpty(Source, StartPosition, EndPosition))
 		{
-			Trim(Source, StartPosition, EndPosition);
+			Trim(Source, StartPosition, EndPosition, bQuoted);
 			String = JsonStringToString(Source, StartPosition, EndPosition - StartPosition + 1);
 		}
 	}
 
 	return String;
+}
+
+bool FPsDataFastJsonPointer::IsQuoted(const TCHAR* Source)
+{
+	GetString(Source);
+	return bQuoted;
 }
 
 void FPsDataFastJsonPointer::Reset()
@@ -558,6 +588,12 @@ void FPsDataFastJsonDeserializer::Parse()
 			break;
 		}
 	}
+
+	// A document that is a single value ("null", 42, "text") has no structural token at all
+	if (Pointers.Num() == 0 && Size > 0 && !IsEmpty(Source, 0, Size - 1))
+	{
+		Pointers.Add({EPsDataFastJsonToken::Value, 0, Size - 1, 1});
+	}
 }
 
 void FPsDataFastJsonDeserializer::SkipComma()
@@ -567,6 +603,67 @@ void FPsDataFastJsonDeserializer::SkipComma()
 	{
 		++PointerIndex;
 	}
+}
+
+EPsDataDeserializedValueType FPsDataFastJsonDeserializer::NextValueType()
+{
+	if (!Pointers.IsValidIndex(PointerIndex))
+	{
+		return EPsDataDeserializedValueType::None;
+	}
+
+	SkipComma();
+	if (!Pointers.IsValidIndex(PointerIndex))
+	{
+		return EPsDataDeserializedValueType::None;
+	}
+
+	auto& Pointer = Pointers[PointerIndex];
+	switch (Pointer.Token)
+	{
+	case EPsDataFastJsonToken::OpenObject: return EPsDataDeserializedValueType::Object;
+	case EPsDataFastJsonToken::OpenArray: return EPsDataDeserializedValueType::Array;
+	case EPsDataFastJsonToken::Value: break;
+	default: return EPsDataDeserializedValueType::None;
+	}
+
+	const FString& Value = Pointer.GetString(Source);
+	if (Pointer.IsQuoted(Source))
+	{
+		return EPsDataDeserializedValueType::String;
+	}
+
+	if (Value.Equals(TEXT("null"), ESearchCase::IgnoreCase))
+	{
+		return EPsDataDeserializedValueType::Null;
+	}
+
+	if (Value.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Value.Equals(TEXT("false"), ESearchCase::IgnoreCase))
+	{
+		return EPsDataDeserializedValueType::Boolean;
+	}
+
+	// Up to 18 digits always fits an int64 (the parser does not detect overflow); anything longer is a double
+	const int32 FirstDigit = Value.StartsWith(TEXT("-")) ? 1 : 0;
+	const int32 Digits = Value.Len() - FirstDigit;
+	bool bInteger = Digits > 0 && Digits <= 18;
+	for (int32 i = FirstDigit; bInteger && i < Value.Len(); ++i)
+	{
+		bInteger = FChar::IsDigit(Value[i]);
+	}
+
+	if (bInteger)
+	{
+		return EPsDataDeserializedValueType::Int64;
+	}
+
+	if (PsDataTools::Numbers::IsNumber(ToStringView(Value)))
+	{
+		return EPsDataDeserializedValueType::Double;
+	}
+
+	// Lenient like the rest of this parser: an unquoted word is read as a string
+	return EPsDataDeserializedValueType::String;
 }
 
 bool FPsDataFastJsonDeserializer::ReadKey(FString& OutKey)
@@ -719,6 +816,30 @@ bool FPsDataFastJsonDeserializer::ReadValue(float& OutValue)
 	}
 
 	OutValue = NumberOpt.GetValue();
+	Pointer.Reset();
+
+	++PointerIndex;
+	return true;
+}
+
+bool FPsDataFastJsonDeserializer::ReadValue(double& OutValue)
+{
+	SkipComma();
+
+	auto& Pointer = Pointers[PointerIndex];
+	if (Pointer.Token != EPsDataFastJsonToken::Value)
+	{
+		return false;
+	}
+
+	// FCString::Atod rounds correctly; the plugin's own parser accumulates powers of ten and drifts in the last digits
+	const FString& Value = Pointer.GetString(Source);
+	if (!PsDataTools::Numbers::IsNumber(ToStringView(Value)))
+	{
+		return false;
+	}
+
+	OutValue = FCString::Atod(*Value);
 	Pointer.Reset();
 
 	++PointerIndex;

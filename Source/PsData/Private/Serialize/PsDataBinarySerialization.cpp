@@ -78,6 +78,12 @@ void FPsDataBinarySerializer::WriteValue(const FName& Value)
 	OutputStream->WriteString(StringValue);
 }
 
+void FPsDataBinarySerializer::WriteValue(double Value)
+{
+	OutputStream->WriteUint8(EBinaryTokens::Value_double);
+	OutputStream->WriteDouble(Value);
+}
+
 void FPsDataBinarySerializer::WriteValue(const UPsData* Value)
 {
 	if (Value == nullptr)
@@ -250,6 +256,44 @@ bool FPsDataBinaryDeserializer::ReadValue(FName& OutValue)
 		return true;
 	}
 	return false;
+}
+
+bool FPsDataBinaryDeserializer::ReadValue(double& OutValue)
+{
+	if (CheckToken(EBinaryTokens::Value_double))
+	{
+		OutValue = InputStream->ReadDouble();
+		return true;
+	}
+	return false;
+}
+
+EPsDataDeserializedValueType FPsDataBinaryDeserializer::NextValueType()
+{
+	if (!InputStream->HasData())
+	{
+		return EPsDataDeserializedValueType::None;
+	}
+
+	// ReadToken may follow an imprint redirect; the read that comes next would follow it too
+	const auto Token = ReadToken();
+	InputStream->ShiftBack();
+
+	switch (Token)
+	{
+	case EBinaryTokens::Value_null: return EPsDataDeserializedValueType::Null;
+	case EBinaryTokens::ObjectBegin: return EPsDataDeserializedValueType::Object;
+	case EBinaryTokens::ArrayBegin: return EPsDataDeserializedValueType::Array;
+	case EBinaryTokens::Value_int32: return EPsDataDeserializedValueType::Int32;
+	case EBinaryTokens::Value_int64: return EPsDataDeserializedValueType::Int64;
+	case EBinaryTokens::Value_uint8: return EPsDataDeserializedValueType::Uint8;
+	case EBinaryTokens::Value_float: return EPsDataDeserializedValueType::Float;
+	case EBinaryTokens::Value_double: return EPsDataDeserializedValueType::Double;
+	case EBinaryTokens::Value_bool: return EPsDataDeserializedValueType::Boolean;
+	case EBinaryTokens::Value_FString: return EPsDataDeserializedValueType::String;
+	case EBinaryTokens::Value_FName: return EPsDataDeserializedValueType::String;
+	default: return EPsDataDeserializedValueType::None;
+	}
 }
 
 bool FPsDataBinaryDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator)

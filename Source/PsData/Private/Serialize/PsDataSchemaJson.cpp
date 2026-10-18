@@ -23,6 +23,8 @@ TSharedPtr<FJsonObject> MakePsDataChildJson(const FString Name, const FAbstractD
 
 	ChildPtr->SetStringField(TEXT("CppType"), Context->GetCppType());
 	ChildPtr->SetStringField(TEXT("CppContentType"), Context->GetCppContentType());
+	// FPsDataJson: any JSON value, no schema of its own
+	ChildPtr->SetBoolField(TEXT("IsDynamic"), Context->GetCppContentType() == TEXT("FPsDataJson"));
 
 	return ChildPtr;
 }

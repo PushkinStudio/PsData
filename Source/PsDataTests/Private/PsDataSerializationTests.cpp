@@ -11,7 +11,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPsDataSerializationTest, "PsData.Serialization",
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPsDataSerializationTest, "PsData.Serialization.RoundTrip",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
 
 bool FPsDataSerializationTest::RunTest(const FString& Parameters)

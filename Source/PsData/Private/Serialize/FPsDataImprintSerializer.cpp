@@ -261,6 +261,9 @@ void FPsDataImprintBinaryConvertor::Convert(FPsDataSerializer* Serializer)
 		case EBinaryTokens::Value_float:
 			ReadValue<float>(Serializer);
 			break;
+		case EBinaryTokens::Value_double:
+			ReadValue<double>(Serializer);
+			break;
 		case EBinaryTokens::Value_bool:
 			ReadValue<bool>(Serializer);
 			break;

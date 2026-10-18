@@ -64,6 +64,11 @@ void FPsDataStructSerializer::WriteValue(const FName& Value)
 	JsonSerializer.WriteValue(Value);
 }
 
+void FPsDataStructSerializer::WriteValue(double Value)
+{
+	JsonSerializer.WriteValue(Value);
+}
+
 void FPsDataStructSerializer::WriteValue(const UPsData* Value)
 {
 	JsonSerializer.WriteValue(Value);
@@ -282,6 +287,16 @@ bool FPsDataStructDeserializer::ReadValue(FString& OutValue)
 bool FPsDataStructDeserializer::ReadValue(FName& OutValue)
 {
 	return JsonDeserializer.ReadValue(OutValue);
+}
+
+bool FPsDataStructDeserializer::ReadValue(double& OutValue)
+{
+	return JsonDeserializer.ReadValue(OutValue);
+}
+
+EPsDataDeserializedValueType FPsDataStructDeserializer::NextValueType()
+{
+	return JsonDeserializer.NextValueType();
 }
 
 bool FPsDataStructDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator)

@@ -171,6 +171,29 @@ T* FromJson(const TSharedPtr<FJsonObject>& Json)
 
 Responses that update existing state go the other way: patch them into the live tree with
 `DataDeserialize(&Deserializer, true)` and let the events drive the UI.
+
+Server notifications in DAWG carry updates of several kinds in one message. The message declares
+them as `FPsDataJson` — it does not need to know their shape — and the client deserializes each
+one into the class that owns it:
+
+```cpp
+UCLASS()
+class UFooNotifyData : public UPsData
+{
+	GENERATED_BODY()
+
+public:
+	DMAP(FPsDataJson, UpdateItems);    // item id -> the item as the server sees it now
+	DMAP(FPsDataJson, UpdateFriends);
+};
+
+for (const auto& Pair : Notify->UpdateItems)
+{
+	UFooItemData* Item = UserData->Items[Pair.Key];
+	FPsDataFastJsonDeserializer Deserializer(Pair.Value.GetJsonString());
+	Item->DataDeserialize(&Deserializer, true);   // patch: only what changed fires events
+}
+```
 `FPsDataSchemaJson::Get()` describes every class for code generation on the backend side.
 
 ## Actors that mirror data

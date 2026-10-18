@@ -49,9 +49,32 @@ public:
 	virtual void WriteValue(const FName& Value) = 0;
 	virtual void WriteValue(const UPsData* Value) = 0;
 
+	/** Every built-in serializer writes doubles exactly; the fallback for others narrows to float */
+	virtual void WriteValue(double Value);
+
 	virtual void PopKey(const FString& Key) = 0;
 	virtual void PopArray() = 0;
 	virtual void PopObject() = 0;
+};
+
+/***********************************
+ * EPsDataDeserializedValueType
+ ***********************************/
+
+/** What a deserializer holds next, so a document can be copied without knowing its schema */
+enum class EPsDataDeserializedValueType : uint8
+{
+	None = 0,
+	Null,
+	Object,
+	Array,
+	Int32,
+	Int64,
+	Uint8,
+	Float,
+	Double,
+	Boolean,
+	String,
 };
 
 /***********************************
@@ -76,8 +99,17 @@ public:
 	virtual bool ReadValue(FName& OutValue) = 0;
 	virtual bool ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator) = 0;
 
+	/** Every built-in deserializer reads doubles exactly; the fallback for others reads a float */
+	virtual bool ReadValue(double& OutValue);
+
 	virtual void PopKey(const FString& Key) = 0;
 	virtual void PopIndex() = 0;
 	virtual void PopArray() = 0;
 	virtual void PopObject() = 0;
+
+	/** The type of the value at the read position, without consuming it. None when unknown or at the end */
+	virtual EPsDataDeserializedValueType NextValueType();
+
+	/** Copies the next value, with everything nested in it, into Serializer. False if the value could not be read */
+	bool Translate(FPsDataSerializer* Serializer);
 };

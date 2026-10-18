@@ -71,7 +71,9 @@ docs/                        user documentation; docs/dev/ is for contributors; 
    Don't introduce PsData calls on other threads; `DataSerializeAsync` converts an already-taken
    snapshot off-thread and is the pattern to copy.
 8. **A fix comes with a test, and the test has been seen to fail.** Add it to `Source/PsDataTests`
-   (one file per area), revert the fix, watch it fail, restore. Name tests `PsData.<Area>.<Case>`.
+   (one file per area), revert the fix, watch it fail, restore. Name tests `PsData.<Area>.<Case>`,
+   and never give a test the name of another test's group (`PsData.Serialization` next to
+   `PsData.Serialization.Translate`): the shorter one silently stops running. Check the count.
 9. **Docs are part of the change.** Public API or behaviour changes update the matching page in
    `docs/` and, if user-visible, `CHANGELOG.md`. Code samples in docs must compile against the
    plugin — the safest source for a sample is a test.

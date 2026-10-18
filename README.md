@@ -21,7 +21,7 @@
 
 <p align="center">
   <a href="#compatibility"><img src="https://img.shields.io/badge/Unreal%20Engine-5.6%20%C2%B7%205.8-1e2630?style=flat-square&logo=unrealengine&logoColor=white" alt="Unreal Engine 5.6 and 5.8" /></a>
-  <a href="docs/dev/testing.md"><img src="https://img.shields.io/badge/tests-15%20passing-2f7d5b?style=flat-square" alt="15 automation tests passing" /></a>
+  <a href="docs/dev/testing.md"><img src="https://img.shields.io/badge/tests-17%20passing-2f7d5b?style=flat-square" alt="17 automation tests passing" /></a>
   <a href="docs/blueprints.md"><img src="https://img.shields.io/badge/C%2B%2B%20%C2%B7%20Blueprints-1e2630?style=flat-square" alt="C++ and Blueprints" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1e2630?style=flat-square" alt="MIT license" /></a>
 </p>
@@ -95,7 +95,8 @@ storage, accessors, events, reflection for the serializers and the Blueprint nod
 **Typed properties, zero boilerplate.** `DPROP(int32, Health)` is a member you assign, compare
 and increment like an `int32` — and it knows its owner, its key on the wire and its event name.
 Numbers, strings, names, text, enums, vectors, colours, curves, soft references, fixed-point and
-big integers, arrays and string-keyed maps of any of them, and child data.
+big integers, free-form JSON (`FPsDataJson`, for payloads the model does not own), arrays and
+string-keyed maps of any of them, and child data.
 → [`docs/model.md`](docs/model.md)
 
 **Events that bubble.** Mark a field `Event` and every change is broadcast synchronously, with
@@ -110,7 +111,8 @@ lists every dangling key in the tree without crashing — run it after loading d
 → [`docs/model.md`](docs/model.md)
 
 **Any node to JSON or binary, and back.** Fast JSON for save games and HTTP, the engine's JSON DOM,
-binary for snapshots inside RPCs. Load with a patch to apply only what a server sent. Content hashes
+binary for snapshots inside RPCs. Load with a patch to apply only what a server sent; `Translate()`
+converts a document between formats without the model. Content hashes
 tell you whether anything really changed; `Copy()` deep-copies a subtree.
 → [`docs/serialization.md`](docs/serialization.md)
 
@@ -195,8 +197,8 @@ docs spell them out for agents:
 
 | Engine | Status |
 | --- | --- |
-| UE 5.8 | Verified on 5.8.1: editor, Game and Shipping targets build with no plugin warnings; 15/15 tests pass. |
-| UE 5.6 | Verified on 5.6.1: editor target builds with no plugin warnings; 15/15 tests pass. |
+| UE 5.8 | Verified on 5.8.1: editor, Game and Shipping targets build with no plugin warnings; 17/17 tests pass. |
+| UE 5.6 | Verified on 5.6.1: editor target builds with no plugin warnings; 17/17 tests pass. |
 | UE 5.7 | Not verified here; the version guards cover it. |
 | Earlier | The source keeps upstream's compatibility branches back to 4.24; they are not re-verified. |
 
@@ -209,7 +211,7 @@ Tools/test.sh /path/to/UnrealEngine
 ```
 
 Builds the plugin in a generated host project for that engine and runs the `PsData.*` automation
-suite — 15 tests over a miniature game model. Windows steps and coverage:
+suite — 17 tests over a miniature game model. Windows steps and coverage:
 [`docs/dev/testing.md`](docs/dev/testing.md).
 
 ## License

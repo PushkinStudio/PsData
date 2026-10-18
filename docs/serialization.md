@@ -59,6 +59,44 @@ Its advantage is that nothing is parsed. Use the optimized form, or compress, wh
 it**: the string must outlive the deserializer. Passing a temporary — a `TEXT("...")` literal or a
 function's return value — is safe since 2.1, which takes such strings over (`FString&&` overload).
 
+## Free-form JSON: `FPsDataJson`
+
+A field of type `FPsDataJson` holds any JSON value — an object, an array, a string, a number,
+`true`/`false` or `null` — whose shape the model does not own: a server notification, an item's
+free-form attributes, a mod's settings. It is stored as compact JSON text and written as the value
+itself, so a JSON document embeds it as JSON and binary carries its structure; it is never a string
+inside a string.
+
+```cpp
+DMAP(FPsDataJson, UpdateItems);   // what the server sends, keyed by item id
+
+Notify->Payload = FPsDataJson(TEXT("{\"hp\": 7, \"buffs\": [\"haste\"]}"));
+const FString& Text = Notify->Payload->GetJsonString();   // {"hp":7,"buffs":["haste"]}
+const bool bEmpty = Notify->Payload->IsNull();            // default is null
+```
+
+Numbers keep their precision across every format: whole numbers up to 18 digits travel as
+`int64`, others as `double`, written with the fewest digits that read back as the same value. Text
+is compared case-sensitively, so assigning the same JSON again fires no event. To turn a payload
+into a data class, deserialize its text: see [the cookbook](cookbook.md#a-backend-protocol-made-of-data-classes).
+
+## Translating between formats
+
+`Deserializer.Translate(&Serializer)` copies the next value — with everything nested in it — from
+any deserializer into any serializer, without a model class: binary to JSON for a log line, JSON
+DOM to fast JSON, a stored payload into the document being written. It is what `FPsDataJson` is
+built on. It returns false when the input is not a readable value.
+
+```cpp
+FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(Bytes));
+FPsDataFastJsonSerializer Json;
+Deserializer.Translate(&Json);   // the snapshot as readable JSON
+```
+
+Serializers and deserializers written outside the plugin keep compiling: `NextValueType()` and the
+`double` overloads that `Translate` needs have default implementations (no type, and a `float`
+round trip). Override them to make such a class translatable at full precision.
+
 ## Patching
 
 `DataDeserialize(&Deserializer, true)` writes only the fields present in the document and leaves

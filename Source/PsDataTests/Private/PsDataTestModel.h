@@ -124,6 +124,21 @@ public:
 	DMAP(UPsDataTestCharacter*, Characters);
 };
 
+/** A protocol message whose payloads the model does not own */
+UCLASS()
+class UPsDataTestMessage : public UPsData
+{
+	GENERATED_BODY()
+
+public:
+	DMETA(Event)
+	DPROP(FPsDataJson, Payload);
+
+	DARRAY(FPsDataJson, Items);
+
+	DMAP(FPsDataJson, Updates);
+};
+
 UCLASS()
 class UPsDataTestRoot : public UPsDataRoot
 {

@@ -21,7 +21,7 @@ PsData's reflection compiles at `PostEngineInit`, which in a packaged game is af
 
 - [Model](https://github.com/PushkinStudio/PsData/blob/develop/docs/model.md): every macro, meta tag (`Event`, `Bubbles`, `EventStorage`, `Strict`, `Alias`, `ReadOnly`, `Hidden`, `Deprecated`, `CustomType`, `Nullable`) and supported type; the tree API; rules enforced with fatal errors.
 - [Events](https://github.com/PushkinStudio/PsData/blob/develop/docs/events.md): field events, bubbling, built-in events, the deferred per-object `Changed` event, `DEFERRED_EVENT_PROCESSING`, promises.
-- [Serialization](https://github.com/PushkinStudio/PsData/blob/develop/docs/serialization.md): fast JSON, JSON DOM, binary, optimized binary, struct and DataTable serializers; patching; content hash; validation; schema; `UPsNetworkData` replication.
+- [Serialization](https://github.com/PushkinStudio/PsData/blob/develop/docs/serialization.md): fast JSON, JSON DOM, binary, optimized binary, struct and DataTable serializers; `FPsDataJson` free-form payloads; `Translate` between formats; patching; content hash; validation; schema; `UPsNetworkData` replication.
 - [Blueprints](https://github.com/PushkinStudio/PsData/blob/develop/docs/blueprints.md): generated Get/Set/Link/collection nodes and Bind.
 - [Cookbook](https://github.com/PushkinStudio/PsData/blob/develop/docs/cookbook.md): production patterns — root with role-gated mutation, DataTable static data, self-saving settings, binary snapshots over RPC, backend protocol classes, actors that mirror data.
 

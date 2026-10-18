@@ -48,6 +48,7 @@ public:
 	virtual void WriteValue(bool Value) override;
 	virtual void WriteValue(const FString& Value) override;
 	virtual void WriteValue(const FName& Value) override;
+	virtual void WriteValue(double Value) override;
 	virtual void WriteValue(const UPsData* Value) override;
 
 	virtual void PopKey(const FString& Key) override;
@@ -76,6 +77,7 @@ struct FPsDataFastJsonPointer
 public:
 	FPsDataFastJsonPointer(EPsDataFastJsonToken Token, int32 StartPosition, int32 EndPosition, int32 Depth);
 	const FString& GetString(const TCHAR* Source);
+	bool IsQuoted(const TCHAR* Source);
 	void Reset();
 
 	EPsDataFastJsonToken Token;
@@ -87,6 +89,7 @@ private:
 
 	FString String;
 	bool bHasString;
+	bool bQuoted;
 };
 
 /***********************************
@@ -131,6 +134,8 @@ public:
 	virtual bool ReadValue(bool& OutValue) override;
 	virtual bool ReadValue(FString& OutValue) override;
 	virtual bool ReadValue(FName& OutValue) override;
+	virtual bool ReadValue(double& OutValue) override;
+	virtual EPsDataDeserializedValueType NextValueType() override;
 	virtual bool ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator) override;
 
 	virtual void PopKey(const FString& Key) override;
