@@ -1,0 +1,42 @@
+# PsData
+
+> Reactive data model plugin for Unreal Engine (C++, source plugin, MIT). Game state, static
+> configs and protocol messages are declared as `UPsData` classes with macros (`DPROP`, `DARRAY`,
+> `DMAP`, `DLINK`, `DMETA`) and get typed accessors, change events that bubble up the data tree,
+> observable collections, typed links (foreign keys) between branches, JSON and binary
+> serialization with patching, content hashes, DataTable import, and generated Blueprint nodes.
+> Verified on UE 5.6 and 5.8. From Pushkin Studio; used in production in DAWG.
+
+Two facts explain most surprises: events fire only for fields declared with `DMETA(Event)`, and
+PsData's reflection compiles at `PostEngineInit`, which in a packaged game is after
+`UGameInstance::Init` — build models from `FDataDelegates::PostDataModuleInitPromise`.
+
+## Start here
+
+- [README](https://github.com/PushkinStudio/PsData/blob/develop/README.md): what it is, a full example, install.
+- [Getting started](https://github.com/PushkinStudio/PsData/blob/develop/docs/getting-started.md): install, declare a model, root, read/write/observe, save/load.
+- [AI guide](https://github.com/PushkinStudio/PsData/blob/develop/docs/ai-guide.md): rules for agents writing game code with PsData — the mistakes that compile and then fail. Read before generating PsData code.
+
+## Reference
+
+- [Model](https://github.com/PushkinStudio/PsData/blob/develop/docs/model.md): every macro, meta tag (`Event`, `Bubbles`, `EventStorage`, `Strict`, `Alias`, `ReadOnly`, `Hidden`, `Deprecated`, `CustomType`, `Nullable`) and supported type; the tree API; rules enforced with fatal errors.
+- [Events](https://github.com/PushkinStudio/PsData/blob/develop/docs/events.md): field events, bubbling, built-in events, the deferred per-object `Changed` event, `DEFERRED_EVENT_PROCESSING`, promises.
+- [Serialization](https://github.com/PushkinStudio/PsData/blob/develop/docs/serialization.md): fast JSON, JSON DOM, binary, optimized binary, struct and DataTable serializers; patching; content hash; validation; schema; `UPsNetworkData` replication.
+- [Blueprints](https://github.com/PushkinStudio/PsData/blob/develop/docs/blueprints.md): generated Get/Set/Link/collection nodes and Bind.
+- [Cookbook](https://github.com/PushkinStudio/PsData/blob/develop/docs/cookbook.md): production patterns — root with role-gated mutation, DataTable static data, self-saving settings, binary snapshots over RPC, backend protocol classes, actors that mirror data.
+
+## Source
+
+- [PsDataAPI.h](https://github.com/PushkinStudio/PsData/blob/develop/Source/PsData/Public/PsDataAPI.h): the macros; the single include for users.
+- [PsData.h](https://github.com/PushkinStudio/PsData/blob/develop/Source/PsData/Public/PsData.h): `UPsData` — tree, events, serialization entry points.
+- [Test model](https://github.com/PushkinStudio/PsData/blob/develop/Source/PsDataTests/Private/PsDataTestModel.h): a compact, compiling example of every declaration style; the tests next to it are working usage examples.
+
+## For agents working on the plugin
+
+- [AGENTS.md](https://github.com/PushkinStudio/PsData/blob/develop/AGENTS.md): build and test (`Tools/test.sh <engine-root>`), layout, rules for changes.
+- [Testing](https://github.com/PushkinStudio/PsData/blob/develop/docs/dev/testing.md): host project, manual steps, test coverage.
+
+## Optional
+
+- [Changelog](https://github.com/PushkinStudio/PsData/blob/develop/CHANGELOG.md)
+- [License (MIT)](https://github.com/PushkinStudio/PsData/blob/develop/LICENSE)
