@@ -1,4 +1,4 @@
-// Copyright 2015-2026 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "PsDataTestModel.h"
 
