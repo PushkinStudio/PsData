@@ -44,43 +44,51 @@ Blueprint nodes — comes from these macros.
 UCLASS()
 class UFooCharacterData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DPROP(FString, Name);
+    DPROP(FString, Name);
 
-	DMETA(Event, EventStorage)                       // broadcast on change, with the old value
-	DPROP(int32, Health);
+    /** Broadcast on change, with the old value */
+    DMETA(Event, EventStorage)
+    DPROP(int32, Health);
 
-	DMETA(Alias = "hp_max")                          // renamed in C++, same key on the wire
-	DPROP(int32, MaxHealth);
+    /** Renamed in C++, same key on the wire */
+    DMETA(Alias = "hp_max")
+    DPROP(int32, MaxHealth);
 
-	DPROP(int32, Kills);                             // no Event meta: silent unless asked
+    /** No Event meta: silent unless a listener asks */
+    DPROP(int32, Kills);
 
-	DMETA(Event)
-	DPROP(EFooTeam, Team);
+    DMETA(Event)
+    DPROP(EFooTeam, Team);
 
-	DMETA(Strict)                                    // allocated with its owner, never null
-	DPROP(UFooPointData*, Location);
+    /** Allocated with its owner, never null */
+    DMETA(Strict)
+    DPROP(UFooPointData*, Location);
 
-	DARRAY(FString, Tags);
+    DARRAY(FString, Tags);
 
-	DPROP(FString, Weapon);                          // a key...
-	DLINK(UFooWeaponProto*, Weapon, World.Weapons);  // ...resolved into static data
+    /** A key, resolved into static data by the link below */
+    DPROP(FString, Weapon);
+    DLINK(UFooWeaponProto*, Weapon, World.Weapons);
 
-	DPROP(FString, Target);
-	DMETA(Nullable)                                  // may point at nothing
-	DLINK(UFooCharacterData*, Target, Battle.Characters);
+    /** May point at nothing */
+    DPROP(FString, Target);
+    DMETA(Nullable)
+    DLINK(UFooCharacterData*, Target, Battle.Characters);
 
-	DMETA(Event, CustomType)                         // any subclass, saved with its class name
-	DMAP(UFooEffectData*, Effects);
+    /** Any subclass of UFooEffectData, saved with its class name */
+    DMETA(Event, CustomType)
+    DMAP(UFooEffectData*, Effects);
 
 protected:
-	virtual void InitProperties() override           // defaults; runs again on every Reset()
-	{
-		Health = 100;
-		MaxHealth = 100;
-	}
+    /** Defaults; runs again on every Reset() */
+    virtual void InitProperties() override
+    {
+        Health = 100;
+        MaxHealth = 100;
+    }
 };
 ```
 
@@ -91,115 +99,119 @@ protected:
 UENUM()
 enum class EFooTeam : uint8
 {
-	None,
-	Red,
-	Blue,
+    None,
+    Red,
+    Blue,
 };
 DESCRIBE_ENUM(EFooTeam);
 
 UCLASS()
 class UFooWeaponProto : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DPROP(int32, Damage);
+    DPROP(int32, Damage);
 
-	DPROP(FPsDataFixedPoint, FireRate);   // "10.5" is exactly 10.5
+    /** "10.5" is exactly 10.5 */
+    DPROP(FPsDataFixedPoint, FireRate);
 
-	MAKE_TABLE_STRUCT({                    // generates FooWeaponProto_DataTableRow for designers
-		Damage = 0;
-		FireRate = 0;
-	});
+    /** Generates FooWeaponProto_DataTableRow, the row struct designers pick */
+    MAKE_TABLE_STRUCT({
+        Damage = 0;
+        FireRate = 0;
+    });
 };
 
 UCLASS()
 class UFooPointData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMETA(Event, Bubbles)                  // heard by every ancestor
-	DPROP(int32, X);
+    /** Heard by every ancestor */
+    DMETA(Event, Bubbles)
+    DPROP(int32, X);
 
-	DMETA(Event, Bubbles)
-	DPROP(int32, Y);
+    DMETA(Event, Bubbles)
+    DPROP(int32, Y);
 };
 
 UCLASS()
 class UFooEffectData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DPROP(FPsDataFixedPoint, Duration);
+    DPROP(FPsDataFixedPoint, Duration);
 };
 
 UCLASS()
 class UFooStunEffectData : public UFooEffectData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 };
 
 UCLASS()
 class UFooWorldData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMAP(UFooWeaponProto*, Weapons);
+    DMAP(UFooWeaponProto*, Weapons);
 };
 
 UCLASS()
 class UFooBattleData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMETA(Event)
-	DPROP(int32, Round);
+    DMETA(Event)
+    DPROP(int32, Round);
 
-	DMAP(UFooCharacterData*, Characters);
+    DMAP(UFooCharacterData*, Characters);
 };
 
 UCLASS()
 class UFooSettingsData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMETA(Event)
-	DPROP(float, MasterVolume);
+    DMETA(Event)
+    DPROP(float, MasterVolume);
 
-	DMETA(Event)
-	DPROP(FString, Language);
+    DMETA(Event)
+    DPROP(FString, Language);
 };
 
 UCLASS()
 class UFooConfigData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DPROP(int32, RoundSeconds);
+    DPROP(int32, RoundSeconds);
 };
 
 UCLASS()
 class UFooRootData : public UPsDataRoot
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMETA(Strict)
-	DPROP(UFooWorldData*, World);
+    DMETA(Strict)
+    DPROP(UFooWorldData*, World);
 
-	DMETA(Strict)
-	DPROP(UFooBattleData*, Battle);
+    DMETA(Strict)
+    DPROP(UFooBattleData*, Battle);
 
-	DMETA(Strict)
-	DPROP(UFooSettingsData*, Settings);
+    DMETA(Strict)
+    DPROP(UFooSettingsData*, Settings);
 
-	DPROP_CONST(UFooConfigData*, Config, class UFooDataSubsystem);   // only the data subsystem writes it
+    /** Only UFooDataSubsystem may write it */
+    DPROP_CONST(UFooConfigData*, Config, class UFooDataSubsystem);
 };
 ```
 
@@ -228,20 +240,26 @@ or to a collection:
 
 ```cpp
 // HUD: a health bar. The event carries the old and the new value
-Binds.Add(Alice->Health.Bind(FPsDataDelegate::CreateLambda([this, Alice](UPsDataEvent* Event) {
-	const auto Change = Alice->Health.GetEventStorage(Event);
-	HealthBar->Animate(Change->GetPreviousValue(), Change->GetValue());
-})));
+Binds.Add(Alice->Health.Bind(
+    FPsDataDelegate::CreateLambda([this, Alice](UPsDataEvent* Event) {
+        const auto Change = Alice->Health.GetEventStorage(Event);
+        HealthBar->Animate(Change->GetPreviousValue(), Change->GetValue());
+    })));
 
-// HUD: a minimap. One listener on the battle hears every character move; X and Y bubble up
-Binds.Add(Battle->Bind(UFooPointData::GetXChangedEventName(), FPsDataDelegate::CreateLambda([this](UPsDataEvent* Event) {
-	const auto Character = Cast<UFooCharacterData>(Event->GetTarget()->GetParent());
-	Minimap->Move(Character->GetDataKey(), *Character->Location->X, *Character->Location->Y);
-})));
+// HUD: a minimap. One listener on the battle hears every character move,
+// because X and Y bubble up
+Binds.Add(Battle->Bind(UFooPointData::GetXChangedEventName(),
+    FPsDataDelegate::CreateLambda([this](UPsDataEvent* Event) {
+        const auto Character = Cast<UFooCharacterData>(Event->GetTarget()->GetParent());
+        Minimap->Move(Character->GetDataKey(),
+            *Character->Location->X, *Character->Location->Y);
+    })));
 
-// Game mode: pawns that follow the data, spawned when a character joins, destroyed when it leaves
-Binds.Add(Battle->Characters->Bind(UPsDataEvent::Added, FPsDataDelegate::CreateUObject(this, &AFooGameMode::SpawnPawn)));
-Binds.Add(Battle->Characters->Bind(UPsDataEvent::Removed, FPsDataDelegate::CreateUObject(this, &AFooGameMode::DestroyPawn)));
+// Game mode: pawns follow the data, spawned and destroyed with their characters
+Binds.Add(Battle->Characters->Bind(UPsDataEvent::Added,
+    FPsDataDelegate::CreateUObject(this, &AFooGameMode::SpawnPawn)));
+Binds.Add(Battle->Characters->Bind(UPsDataEvent::Removed,
+    FPsDataDelegate::CreateUObject(this, &AFooGameMode::DestroyPawn)));
 ```
 
 `Binds` is an `FPsDataBindCollection`; everything in it unbinds when it is destroyed. Every object
@@ -253,14 +271,15 @@ also sends one deferred `Changed` per burst of edits — the event to hang savin
 ```cpp
 void AFooGameMode::StartRound()
 {
-	DEFERRED_EVENT_PROCESSING();   // listeners run after the block, and see the finished state
+    // Listeners run after the block, and see the finished state
+    DEFERRED_EVENT_PROCESSING();
 
-	++Battle->Round;
-	for (const auto& Pair : Battle->Characters)
-	{
-		Pair.Value->Health = *Pair.Value->MaxHealth;
-		Pair.Value->Effects->Empty();
-	}
+    ++Battle->Round;
+    for (const auto& Pair : Battle->Characters)
+    {
+        Pair.Value->Health = *Pair.Value->MaxHealth;
+        Pair.Value->Effects->Empty();
+    }
 }
 ```
 
@@ -270,58 +289,67 @@ Live state stores keys; links resolve them through the tree, cache the result an
 either side changes.
 
 ```cpp
-const UFooWeaponProto* Weapon = Alice->LinkByWeapon.Get();   // World.Weapons[Alice->Weapon]
+// World.Weapons[Alice->Weapon]
+const UFooWeaponProto* Weapon = Alice->LinkByWeapon.Get();
 const int32 Damage = *Weapon->Damage;
 
-if (const UFooCharacterData* Target = Alice->LinkByTarget.Get())   // Nullable: may be empty
+// Nullable: may be empty
+if (const UFooCharacterData* Target = Alice->LinkByTarget.Get())
 {
-	UE_LOG(LogTemp, Log, TEXT("%s aims at %s"), **Alice->Name, **Target->Name);
+    UE_LOG(LogTemp, Log, TEXT("%s aims at %s"), **Alice->Name, **Target->Name);
 }
 
-Alice->Weapon = TEXT("shotgun");   // the link follows the key; nothing to re-resolve by hand
+// The link follows the key; nothing to re-resolve by hand
+Alice->Weapon = TEXT("shotgun");
 
-for (const FString& Error : RootData->Validation())   // every dangling key in the tree, no crash
+// Every dangling key in the tree, without a crash
+for (const FString& Error : RootData->Validation())
 {
-	UE_LOG(LogTemp, Error, TEXT("%s"), *Error);
+    UE_LOG(LogTemp, Error, TEXT("%s"), *Error);
 }
 ```
 
 ### Decide who may write
 
 ```cpp
-const int32 Seconds = *RootData->Config->RoundSeconds;   // anyone reads
-// RootData->Config->RoundSeconds = 90;                 // does not compile: Config is const here
+// Anyone reads...
+const int32 Seconds = *RootData->Config->RoundSeconds;
+
+// ...but this does not compile: Config is const outside its friend
+// RootData->Config->RoundSeconds = 90;
 
 void UFooDataSubsystem::ApplyServerConfig(int32 RoundSeconds)
 {
-	UFooConfigData* Config = *RootData->Config.Mutable;   // the friend named in DPROP_CONST
-	Config->RoundSeconds = RoundSeconds;
+    // The friend named in DPROP_CONST gets the mutable side
+    UFooConfigData* Config = *RootData->Config.Mutable;
+    Config->RoundSeconds = RoundSeconds;
 }
 ```
 
 ### Save only what really changed
 
 ```cpp
-// Settings save themselves: Changed comes once per burst of edits, and the content hash
-// skips edits that cancel out
-Binds.Add(Settings->Bind(UPsDataEvent::Changed, FPsDataDelegate::CreateLambda([this](UPsDataEvent*) {
-	if (Settings->GetHashInt32() == SavedHash)
-	{
-		return;
-	}
-	SavedHash = Settings->GetHashInt32();
+// Settings save themselves: Changed comes once per burst of edits,
+// and the content hash skips edits that cancel out
+Binds.Add(Settings->Bind(UPsDataEvent::Changed,
+    FPsDataDelegate::CreateLambda([this](UPsDataEvent*) {
+        if (Settings->GetHashInt32() == SavedHash)
+        {
+            return;
+        }
+        SavedHash = Settings->GetHashInt32();
 
-	FPsDataFastJsonSerializer Json;
-	Settings->DataSerialize(&Json);
-	FFileHelper::SaveStringToFile(Json.GetJsonString(), *SettingsPath);
-})));
+        FPsDataFastJsonSerializer Json;
+        Settings->DataSerialize(&Json);
+        FFileHelper::SaveStringToFile(Json.GetJsonString(), *SettingsPath);
+    })));
 
 // And back, at startup
 FString Saved;
 if (FFileHelper::LoadFileToString(Saved, *SettingsPath))
 {
-	FPsDataFastJsonDeserializer Json(Saved);
-	Settings->DataDeserialize(&Json);
+    FPsDataFastJsonDeserializer Json(Saved);
+    Settings->DataDeserialize(&Json);
 }
 ```
 
@@ -337,12 +365,13 @@ PlayerController->Client_SyncBattle(Bytes->GetBuffer());
 // Client: the same subtree, rebuilt; everything bound to it updates through its events
 void AFooPlayerController::Client_SyncBattle_Implementation(const TArray<uint8>& Snapshot)
 {
-	FPsDataBinaryDeserializer In(MakeShared<FPsDataBufferInputStream>(Snapshot));
-	Battle->DataDeserialize(&In);
+    FPsDataBinaryDeserializer In(MakeShared<FPsDataBufferInputStream>(Snapshot));
+    Battle->DataDeserialize(&In);
 }
 
-// A partial update from a backend: only the fields it names are touched, only real changes fire
-FPsDataFastJsonDeserializer Patch(ResponseBody);   // {"Health": 40, "Team": "Blue"}
+// A partial update from a backend, e.g. {"Health": 40, "Team": "Blue"}:
+// only the fields it names are touched, and only real changes fire
+FPsDataFastJsonDeserializer Patch(ResponseBody);
 Alice->DataDeserialize(&Patch, true);
 ```
 
@@ -355,26 +384,28 @@ and each one patches the character it names:
 UCLASS()
 class UFooNotifyData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMAP(FPsDataJson, Updates);   // character key -> whatever changed
+    /** Character key -> whatever changed */
+    DMAP(FPsDataJson, Updates);
 };
 
 for (const auto& Pair : Notify->Updates)
 {
-	if (UFooCharacterData* const* Character = Battle->Characters->Find(Pair.Key))
-	{
-		FPsDataFastJsonDeserializer Update(Pair.Value.GetJsonString());
-		(*Character)->DataDeserialize(&Update, true);
-	}
+    if (UFooCharacterData* const* Character = Battle->Characters->Find(Pair.Key))
+    {
+        FPsDataFastJsonDeserializer Update(Pair.Value.GetJsonString());
+        (*Character)->DataDeserialize(&Update, true);
+    }
 }
 ```
 
 ### Read any snapshot
 
 ```cpp
-// A binary snapshot from a crash report or a replay, as JSON a human can read; no model class needed
+// A binary snapshot from a crash report or a replay, as JSON a human can read;
+// no model class needed
 FPsDataBinaryDeserializer In(MakeShared<FPsDataBufferInputStream>(Snapshot));
 FPsDataFastJsonSerializer Pretty(true);
 In.Translate(&Pretty);
@@ -384,7 +415,8 @@ UE_LOG(LogTemp, Display, TEXT("%s"), *Pretty.GetJsonString());
 ### Let designers own the numbers
 
 ```cpp
-// UFooWeaponProto has MAKE_TABLE_STRUCT: designers pick FooWeaponProto_DataTableRow as the row struct
+// UFooWeaponProto has MAKE_TABLE_STRUCT, so designers pick FooWeaponProto_DataTableRow
+// as the row struct of an ordinary DataTable
 FPsDataTableDeserializer Rows(WeaponsTable, RootData->World->Weapons.Get());
 RootData->World->DataDeserialize(&Rows, true);
 
@@ -397,9 +429,10 @@ const FPsDataFixedPoint ShotsPerMinute = *Weapon->FireRate * FPsDataFixedPoint(6
 ```cpp
 Alice->Effects->Add(TEXT("stun"), NewObject<UFooStunEffectData>());
 
-// CustomType writes the class with the value: a copy, a save or a snapshot comes back as a stun
+// CustomType writes the class with the value,
+// so a copy, a save or a snapshot comes back as a stun
 const auto Copy = Alice->Copy<UFooCharacterData>();
-const bool bStillStun = Copy->Effects[TEXT("stun")]->IsA<UFooStunEffectData>();   // true
+const bool bStillStun = Copy->Effects[TEXT("stun")]->IsA<UFooStunEffectData>();
 ```
 
 ### And from Blueprints
@@ -460,8 +493,9 @@ docs spell them out for agents:
   be built, …) and how to verify a change. Paste this into your project's `CLAUDE.md` / `AGENTS.md`:
 
   ```markdown
-  Game data uses the PsData plugin (reactive data model, Plugins/PsData). Before declaring or
-  changing data classes, read Plugins/PsData/docs/ai-guide.md and Plugins/PsData/docs/model.md.
+  Game data uses the PsData plugin (reactive data model, Plugins/PsData).
+  Before declaring or changing data classes, read
+  Plugins/PsData/docs/ai-guide.md and Plugins/PsData/docs/model.md.
   ```
 
 - **[`AGENTS.md`](AGENTS.md)** — for an agent working *on* the plugin: one command to build and

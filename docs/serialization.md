@@ -22,7 +22,8 @@ Data->DataDeserialize(&Deserializer, true);    // patch: load over what is there
 
 ```cpp
 // Fast JSON
-FPsDataFastJsonSerializer Serializer;           // FPsDataFastJsonSerializer(true) pretty-prints
+// FPsDataFastJsonSerializer(true) pretty-prints
+FPsDataFastJsonSerializer Serializer;
 Settings->DataSerialize(&Serializer);
 const FString Json = Serializer.GetJsonString();
 
@@ -137,8 +138,8 @@ small edit is cheap.
 const int32 NewHash = Settings->GetHashInt32();
 if (NewHash != LastSavedHash)
 {
-	LastSavedHash = NewHash;
-	Save();
+    LastSavedHash = NewHash;
+    Save();
 }
 ```
 
@@ -160,17 +161,17 @@ normal DataTable, and code loads every row into a `DMAP` keyed by row name:
 UCLASS()
 class UFooWeaponProto : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DPROP(int32, Damage);
+    DPROP(int32, Damage);
 
-	DPROP(FPsDataFixedPoint, FireRate);
+    DPROP(FPsDataFixedPoint, FireRate);
 
-	MAKE_TABLE_STRUCT({
-		Damage = 0;
-		FireRate = 0;
-	});
+    MAKE_TABLE_STRUCT({
+        Damage = 0;
+        FireRate = 0;
+    });
 };
 ```
 
@@ -196,7 +197,7 @@ a test:
 ```cpp
 for (const FString& Error : RootData->Validation())
 {
-	UE_LOG(LogFoo, Error, TEXT("%s"), *Error);
+    UE_LOG(LogFoo, Error, TEXT("%s"), *Error);
 }
 ```
 

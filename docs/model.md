@@ -9,12 +9,12 @@ by serializers and Blueprints, and the parent/child bookkeeping.
 UCLASS()
 class UFooCharacterData : public UPsData
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	DMETA(Event, EventStorage)
-	DPROP(int32, Health);
-	...
+    DMETA(Event, EventStorage)
+    DPROP(int32, Health);
+    ...
 };
 ```
 
@@ -41,12 +41,23 @@ bind to by name (`UFooCharacterData::GetHealthChangedEventName()` is `"HealthCha
 A property member behaves like the value it holds:
 
 ```cpp
-Character->Health = 100;                 // assign
-Character->Health -= 30;                 // compound assignment, ++, -- on arithmetic types
-const int32 Value = *Character->Health;  // read: operator*
-if (Character->Health > 50) {}           // comparisons on arithmetic types
-const bool bNoName = Character->Name->IsEmpty(); // -> reaches members of a struct/string value
-Character->Location->X = 5;              // -> on a data pointer walks the tree
+// Assign
+Character->Health = 100;
+
+// Compound assignment; ++ and -- work on arithmetic types too
+Character->Health -= 30;
+
+// Read with operator*
+const int32 Value = *Character->Health;
+
+// Compare arithmetic types in place
+if (Character->Health > 50) {}
+
+// -> reaches members of a struct or string value
+const bool bNoName = Character->Name->IsEmpty();
+
+// -> on a data pointer walks the tree
+Character->Location->X = 5;
 ```
 
 Collections expose their API through `->`:
@@ -56,12 +67,19 @@ Character->Tags->Add(TEXT("sniper"));
 Character->Tags->RemoveAt(0);
 const int32 Count = Character->Tags->Num();
 
-Battle->Characters->Add(TEXT("alice"), Alice);   // Alice becomes a child, key "alice"
-Battle->Characters->Remove(TEXT("bob"));          // Bob is detached from the tree
-UFooCharacterData* Found = Battle->Characters[TEXT("alice")];
-const auto Maybe = Battle->Characters->Find(TEXT("nobody"));  // pointer to the element, nullptr if absent
+// Alice becomes a child, with the key "alice"
+Battle->Characters->Add(TEXT("alice"), Alice);
 
-for (const auto& Pair : Battle->Characters)       // Pair.Key, Pair.Value
+// Bob is detached from the tree
+Battle->Characters->Remove(TEXT("bob"));
+
+UFooCharacterData* Found = Battle->Characters[TEXT("alice")];
+
+// A pointer to the element, nullptr if absent
+const auto Maybe = Battle->Characters->Find(TEXT("nobody"));
+
+// Pair.Key, Pair.Value
+for (const auto& Pair : Battle->Characters)
 {
 }
 ```
@@ -112,11 +130,14 @@ Blueprint nodes.
 
 ```cpp
 protected:
-	/** Runs when the object is created and on every Reset(). Set defaults here, not in a constructor */
-	virtual void InitProperties() override;
+    /**
+     * Runs when the object is created and on every Reset().
+     * Set defaults here, not in a constructor
+     */
+    virtual void InitProperties() override;
 
-	/** Runs after creation and after every deserialization; derive cached values here */
-	virtual void PostDeserialize() override;
+    /** Runs after creation and after every deserialization; derive cached values here */
+    virtual void PostDeserialize() override;
 ```
 
 `Reset()` returns every property to its default and runs `InitProperties()` again.

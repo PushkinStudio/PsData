@@ -11,8 +11,9 @@ The rules below are the ones that cost real debugging time.
 To brief an agent in your project, add this to its `CLAUDE.md` / `AGENTS.md`:
 
 ```markdown
-Game data uses the PsData plugin (reactive data model, Plugins/PsData). Before declaring or
-changing data classes, read Plugins/PsData/docs/ai-guide.md and Plugins/PsData/docs/model.md.
+Game data uses the PsData plugin (reactive data model, Plugins/PsData).
+Before declaring or changing data classes, read
+Plugins/PsData/docs/ai-guide.md and Plugins/PsData/docs/model.md.
 ```
 
 ## Rules

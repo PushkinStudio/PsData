@@ -18,12 +18,16 @@ DMETA(Event, EventStorage)
 DPROP(int32, Health);
 
 // anywhere
-FPsDataBindCollection Binds;  // a member: unbinds everything when destroyed
+// A member: unbinds everything when destroyed
+FPsDataBindCollection Binds;
 
-Binds.Add(Character->Health.Bind(FPsDataDelegate::CreateLambda([Character](UPsDataEvent* Event) {
-	const auto Storage = Character->Health.GetEventStorage(Event);  // needs EventStorage meta
-	UE_LOG(LogTemp, Log, TEXT("Health %d -> %d"), Storage->GetPreviousValue(), Storage->GetValue());
-})));
+Binds.Add(Character->Health.Bind(
+    FPsDataDelegate::CreateLambda([Character](UPsDataEvent* Event) {
+        // Needs EventStorage meta
+        const auto Storage = Character->Health.GetEventStorage(Event);
+        UE_LOG(LogTemp, Log, TEXT("Health %d -> %d"),
+            Storage->GetPreviousValue(), Storage->GetValue());
+    })));
 ```
 
 There are three ways to bind, all returning an `FPsDataBind`:
@@ -62,10 +66,11 @@ DMETA(Event, Bubbles)
 DPROP(int32, X);
 
 // one listener for every character's position on the whole battle
-Binds.Add(Battle->Bind(UFooPointData::GetXChangedEventName(), FPsDataDelegate::CreateLambda([](UPsDataEvent* Event) {
-	const auto Point = Cast<UFooPointData>(Event->GetTarget());
-	const auto Character = Cast<UFooCharacterData>(Point->GetParent());
-})));
+Binds.Add(Battle->Bind(UFooPointData::GetXChangedEventName(),
+    FPsDataDelegate::CreateLambda([](UPsDataEvent* Event) {
+        const auto Point = Cast<UFooPointData>(Event->GetTarget());
+        const auto Character = Cast<UFooCharacterData>(Point->GetParent());
+    })));
 ```
 
 `Event->StopPropagation()` stops the event at the current level after its listeners run;
@@ -94,7 +99,8 @@ task broadcasts once, however many fields changed in between. It is per object â
 does not mark its parent â€” and it does not bubble.
 
 ```cpp
-Binds.Add(Settings->Bind(UPsDataEvent::Changed, FPsDataDelegate::CreateUObject(this, &UFooSettingsSubsystem::RequestSave)));
+Binds.Add(Settings->Bind(UPsDataEvent::Changed,
+    FPsDataDelegate::CreateUObject(this, &UFooSettingsSubsystem::RequestSave)));
 
 Settings->MasterVolume = 0.5f;
 Settings->Language = TEXT("en");
@@ -110,12 +116,13 @@ then run in order. Listeners bound with `EDataBindFlags::NonDeferred` still run 
 
 ```cpp
 {
-	DEFERRED_EVENT_PROCESSING();
+    DEFERRED_EVENT_PROCESSING();
 
-	Character->Health = 0;
-	Character->Deaths += 1;
-	Battle->Characters->Remove(Character->GetDataKey());
-	// nothing bound without NonDeferred has run yet: no listener sees a half-applied state
+    Character->Health = 0;
+    Character->Deaths += 1;
+    Battle->Characters->Remove(Character->GetDataKey());
+    // Nothing bound without NonDeferred has run yet:
+    // no listener sees a half-applied state
 }
 // all of it is delivered here
 ```
