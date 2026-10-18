@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
@@ -21,6 +21,7 @@
 #include "Types/PsData_FName.h"
 #include "Types/PsData_FPsDataBigInteger.h"
 #include "Types/PsData_FPsDataFixedPoint.h"
+#include "Types/PsData_FPsDataJson.h"
 #include "Types/PsData_FRuntimeFloatCurve.h"
 #include "Types/PsData_FString.h"
 #include "Types/PsData_FText.h"
@@ -727,13 +728,17 @@ using TDPropSelector = typename TSelector<
 
 #define COMMA ,
 
+/** Token pasting that expands its arguments first; PREPROCESSOR_JOIN is deprecated since 5.8 and UE_JOIN's arity varies by engine */
+#define PSDATA_JOIN_INNER(A, B) A##B
+#define PSDATA_JOIN(A, B) PSDATA_JOIN_INNER(A, B)
+
 /***********************************
  * Macro DMETA
  ***********************************/
 
 #define DMETA(...) \
 private:           \
-	PsDataTools::TDMeta<ThisClass, __LINE__> PREPROCESSOR_JOIN(DMeta_, __LINE__){#__VA_ARGS__};
+	PsDataTools::TDMeta<ThisClass, __LINE__> PSDATA_JOIN(DMeta_, __LINE__){#__VA_ARGS__};
 
 /***********************************
  * Macro DPROP

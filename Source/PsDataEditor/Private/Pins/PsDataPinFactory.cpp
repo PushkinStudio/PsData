@@ -1,9 +1,10 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "Pins/PsDataPinFactory.h"
 
 #include "Pins/PsDataGraphPinEventList.h"
 #include "PsDataAPI.h"
+#include "PsDataDefines.h"
 
 #include "EdGraphSchema_K2.h"
 #include "K2Node_CallFunction.h"
@@ -52,7 +53,7 @@ TArray<TSharedPtr<FEventPath>> GenerateEvents(UClass* TargetClass)
 	while (Children.Num() > 0)
 	{
 		FHelperStruct Child = Children.Last();
-		Children.RemoveAt(Children.Num() - 1, 1, false);
+		Children.RemoveAt(Children.Num() - 1, 1, PSDATA_NO_SHRINK);
 
 		UClass* Class = Cast<UClass>(Child.Field);
 		if (Class == nullptr)

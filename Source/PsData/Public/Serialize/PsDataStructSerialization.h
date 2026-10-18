@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
@@ -65,6 +65,7 @@ public:
 	virtual void WriteValue(bool Value) override;
 	virtual void WriteValue(const FString& Value) override;
 	virtual void WriteValue(const FName& Value) override;
+	virtual void WriteValue(double Value) override;
 	virtual void WriteValue(const UPsData* Value) override;
 
 	virtual void PopKey(const FString& Key) override;
@@ -133,6 +134,8 @@ public:
 	virtual bool ReadValue(bool& OutValue) override;
 	virtual bool ReadValue(FString& OutValue) override;
 	virtual bool ReadValue(FName& OutValue) override;
+	virtual bool ReadValue(double& OutValue) override;
+	virtual EPsDataDeserializedValueType NextValueType() override;
 	virtual bool ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator) override;
 
 	virtual void PopKey(const FString& Key) override;

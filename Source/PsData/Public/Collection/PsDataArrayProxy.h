@@ -1,9 +1,10 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
 #include "PsData.h"
 #include "PsDataCore.h"
+#include "PsDataDefines.h"
 #include "PsDataField.h"
 #include "PsDataTraits.h"
 
@@ -93,7 +94,7 @@ public:
 	void RemoveAt(int32 Index, bool bAllowShrinking = false)
 	{
 		auto NewArray = Property->GetValue();
-		NewArray.RemoveAt(Index, 1, bAllowShrinking);
+		NewArray.RemoveAt(Index, 1, PSDATA_SHRINK(bAllowShrinking));
 		Property->SetValue(NewArray);
 	}
 
@@ -108,7 +109,7 @@ public:
 		}
 
 		auto NewArray = Property->GetValue();
-		NewArray.RemoveAt(Index, 1, bAllowShrinking);
+		NewArray.RemoveAt(Index, 1, PSDATA_SHRINK(bAllowShrinking));
 		Property->SetValue(NewArray);
 
 		return Index;
@@ -348,7 +349,7 @@ public:
 			}
 
 			auto NewArray = Property->GetValue();
-			NewArray.RemoveAt(CurrentIndex, 1, bAllowShrinking);
+			NewArray.RemoveAt(CurrentIndex, 1, PSDATA_SHRINK(bAllowShrinking));
 			Property->SetValue(NewArray);
 
 			return Index;

@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
@@ -48,6 +48,7 @@ public:
 	virtual void WriteValue(bool Value) override;
 	virtual void WriteValue(const FString& Value) override;
 	virtual void WriteValue(const FName& Value) override;
+	virtual void WriteValue(double Value) override;
 	virtual void WriteValue(const UPsData* Value) override;
 
 	virtual void PopKey(const FString& Key) override;
@@ -65,6 +66,7 @@ enum class EPsDataFastJsonToken : uint8
 	OpenArray = 5,
 	CloseArray = 6,
 	Comma = 7,
+	End = 8,
 };
 
 /***********************************
@@ -76,6 +78,7 @@ struct FPsDataFastJsonPointer
 public:
 	FPsDataFastJsonPointer(EPsDataFastJsonToken Token, int32 StartPosition, int32 EndPosition, int32 Depth);
 	const FString& GetString(const TCHAR* Source);
+	bool IsQuoted(const TCHAR* Source);
 	void Reset();
 
 	EPsDataFastJsonToken Token;
@@ -87,6 +90,7 @@ private:
 
 	FString String;
 	bool bHasString;
+	bool bQuoted;
 };
 
 /***********************************
@@ -96,16 +100,29 @@ private:
 struct PSDATA_API FPsDataFastJsonDeserializer : public FPsDataDeserializer
 {
 public:
+	/** Parses the string in place: it must outlive the deserializer */
 	FPsDataFastJsonDeserializer(const FString& InJsonString);
+
+	/** Takes the string over, so a temporary is safe to pass */
+	FPsDataFastJsonDeserializer(FString&& InJsonString);
+
+	/** Source may point into OwnedJsonString: a copy would point into the original */
+	FPsDataFastJsonDeserializer(const FPsDataFastJsonDeserializer&) = delete;
+	FPsDataFastJsonDeserializer& operator=(const FPsDataFastJsonDeserializer&) = delete;
 
 	virtual ~FPsDataFastJsonDeserializer(){};
 
+	/** After reading: every object and array was closed and nothing follows. False for truncated or trailing input */
+	bool IsComplete();
+
 private:
+	FString OwnedJsonString;
 	const TCHAR* Source;
 	int32 Size;
 	TArray<FPsDataFastJsonPointer> Pointers;
 	int32 PointerIndex;
 	TArray<int32> DepthStack;
+	bool bTruncated;
 
 	void Parse();
 	void SkipComma();
@@ -122,6 +139,8 @@ public:
 	virtual bool ReadValue(bool& OutValue) override;
 	virtual bool ReadValue(FString& OutValue) override;
 	virtual bool ReadValue(FName& OutValue) override;
+	virtual bool ReadValue(double& OutValue) override;
+	virtual EPsDataDeserializedValueType NextValueType() override;
 	virtual bool ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator) override;
 
 	virtual void PopKey(const FString& Key) override;

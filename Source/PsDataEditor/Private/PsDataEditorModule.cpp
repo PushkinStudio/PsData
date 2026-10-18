@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "PsDataEditorModule.h"
 
@@ -7,6 +7,7 @@
 #include "Customization/PsDataFixedPointStructCustomization.h"
 #include "Pins/PsDataPinFactory.h"
 #include "PsData.h"
+#include "PsDataDefines.h"
 
 #include "AssetToolsModule.h"
 #include "EdGraphUtilities.h"
@@ -23,7 +24,11 @@ void FPsDataEditorModule::StartupModule()
 	PropertyModule.RegisterCustomPropertyTypeLayout("PsDataFixedPoint", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FPsDataFixedPointStructCustomization::MakeInstance));
 	PropertyModule.RegisterCustomPropertyTypeLayout("PsDataBigInteger", FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FPsDataBigIntegerStructCustomization::MakeInstance));
 
+#if PSDATA_ENGINE_AT_LEAST(5, 8)
+	FCoreDelegates::GetOnPostEngineInit().AddLambda([this]() {
+#else
 	FCoreDelegates::OnPostEngineInit.AddLambda([this]() {
+#endif
 		RegisterAssetTypeActions();
 	});
 }

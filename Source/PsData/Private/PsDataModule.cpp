@@ -1,8 +1,9 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "PsDataModule.h"
 
 #include "PsDataCore.h"
+#include "PsDataDefines.h"
 
 #include "Misc/CoreDelegates.h"
 
@@ -10,7 +11,11 @@
 
 void FPsDataModule::StartupModule()
 {
+#if PSDATA_ENGINE_AT_LEAST(5, 8)
+	FCoreDelegates::GetOnPostEngineInit().AddLambda([] {
+#else
 	FCoreDelegates::OnPostEngineInit.AddLambda([] {
+#endif
 		PsDataTools::FDataReflection::Compile();
 
 		FDataDelegates::OnPostDataModuleInit.Broadcast();

@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
@@ -72,7 +72,7 @@ private:
 	{
 		while (Delegates.Num() > 0)
 		{
-			TArray<FSimpleDelegate> DelegatesArray = std::move(Delegates);
+			TArray<FPsDataPromiseDelegate> DelegatesArray = std::move(Delegates);
 			for (const auto& Delegate : DelegatesArray)
 			{
 				ExecuteSingle(Delegate);
@@ -82,7 +82,7 @@ private:
 
 	void ExecuteSingle(const FPsDataPromiseDelegate& Delegate)
 	{
-		Delegate.ExecuteIfBound(Value.Get());
+		Delegate.ExecuteIfBound(Value.GetValue());
 	}
 
 	TOptional<T> Value;

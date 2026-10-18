@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "Serialize/FPsDataImprintSerializer.h"
 
@@ -260,6 +260,9 @@ void FPsDataImprintBinaryConvertor::Convert(FPsDataSerializer* Serializer)
 			break;
 		case EBinaryTokens::Value_float:
 			ReadValue<float>(Serializer);
+			break;
+		case EBinaryTokens::Value_double:
+			ReadValue<double>(Serializer);
 			break;
 		case EBinaryTokens::Value_bool:
 			ReadValue<bool>(Serializer);

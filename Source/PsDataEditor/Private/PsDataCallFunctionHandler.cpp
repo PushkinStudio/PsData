@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "PsDataCallFunctionHandler.h"
 
@@ -62,7 +62,11 @@ bool FPsDataHandler_CallFunction::IsCalledFunctionPure(UEdGraphNode* Node) const
 {
 	if (const auto CallFunctionNode = Cast<UK2Node_CallFunction>(Node))
 	{
+#if PSDATA_ENGINE_AT_LEAST(5, 5)
+		return CallFunctionNode->IsNodePure();
+#else
 		return CallFunctionNode->bIsPureFunc;
+#endif
 	}
 
 	return false;

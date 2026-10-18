@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "Serialize/PsDataTableSerialization.h"
 
@@ -64,12 +64,14 @@ void FPsDataTableSerializer::ReportAboutExtraFields(const UScriptStruct* Struct,
 	TArray<FString> Names;
 	for (const auto& Pair : JsonObject->Values)
 	{
-		FName PropName = DataTableUtils::MakeValidName(Pair.Key);
+		// FJsonObject keys are FString before 5.8 and UE::FSharedString since; both dereference to TCHAR*
+		const FString Key(*Pair.Key);
+		FName PropName = DataTableUtils::MakeValidName(Key);
 		FProperty* ColumnProp = Struct->FindPropertyByName(PropName);
 		for (TFieldIterator<FProperty> It(Struct); It && !ColumnProp; ++It)
 		{
 			Names.Append(DataTableUtils::GetPropertyImportNames(*It));
-			ColumnProp = Names.Contains(Pair.Key) ? *It : nullptr;
+			ColumnProp = Names.Contains(Key) ? *It : nullptr;
 		}
 
 		if (!ColumnProp)
@@ -145,6 +147,16 @@ bool FPsDataTableDeserializer::ReadValue(FName& OutValue)
 	return JsonDeserializer.ReadValue(OutValue);
 }
 
+bool FPsDataTableDeserializer::ReadValue(double& OutValue)
+{
+	return JsonDeserializer.ReadValue(OutValue);
+}
+
+EPsDataDeserializedValueType FPsDataTableDeserializer::NextValueType()
+{
+	return JsonDeserializer.NextValueType();
+}
+
 bool FPsDataTableDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator Allocator)
 {
 	return JsonDeserializer.ReadValue(OutValue, Allocator);
@@ -208,7 +220,7 @@ TArray<TSharedPtr<FJsonValue>> FPsDataTableDeserializer::CreateJsonFromTable_Exp
 		auto StructJsonObject = FPsDataStructDeserializer::CreateJsonFromStruct_Export(Struct, Pair.Value);
 		for (auto& FieldPair : StructJsonObject->Values)
 		{
-			JsonObject->SetField(FieldPair.Key, FieldPair.Value);
+			JsonObject->SetField(FString(*FieldPair.Key), FieldPair.Value);
 		}
 
 		Result.Add(MakeShared<FJsonValueObject>(JsonObject));

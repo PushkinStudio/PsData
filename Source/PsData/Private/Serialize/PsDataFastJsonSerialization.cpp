@@ -1,8 +1,9 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #include "Serialize/PsDataFastJsonSerialization.h"
 
 #include "PsData.h"
+#include "PsDataDefines.h"
 #include "PsDataUtils.h"
 
 #include <cmath>
@@ -97,8 +98,10 @@ bool IsEmpty(const TCHAR* String, int32 StartPosition, int32 EndPosition)
 	return true;
 }
 
-void Trim(const TCHAR* String, int32& StartPosition, int32& EndPosition)
+void Trim(const TCHAR* String, int32& StartPosition, int32& EndPosition, bool& bOutQuoted)
 {
+	bOutQuoted = false;
+
 	while (StartPosition <= EndPosition)
 	{
 		if (IsSpace(String[StartPosition]))
@@ -131,62 +134,63 @@ void Trim(const TCHAR* String, int32& StartPosition, int32& EndPosition)
 		{
 			++StartPosition;
 			--EndPosition;
+			bOutQuoted = true;
 		}
 	}
 }
 
-constexpr char CharToEscape[] = {'\\', '\n', '\r', '\t', '"'};
-constexpr char EscapedChars[] = {'\\', 'n', 'r', 't', '"'};
-constexpr uint32 MaxSupportedEscapeChars = UE_ARRAY_COUNT(CharToEscape);
-
-int32 FindСharToEscape(TCHAR Char)
+// RFC 8259 section 7: quote and backslash, the short forms, and \u00XX for the remaining control characters
+void AppendStringAsJsonString(TArray<TCHAR>& Json, const TCHAR* String, int32 StartPosition, int32 Count)
 {
-	for (int32 i = 0; i < MaxSupportedEscapeChars; ++i)
-	{
-		if (Char == CharToEscape[i])
-		{
-			return i;
-		}
-	}
+	static constexpr TCHAR HexDigits[] = TEXT("0123456789abcdef");
 
-	return INDEX_NONE;
-}
-
-bool HasСharToEscape(const TCHAR* String, int32 StartPosition, int32 EndPosition)
-{
-	while (StartPosition < EndPosition)
-	{
-		if (FindСharToEscape(String[StartPosition]) != INDEX_NONE)
-		{
-			return true;
-		}
-		++StartPosition;
-	}
-
-	return false;
-}
-
-void AppendStringAsJsonString(TArray<TCHAR>& JsonStringCharArray, const TCHAR* String, int32 StartPosition, int32 Count)
-{
-	JsonStringCharArray.Reserve(JsonStringCharArray.Num() + 2 + 2 * Count);
-	JsonStringCharArray.Add('"');
+	Json.Reserve(Json.Num() + 2 + Count + Count / 8);
+	Json.Add('"');
 
 	for (int32 i = StartPosition; i < StartPosition + Count; ++i)
 	{
-		const auto c = String[i];
-		const auto EscapeIndex = FindСharToEscape(c);
-		if (EscapeIndex != INDEX_NONE)
+		const TCHAR c = String[i];
+		switch (c)
 		{
-			JsonStringCharArray.Add('\\');
-			JsonStringCharArray.Add(EscapedChars[EscapeIndex]);
-		}
-		else
-		{
-			JsonStringCharArray.Add(c);
+		case '"': Json.Append(TEXT("\\\""), 2); break;
+		case '\\': Json.Append(TEXT("\\\\"), 2); break;
+		case '\n': Json.Append(TEXT("\\n"), 2); break;
+		case '\r': Json.Append(TEXT("\\r"), 2); break;
+		case '\t': Json.Append(TEXT("\\t"), 2); break;
+		case '\b': Json.Append(TEXT("\\b"), 2); break;
+		case '\f': Json.Append(TEXT("\\f"), 2); break;
+		default:
+			if (c < 0x20)
+			{
+				Json.Append(TEXT("\\u00"), 4);
+				Json.Add(HexDigits[(c >> 4) & 0xF]);
+				Json.Add(HexDigits[c & 0xF]);
+			}
+			else
+			{
+				Json.Add(c);
+			}
 		}
 	}
 
-	JsonStringCharArray.Add('"');
+	Json.Add('"');
+}
+
+int32 HexToInt(TCHAR Char)
+{
+	if (Char >= '0' && Char <= '9')
+	{
+		return Char - '0';
+	}
+	if (Char >= 'a' && Char <= 'f')
+	{
+		return Char - 'a' + 10;
+	}
+	if (Char >= 'A' && Char <= 'F')
+	{
+		return Char - 'A' + 10;
+	}
+	return INDEX_NONE;
 }
 
 FString JsonStringToString(const TCHAR* String, int32 StartPosition, int32 Count)
@@ -194,41 +198,57 @@ FString JsonStringToString(const TCHAR* String, int32 StartPosition, int32 Count
 	FString Result;
 	Result.Reserve(Count);
 
-	bool bEscaped = false;
-	for (int32 i = StartPosition; i < StartPosition + Count; ++i)
+	const int32 EndPosition = StartPosition + Count;
+	for (int32 i = StartPosition; i < EndPosition; ++i)
 	{
-		auto const c = String[i];
-		if (!bEscaped && c == '\\')
+		const TCHAR c = String[i];
+		if (c != '\\' || i + 1 >= EndPosition)
 		{
-			bEscaped = true;
+			Result.AppendChar(c);
 			continue;
 		}
 
-		bool bAppended = false;
-		for (int32 j = 0; j < MaxSupportedEscapeChars; ++j)
+		const TCHAR Escaped = String[++i];
+		switch (Escaped)
 		{
-			if (bEscaped && c == EscapedChars[j])
+		case '"':
+		case '\'':
+		case '\\':
+		case '/': Result.AppendChar(Escaped); break;
+		case 'n': Result.AppendChar('\n'); break;
+		case 'r': Result.AppendChar('\r'); break;
+		case 't': Result.AppendChar('\t'); break;
+		case 'b': Result.AppendChar('\b'); break;
+		case 'f': Result.AppendChar('\f'); break;
+		case 'u':
+		{
+			// One UTF-16 code unit; TCHAR is UTF-16, so a surrogate pair written as two escapes reassembles itself
+			int32 Code = 0;
+			bool bValid = i + 4 < EndPosition;
+			for (int32 Digit = 1; bValid && Digit <= 4; ++Digit)
 			{
-				Result.AppendChar(CharToEscape[j]);
-				bAppended = true;
-				break;
+				const int32 Value = HexToInt(String[i + Digit]);
+				bValid = Value != INDEX_NONE;
+				Code = Code * 16 + Value;
 			}
-		}
 
-		if (!bAppended)
-		{
-			if (bEscaped)
+			if (bValid)
 			{
-				Result.AppendChar('\\');
-				Result.AppendChar(c);
+				Result.AppendChar(static_cast<TCHAR>(Code));
+				i += 4;
 			}
 			else
 			{
-				Result.AppendChar(c);
+				Result.AppendChar('\\');
+				Result.AppendChar(Escaped);
 			}
+			break;
 		}
-
-		bEscaped = false;
+		default:
+			// Not an escape JSON defines: kept as written
+			Result.AppendChar('\\');
+			Result.AppendChar(Escaped);
+		}
 	}
 
 	return Result;
@@ -314,9 +334,8 @@ void FPsDataFastJsonSerializer::WriteKey(const FString& Key)
 	AppendComma();
 	AppendSpace();
 
-	Buffer.Add('"');
-	Buffer.Append(Key.GetCharArray().GetData(), Key.Len());
-	Buffer.Add('"');
+	// Escaped: Translate passes keys through from arbitrary JSON, not only property names
+	AppendStringAsJsonString(Buffer, Key.GetCharArray().GetData(), 0, Key.Len());
 	Buffer.Add(':');
 }
 
@@ -368,6 +387,27 @@ void FPsDataFastJsonSerializer::WriteValue(float Value)
 	AppendSpace();
 
 	PsDataTools::Numbers::ToString(Value, Buffer);
+}
+
+void FPsDataFastJsonSerializer::WriteValue(double Value)
+{
+	AppendComma();
+	AppendSpace();
+
+	if (!FMath::IsFinite(Value))
+	{
+		Buffer.Append(TEXT("null"), 4); // ECMA-404.8
+		return;
+	}
+
+	// The shorter of 15 and 17 significant digits that reads back as the same double
+	TCHAR String[32];
+	int32 Length = FCString::Snprintf(String, UE_ARRAY_COUNT(String), TEXT("%.15g"), Value);
+	if (FCString::Atod(String) != Value)
+	{
+		Length = FCString::Snprintf(String, UE_ARRAY_COUNT(String), TEXT("%.17g"), Value);
+	}
+	Buffer.Append(String, Length);
 }
 
 void FPsDataFastJsonSerializer::WriteValue(bool Value)
@@ -457,6 +497,7 @@ FPsDataFastJsonPointer::FPsDataFastJsonPointer(EPsDataFastJsonToken InToken, int
 	, StartPosition(InStartPosition)
 	, EndPosition(InEndPosition)
 	, bHasString(false)
+	, bQuoted(false)
 {
 }
 
@@ -467,12 +508,18 @@ const FString& FPsDataFastJsonPointer::GetString(const TCHAR* Source)
 		bHasString = true;
 		if (!IsEmpty(Source, StartPosition, EndPosition))
 		{
-			Trim(Source, StartPosition, EndPosition);
+			Trim(Source, StartPosition, EndPosition, bQuoted);
 			String = JsonStringToString(Source, StartPosition, EndPosition - StartPosition + 1);
 		}
 	}
 
 	return String;
+}
+
+bool FPsDataFastJsonPointer::IsQuoted(const TCHAR* Source)
+{
+	GetString(Source);
+	return bQuoted;
 }
 
 void FPsDataFastJsonPointer::Reset()
@@ -493,6 +540,21 @@ FPsDataFastJsonDeserializer::FPsDataFastJsonDeserializer(const FString& InJsonSt
 	, Source(InJsonString.GetCharArray().GetData())
 	, Size(InJsonString.Len())
 	, PointerIndex(0)
+	, bTruncated(false)
+{
+	Pointers.Reserve(100);
+	Parse();
+
+	DepthStack.Reserve(10);
+}
+
+FPsDataFastJsonDeserializer::FPsDataFastJsonDeserializer(FString&& InJsonString)
+	: FPsDataDeserializer()
+	, OwnedJsonString(MoveTemp(InJsonString))
+	, Source(OwnedJsonString.GetCharArray().GetData())
+	, Size(OwnedJsonString.Len())
+	, PointerIndex(0)
+	, bTruncated(false)
 {
 	Pointers.Reserve(100);
 	Parse();
@@ -544,6 +606,22 @@ void FPsDataFastJsonDeserializer::Parse()
 			break;
 		}
 	}
+
+	// A document that is a single value ("null", 42, "text") has no structural token at all
+	if (Pointers.Num() == 0 && Size > 0 && !IsEmpty(Source, 0, Size - 1))
+	{
+		Pointers.Add({EPsDataFastJsonToken::Value, 0, Size - 1, 1});
+	}
+
+	// Every read looks at Pointers[PointerIndex] and only moves past a token it understood, so this
+	// sentinel keeps an empty, truncated or malformed document from being read out of bounds
+	Pointers.Add({EPsDataFastJsonToken::End, Size, Size, INDEX_NONE});
+}
+
+bool FPsDataFastJsonDeserializer::IsComplete()
+{
+	SkipComma();
+	return !bTruncated && Pointers[PointerIndex].Token == EPsDataFastJsonToken::End;
 }
 
 void FPsDataFastJsonDeserializer::SkipComma()
@@ -553,6 +631,66 @@ void FPsDataFastJsonDeserializer::SkipComma()
 	{
 		++PointerIndex;
 	}
+}
+
+EPsDataDeserializedValueType FPsDataFastJsonDeserializer::NextValueType()
+{
+	if (!Pointers.IsValidIndex(PointerIndex))
+	{
+		return EPsDataDeserializedValueType::None;
+	}
+
+	SkipComma();
+	if (!Pointers.IsValidIndex(PointerIndex))
+	{
+		return EPsDataDeserializedValueType::None;
+	}
+
+	auto& Pointer = Pointers[PointerIndex];
+	switch (Pointer.Token)
+	{
+	case EPsDataFastJsonToken::OpenObject: return EPsDataDeserializedValueType::Object;
+	case EPsDataFastJsonToken::OpenArray: return EPsDataDeserializedValueType::Array;
+	case EPsDataFastJsonToken::Value: break;
+	default: return EPsDataDeserializedValueType::None;
+	}
+
+	const FString& Value = Pointer.GetString(Source);
+	if (Pointer.IsQuoted(Source))
+	{
+		return EPsDataDeserializedValueType::String;
+	}
+
+	if (Value.Equals(TEXT("null"), ESearchCase::IgnoreCase))
+	{
+		return EPsDataDeserializedValueType::Null;
+	}
+
+	if (Value.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Value.Equals(TEXT("false"), ESearchCase::IgnoreCase))
+	{
+		return EPsDataDeserializedValueType::Boolean;
+	}
+
+	// Whole numbers that fit an int64 travel as int64. The integer parser does not detect overflow, so the
+	// range is checked here: 18 digits always fit, 19 fit up to 9223372036854775807 (the minimum is left out)
+	const auto Digits = ToStringView(Value).RightChop(Value.StartsWith(TEXT("-")) ? 1 : 0);
+	if (PsDataTools::Numbers::IsUnsignedInteger(Digits))
+	{
+		static const FString MaxInt64(TEXT("9223372036854775807"));
+		const FString DigitString(Digits.Len(), Digits.GetData());
+		if (Digits.Len() < 19 || (Digits.Len() == 19 && DigitString.Compare(MaxInt64, ESearchCase::CaseSensitive) <= 0))
+		{
+			return EPsDataDeserializedValueType::Int64;
+		}
+	}
+
+	if (PsDataTools::Numbers::IsNumber(ToStringView(Value)))
+	{
+		return EPsDataDeserializedValueType::Double;
+	}
+
+	// Lenient like the rest of this parser: an unquoted word is read as a string
+	return EPsDataDeserializedValueType::String;
 }
 
 bool FPsDataFastJsonDeserializer::ReadKey(FString& OutKey)
@@ -592,7 +730,7 @@ bool FPsDataFastJsonDeserializer::ReadArray()
 bool FPsDataFastJsonDeserializer::ReadIndex()
 {
 	const auto& Pointer = Pointers[PointerIndex];
-	if (Pointer.Token == EPsDataFastJsonToken::CloseArray)
+	if (Pointer.Token == EPsDataFastJsonToken::CloseArray || Pointer.Token == EPsDataFastJsonToken::End)
 	{
 		return false;
 	}
@@ -711,6 +849,30 @@ bool FPsDataFastJsonDeserializer::ReadValue(float& OutValue)
 	return true;
 }
 
+bool FPsDataFastJsonDeserializer::ReadValue(double& OutValue)
+{
+	SkipComma();
+
+	auto& Pointer = Pointers[PointerIndex];
+	if (Pointer.Token != EPsDataFastJsonToken::Value)
+	{
+		return false;
+	}
+
+	// FCString::Atod rounds correctly; the plugin's own parser accumulates powers of ten and drifts in the last digits
+	const FString& Value = Pointer.GetString(Source);
+	if (!PsDataTools::Numbers::IsNumber(ToStringView(Value)))
+	{
+		return false;
+	}
+
+	OutValue = FCString::Atod(*Value);
+	Pointer.Reset();
+
+	++PointerIndex;
+	return true;
+}
+
 bool FPsDataFastJsonDeserializer::ReadValue(bool& OutValue)
 {
 	SkipComma();
@@ -802,7 +964,7 @@ bool FPsDataFastJsonDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator
 
 void FPsDataFastJsonDeserializer::PopKey(const FString& Key)
 {
-	const int32 Depth = DepthStack.Pop(false);
+	const int32 Depth = DepthStack.Pop(PSDATA_NO_SHRINK);
 	for (int32 i = PointerIndex; i < Pointers.Num(); ++i)
 	{
 		const auto& Pointer = Pointers[i];
@@ -813,7 +975,9 @@ void FPsDataFastJsonDeserializer::PopKey(const FString& Key)
 		}
 	}
 
-	checkNoEntry();
+	// A truncated document: nothing after this point can be read
+	PointerIndex = Pointers.Num() - 1;
+	bTruncated = true;
 }
 
 void FPsDataFastJsonDeserializer::PopIndex()
@@ -822,7 +986,7 @@ void FPsDataFastJsonDeserializer::PopIndex()
 
 void FPsDataFastJsonDeserializer::PopArray()
 {
-	const int32 Depth = DepthStack.Pop(false);
+	const int32 Depth = DepthStack.Pop(PSDATA_NO_SHRINK);
 	for (int32 i = PointerIndex; i < Pointers.Num(); ++i)
 	{
 		const auto& Pointer = Pointers[i];
@@ -833,12 +997,14 @@ void FPsDataFastJsonDeserializer::PopArray()
 		}
 	}
 
-	checkNoEntry();
+	// A truncated document: nothing after this point can be read
+	PointerIndex = Pointers.Num() - 1;
+	bTruncated = true;
 }
 
 void FPsDataFastJsonDeserializer::PopObject()
 {
-	const int32 Depth = DepthStack.Pop(false);
+	const int32 Depth = DepthStack.Pop(PSDATA_NO_SHRINK);
 	for (int32 i = PointerIndex; i < Pointers.Num(); ++i)
 	{
 		const auto& Pointer = Pointers[i];
@@ -849,5 +1015,7 @@ void FPsDataFastJsonDeserializer::PopObject()
 		}
 	}
 
-	checkNoEntry();
+	// A truncated document: nothing after this point can be read
+	PointerIndex = Pointers.Num() - 1;
+	bTruncated = true;
 }

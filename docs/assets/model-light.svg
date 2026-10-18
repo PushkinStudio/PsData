@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 490" width="1000" height="490" role="img" aria-label="A PsData tree: links and bubbling events">
+<defs>
+<marker id="arrow-link" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f7dd1"/></marker>
+<marker id="arrow-event" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f9e6e"/></marker>
+<marker id="arrow-edge" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c9d1dc"/></marker>
+</defs>
+<rect x="390" y="18" width="220" height="52" rx="12" fill="#ffffff" stroke="#ff5c39" stroke-width="1.5"/>
+<text x="500" y="41" fill="#161b22" font-size="16" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="middle">UFooRootData</text>
+<text x="500" y="60" fill="#5d6b80" font-size="12" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle">UPsDataRoot</text>
+<path d="M450,70 C450,92 170,88 170,112" fill="none" stroke="#c9d1dc" stroke-width="2" marker-end="url(#arrow-edge)"/>
+<path d="M550,70 C550,92 690,88 690,112" fill="none" stroke="#c9d1dc" stroke-width="2" marker-end="url(#arrow-edge)"/>
+<rect x="40" y="114" width="260" height="350" rx="14" fill="#f4f6f9" stroke="#c9d1dc" stroke-width="1.5"/>
+<text x="60" y="144" fill="#161b22" font-size="17" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">World</text>
+<text x="60" y="165" fill="#5d6b80" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">static data from DataTables</text>
+<text x="60" y="200" fill="#5d6b80" font-size="12.5" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">DMAP Weapons</text>
+<rect x="60" y="212" width="220" height="50" rx="8" fill="#ffffff" stroke="#2f7dd1" stroke-width="1.5"/>
+<text x="76" y="233" fill="#161b22" font-size="15" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">rifle</text>
+<text x="76" y="251" fill="#5d6b80" font-size="12" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Damage 30 · FireRate 10.5</text>
+<rect x="60" y="274" width="220" height="50" rx="8" fill="#ffffff" stroke="#c9d1dc" stroke-width="1.5"/>
+<text x="76" y="295" fill="#161b22" font-size="15" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">pistol</text>
+<text x="76" y="313" fill="#5d6b80" font-size="12" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Damage 12 · FireRate 4</text>
+<text x="60" y="372" fill="#5d6b80" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">read by everyone,</text>
+<text x="60" y="390" fill="#5d6b80" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">written only by its loader</text>
+<text x="60" y="408" fill="#5d6b80" font-size="12.5" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">(DPROP_CONST)</text>
+<rect x="420" y="114" width="540" height="350" rx="14" fill="#f4f6f9" stroke="#c9d1dc" stroke-width="1.5"/>
+<text x="440" y="144" fill="#161b22" font-size="17" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Battle</text>
+<text x="440" y="165" fill="#5d6b80" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">live state</text>
+<text x="440" y="200" fill="#5d6b80" font-size="12.5" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">DMAP Characters</text>
+<rect x="440" y="212" width="400" height="196" rx="10" fill="#ffffff" stroke="#c9d1dc" stroke-width="1.5"/>
+<text x="456" y="236" fill="#161b22" font-size="15" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">alice</text>
+<text x="824" y="236" fill="#5d6b80" font-size="12" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="end">UFooCharacterData</text>
+<line x1="456" y1="248" x2="824" y2="248" stroke="#c9d1dc" stroke-width="1"/>
+<text x="456" y="270" fill="#161b22" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Name</text>
+<text x="586" y="270" fill="#5d6b80" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">"Alice"</text>
+<line x1="456" y1="284" x2="824" y2="284" stroke="#c9d1dc" stroke-width="1"/>
+<text x="456" y="306" fill="#161b22" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Health</text>
+<text x="586" y="306" fill="#5d6b80" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">70</text>
+<rect x="672" y="292" width="46" height="18" rx="9" fill="#2f9e6e" fill-opacity="0.14" stroke="#2f9e6e" stroke-width="1"/><text x="695.0" y="305" fill="#2f9e6e" font-size="11.5" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle">Event</text>
+<line x1="456" y1="320" x2="824" y2="320" stroke="#c9d1dc" stroke-width="1"/>
+<text x="456" y="342" fill="#161b22" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Location.X</text>
+<text x="586" y="342" fill="#5d6b80" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">5</text>
+<rect x="672" y="328" width="120" height="18" rx="9" fill="#2f9e6e" fill-opacity="0.14" stroke="#2f9e6e" stroke-width="1"/><text x="732.0" y="341" fill="#2f9e6e" font-size="11.5" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle">Event · Bubbles</text>
+<line x1="456" y1="356" x2="824" y2="356" stroke="#c9d1dc" stroke-width="1"/>
+<text x="456" y="378" fill="#161b22" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Weapon</text>
+<text x="586" y="378" fill="#5d6b80" font-size="14" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">"rifle"</text>
+<rect x="672" y="364" width="46" height="18" rx="9" fill="#2f7dd1" fill-opacity="0.14" stroke="#2f7dd1" stroke-width="1"/><text x="695.0" y="377" fill="#2f7dd1" font-size="11.5" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle">DLINK</text>
+<rect x="440" y="418" width="400" height="30" rx="8" fill="#ffffff" stroke="#c9d1dc" stroke-width="1.5"/>
+<text x="456" y="438" fill="#161b22" font-size="14" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">bob</text>
+<text x="824" y="438" fill="#5d6b80" font-size="12" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="end">UFooCharacterData</text>
+<path d="M450,372 C380,372 360,237 284,237" fill="none" stroke="#2f7dd1" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#arrow-link)"/>
+<text x="360" y="392" fill="#2f7dd1" font-size="12.5" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="middle">LinkByWeapon</text>
+<text x="360" y="409" fill="#2f7dd1" font-size="12" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle">resolves the key</text>
+<path d="M846,334 C905,334 905,180 905,140" fill="none" stroke="#2f9e6e" stroke-width="2.5" marker-end="url(#arrow-event)"/>
+<text x="940" y="236" fill="#2f9e6e" font-size="12.5" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="end">XChanged</text>
+<text x="940" y="254" fill="#2f9e6e" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="end">bubbles up</text>
+<circle cx="905" cy="132" r="5" fill="#2f9e6e"/>
+<text x="892" y="136" fill="#2f9e6e" font-size="12" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="end">Battle-&gt;Bind(...)</text>
+</svg>

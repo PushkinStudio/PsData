@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
@@ -19,6 +19,16 @@ struct PSDATA_API FPsDataInputStream
 	virtual uint64 ReadUint64() = 0;
 	virtual int64 ReadInt64() = 0;
 	virtual float ReadFloat() = 0;
+
+	/** Reads what FPsDataOutputStream::WriteDouble wrote */
+	virtual double ReadDouble()
+	{
+		const uint64 Bits = ReadUint64();
+		double Value;
+		FMemory::Memcpy(&Value, &Bits, sizeof(Value));
+		return Value;
+	}
+
 	virtual bool ReadBool() = 0;
 	virtual TCHAR ReadTCHAR() = 0;
 	virtual FString ReadString() = 0;

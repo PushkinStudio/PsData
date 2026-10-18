@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
@@ -69,7 +69,7 @@ constexpr bool IsValidKey(const T* Data)
 {
 	if (*Data)
 	{
-		while (*Data++)
+		for (; *Data; ++Data)
 		{
 			if (!IsValidCharForKey(*Data))
 			{

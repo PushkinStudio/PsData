@@ -1,11 +1,15 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
 #include "PsDataDefines.h"
 
 #include "CoreMinimal.h"
+#if PSDATA_ENGINE_AT_LEAST(5, 5)
+#include "StructUtils/UserDefinedStruct.h"
+#else
 #include "Engine/UserDefinedStruct.h"
+#endif
 
 #include "PsDataStruct.generated.h"
 

@@ -1,4 +1,4 @@
-// Copyright 2015-2023 MY.GAMES. All Rights Reserved.
+// Copyright 2015-2026 Pushkin Studio. All Rights Reserved.
 
 #pragma once
 
@@ -19,6 +19,15 @@ struct PSDATA_API FPsDataOutputStream
 	virtual void WriteUint64(uint64 Value) = 0;
 	virtual void WriteInt64(int64 Value) = 0;
 	virtual void WriteFloat(float Value) = 0;
+
+	/** The double's bits as a uint64, so every stream supports it without its own implementation */
+	virtual void WriteDouble(double Value)
+	{
+		uint64 Bits;
+		FMemory::Memcpy(&Bits, &Value, sizeof(Bits));
+		WriteUint64(Bits);
+	}
+
 	virtual void WriteBool(bool Value) = 0;
 	virtual void WriteTCHAR(TCHAR Value) = 0;
 	virtual void WriteString(const FString& Value) = 0;
