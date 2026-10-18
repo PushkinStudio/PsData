@@ -19,9 +19,9 @@
 <rect x="60" y="274" width="220" height="50" rx="8" fill="#1e2630" stroke="#3a4556" stroke-width="1.5"/>
 <text x="76" y="295" fill="#e8edf4" font-size="15" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">pistol</text>
 <text x="76" y="313" fill="#97a3b6" font-size="12" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Damage 12 · FireRate 4</text>
-<text x="60" y="372" fill="#97a3b6" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">read by everyone,</text>
-<text x="60" y="390" fill="#97a3b6" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">written only by its loader</text>
-<text x="60" y="408" fill="#97a3b6" font-size="12.5" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">(DPROP_CONST)</text>
+<text x="60" y="372" fill="#97a3b6" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">live state keeps keys;</text>
+<text x="60" y="390" fill="#97a3b6" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">links resolve them here</text>
+<text x="60" y="408" fill="#97a3b6" font-size="12.5" font-weight="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">(DLINK, Validation())</text>
 <rect x="420" y="114" width="540" height="350" rx="14" fill="#171d25" stroke="#3a4556" stroke-width="1.5"/>
 <text x="440" y="144" fill="#e8edf4" font-size="17" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" text-anchor="start">Battle</text>
 <text x="440" y="165" fill="#97a3b6" font-size="12.5" font-weight="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">live state</text>

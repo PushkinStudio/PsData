@@ -13,7 +13,7 @@ PsData's reflection compiles at `PostEngineInit`, which in a packaged game is af
 
 ## Start here
 
-- [README](https://github.com/PushkinStudio/PsData/blob/develop/README.md): what it is, a full example, install.
+- [README](https://github.com/PushkinStudio/PsData/blob/develop/README.md): what it is, one complete model, and a tour of every capability with working code (events, links, role-gated writes, saving, network snapshots and patches, FPsDataJson, Translate, DataTables, fixed point, polymorphic data).
 - [Getting started](https://github.com/PushkinStudio/PsData/blob/develop/docs/getting-started.md): install, declare a model, root, read/write/observe, save/load.
 - [AI guide](https://github.com/PushkinStudio/PsData/blob/develop/docs/ai-guide.md): rules for agents writing game code with PsData — the mistakes that compile and then fail. Read before generating PsData code.
 
