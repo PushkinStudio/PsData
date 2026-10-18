@@ -66,6 +66,7 @@ enum class EPsDataFastJsonToken : uint8
 	OpenArray = 5,
 	CloseArray = 6,
 	Comma = 7,
+	End = 8,
 };
 
 /***********************************
@@ -111,6 +112,9 @@ public:
 
 	virtual ~FPsDataFastJsonDeserializer(){};
 
+	/** After reading: every object and array was closed and nothing follows. False for truncated or trailing input */
+	bool IsComplete();
+
 private:
 	FString OwnedJsonString;
 	const TCHAR* Source;
@@ -118,6 +122,7 @@ private:
 	TArray<FPsDataFastJsonPointer> Pointers;
 	int32 PointerIndex;
 	TArray<int32> DepthStack;
+	bool bTruncated;
 
 	void Parse();
 	void SkipComma();

@@ -55,6 +55,11 @@ Binary is not automatically smaller than JSON: it writes keys and strings in ful
 string-heavy model can come out larger (the test model: 456 bytes binary, 351 characters of JSON).
 Its advantage is that nothing is parsed. Use the optimized form, or compress, when size matters.
 
+Strings follow RFC 8259 both ways: `\uXXXX`, `\/` and the short escapes other writers produce are
+read, and control characters are written as escapes, so the output is valid JSON for any reader. A
+cut-off or empty fast-JSON document is read up to where it stops — nothing is read out of bounds — and
+`FPsDataFastJsonDeserializer::IsComplete()` tells whether it was whole.
+
 **`FPsDataFastJsonDeserializer(const FString&)` parses the string in place and keeps pointing into
 it**: the string must outlive the deserializer. Passing a temporary — a `TEXT("...")` literal or a
 function's return value — is safe since 2.1, which takes such strings over (`FString&&` overload).
@@ -75,9 +80,17 @@ const FString& Text = Notify->Payload->GetJsonString();   // {"hp":7,"buffs":["h
 const bool bEmpty = Notify->Payload->IsNull();            // default is null
 ```
 
-Numbers keep their precision across every format: whole numbers up to 18 digits travel as
-`int64`, others as `double`, written with the fewest digits that read back as the same value. Text
-is compared case-sensitively, so assigning the same JSON again fires no event. To turn a payload
+The text is stored in the compact form serializers write, so `{ "hp" : 7 }` and `{"hp":7}` are the
+same value and assigning one after the other fires no event; comparison is otherwise
+case-sensitive. Text that is not JSON — or is cut off — is refused when stored: an error in
+`LogData`, and the value becomes null. A value that is stored can always be written, so a bad payload
+never breaks the document around it.
+
+Whole numbers that fit an `int64` travel as `int64`, others as `double`, written with the fewest
+digits that read back as the same value. The engine's JSON DOM (`FJsonObject`) keeps every number as
+a double, so integers past 2^53 lose precision there; fast JSON and binary keep them exactly.
+Writing an `FPsDataJson` re-reads its text each time; hashes are cached per node, so repeated
+`GetHash()` calls on unchanged data do not. To turn a payload
 into a data class, deserialize its text: see [the cookbook](cookbook.md#a-backend-protocol-made-of-data-classes).
 
 ## Translating between formats

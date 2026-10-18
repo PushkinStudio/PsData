@@ -79,7 +79,7 @@ changing data classes, read Plugins/PsData/docs/ai-guide.md and Plugins/PsData/d
 
 - **It compiles** is not evidence: rules 3, 5, 6 and 7 all compile.
 - **Write an automation test** next to your model, shaped like the plugin's own
-  (`Plugins/PsData/Source/PsDataTests`): build a small tree, bind, mutate, assert counts, round-trip
+  (`Plugins/PsData/Tests/PsDataTests`): build a small tree, bind, mutate, assert counts, round-trip
   through a serializer, compare `GetHash()`. `PsData.Events.Deferred` shows how to flush the
   deferred `Changed` event inside a test
   (`FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread)`).

@@ -24,10 +24,14 @@ struct PSDATA_API FPsDataJson
 	/** null */
 	FPsDataJson();
 
-	/** Any JSON text: an object, an array, a string, a number, true, false or null */
+	/**
+	 * Any JSON text: an object, an array, a string, a number, true, false or null. Stored in the compact
+	 * form serializers write, so equal values compare equal however they were spaced. Text that is not
+	 * JSON is logged as an error and stored as null: a value that cannot be written is never kept.
+	 */
 	FPsDataJson(const FString& InJsonString);
 
-	/** Compact JSON text, "null" when empty */
+	/** Compact JSON text */
 	const FString& GetJsonString() const;
 
 	bool IsNull() const;
@@ -36,6 +40,14 @@ struct PSDATA_API FPsDataJson
 	void Reset();
 
 private:
+	friend class UPsDataFPsDataJsonLibrary;
+
+	/** For text a serializer just produced: already compact, not parsed again */
+	struct FCompact
+	{
+	};
+	FPsDataJson(FString&& InCompactJson, FCompact);
+
 	FString JsonString;
 };
 

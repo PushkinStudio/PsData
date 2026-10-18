@@ -17,7 +17,7 @@ engine version, so switching engines never rebuilds from scratch), copies the pl
 `Plugins/PsData`, builds `PsDataHostEditor`, runs `Automation RunTests PsData` headless and prints
 one line per test. The exit code is non-zero if anything failed to build or any test failed.
 
-Measured on Linux with this tree: UE 5.8.1 and UE 5.6.1, 17 tests each, all passing; a warm editor
+Measured on Linux with this tree: UE 5.8.1 and UE 5.6.1, 20 tests each, all passing; a warm editor
 build is ~25 s. `--game` compiles the engine's modules for the host once (~10 minutes cold).
 
 Why a copy and not a symlink: Unreal Build Accelerator tracks the symlinked path and the real path
@@ -29,6 +29,8 @@ tree.
 
 1. Create a C++ project (or use an existing one) and copy this folder to
    `<Host>/Plugins/PsData`. `Binaries/`, `Intermediate/`, `docs/` and `Tools/` are not needed.
+   Copy `Tests/PsDataTests` to `<Host>/Plugins/PsDataTests` and enable both plugins in the
+   `.uproject`: left inside `Plugins/PsData/Tests` the test plugin is never found.
 2. Build the editor target:
 
    ```bat
@@ -49,8 +51,11 @@ Read the log, not stdout: the trace server forks and can clobber the tail of std
 
 ## The suite
 
-`Source/PsDataTests` is a `DeveloperTool` module: it loads in the editor and in development
-programs, never in a shipped game. Its model (`PsDataTestModel.h`) is a miniature game — static
+`Tests/PsDataTests` is a plugin of its own with one `DeveloperTool` module. It sits inside this
+repository but outside the PsData plugin's discovery: the engine and UnrealBuildTool stop searching a
+directory once they find a `.uplugin` in it (`FPluginManager::FindPluginsInDirectory`,
+`EnumeratePlugins.cs`), so a project that installs PsData never compiles or loads the test classes.
+`Tools/test.sh` copies it next to PsData in the host project and enables it. Its model (`PsDataTestModel.h`) is a miniature game — static
 weapon data, characters with strict, event, alias, array and link fields under one root — and each
 test file covers one area:
 
@@ -62,7 +67,10 @@ test file covers one area:
 | `PsData.Links` | resolution, re-resolution on key change, `Nullable`, dangling keys, `Validation` |
 | `PsData.Serialization.RoundTrip`, `PsData.Hash` | JSON DOM, fast JSON, binary round trips, aliases on the wire, patch vs replace, content hash |
 | `PsData.Serialization.Translate` | binary and JSON DOM documents translated to fast JSON without the model |
-| `PsData.Types.Json` | `FPsDataJson` through every format and `Copy`: objects, arrays and scalars at the top level, int64 and 17-digit doubles, patch, change events |
+| `PsData.Types.Json.Formats` | `FPsDataJson` through every format and `Copy`: objects, arrays and scalars at the top level, int64 and 17-digit doubles, patch, change events |
+| `PsData.Types.Json.Canonical` | compact storage, blank and invalid text become null, the document stays valid JSON, other spacing is not a change |
+| `PsData.Serialization.Escapes` | `\uXXXX`, `\/` and short escapes from other writers; control characters, quotes and backslashes written so the engine's parser accepts them; escaped keys; 19-digit int64 |
+| `PsData.Serialization.Truncated` | cut-off and empty fast-JSON documents: no out-of-bounds read, no assert, what arrived is applied |
 | `PsData.DataTable` | `MAKE_TABLE_STRUCT` row struct generation and DataTable import |
 | `PsData.Numbers.*` | `FPsDataFixedPoint`, `FPsDataBigInteger` |
 

@@ -23,11 +23,6 @@
 			"Name": "PsDataEditor",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "EarliestPossible"
-		},
-		{
-			"Name": "PsDataTests",
-			"Type": "DeveloperTool",
-			"LoadingPhase": "Default"
 		}
 	]
 }

@@ -2,7 +2,7 @@
 
 From an empty project to a model you can change, observe and save. Every snippet on this page
 compiles against the plugin as shipped; the same shapes run in its automation suite
-(`Source/PsDataTests`).
+(`Tests/PsDataTests`).
 
 ## 1. Install
 

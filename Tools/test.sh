@@ -63,7 +63,7 @@ cat > "$HOST/$NAME.uproject" <<EOF
 	"FileVersion": 3,
 	"EngineAssociation": "",
 	"Modules": [{ "Name": "$NAME", "Type": "Runtime", "LoadingPhase": "Default" }],
-	"Plugins": [{ "Name": "PsData", "Enabled": true }]
+	"Plugins": [{ "Name": "PsData", "Enabled": true }, { "Name": "PsDataTests", "Enabled": true }]
 }
 EOF
 for TARGET in Game Editor; do
@@ -105,8 +105,13 @@ printf '[/Script/EngineSettings.GameMapsSettings]\nGameDefaultMap=/Engine/Maps/E
 # A copy, not a symlink: Unreal Build Accelerator aborts on a symlinked plugin
 # ("cross-process rename-while-open"). Only what the build reads is copied.
 rsync -a --delete \
-	--exclude .git --exclude Binaries --exclude Intermediate --exclude docs --exclude Tools \
+	--exclude .git --exclude Binaries --exclude Intermediate --exclude docs --exclude Tools --exclude Tests \
 	"$PLUGIN/" "$HOST/Plugins/PsData/"
+
+# The suite is its own plugin: nested inside PsData it is never discovered (plugin discovery stops at
+# the first .uplugin), so game projects never get its classes. Here it sits next to PsData.
+rsync -a --delete --exclude Binaries --exclude Intermediate \
+	"$PLUGIN/Tests/PsDataTests/" "$HOST/Plugins/PsDataTests/"
 
 build() {
 	local Target=$1

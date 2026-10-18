@@ -1,0 +1,26 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "PsData Tests",
+	"Description": "The automation suite for PsData. Kept out of the PsData plugin so its test classes never reach a game project; Tools/test.sh installs it next to PsData in a host project.",
+	"Category": "Testing",
+	"CreatedBy": "Pushkin Studio",
+	"CreatedByURL": "https://github.com/PushkinStudio",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "PsDataTests",
+			"Type": "DeveloperTool",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "PsData",
+			"Enabled": true
+		}
+	]
+}

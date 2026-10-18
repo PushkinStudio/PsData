@@ -3,6 +3,7 @@
 #include "PsDataTestModel.h"
 
 #include "Misc/AutomationTest.h"
+#include "Serialization/JsonSerializer.h"
 #include "Serialize/PsDataBinarySerialization.h"
 #include "Serialize/PsDataFastJsonSerialization.h"
 #include "Serialize/PsDataJsonSerialization.h"
@@ -47,7 +48,7 @@ void ExpectCanonical(FAutomationTestBase& Test, const FString& Format, const UPs
 }
 } // namespace PsDataJsonTypeTest
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPsDataJsonTypeTest, "PsData.Types.Json",
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPsDataJsonTypeTest, "PsData.Types.Json.Formats",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
 
 bool FPsDataJsonTypeTest::RunTest(const FString& Parameters)
@@ -155,6 +156,128 @@ bool FPsDataTranslateTest::RunTest(const FString& Parameters)
 	FPsDataFastJsonDeserializer Empty(TEXT(""));
 	FPsDataFastJsonSerializer Nothing;
 	TestFalse(TEXT("An empty document translates to nothing"), Empty.Translate(&Nothing));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPsDataJsonCanonicalTest, "PsData.Types.Json.Canonical",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+
+bool FPsDataJsonCanonicalTest::RunTest(const FString& Parameters)
+{
+	TestEqual(TEXT("Stored in compact form"), FPsDataJson(TEXT("{ \"hp\" : 7 }")).GetJsonString(), FString(TEXT("{\"hp\":7}")));
+	TestTrue(TEXT("Blank text is null"), FPsDataJson(TEXT("  \n")).IsNull());
+
+	// Text that is not JSON never reaches a document: it is refused when stored
+	AddExpectedError(TEXT("not valid JSON"), EAutomationExpectedErrorFlags::Contains, 1);
+	const auto Message = NewObject<UPsDataTestMessage>();
+	Message->Payload = FPsDataJson(TEXT("{\"a\": }"));
+	TestTrue(TEXT("Invalid JSON is stored as null"), Message->Payload->IsNull());
+
+	Message->Items->Add(FPsDataJson(TEXT("[1, 2]")));
+	FPsDataFastJsonSerializer Serializer;
+	Message->DataSerialize(&Serializer);
+	TSharedPtr<FJsonObject> Parsed;
+	TestTrue(TEXT("The document stays valid JSON"), FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Serializer.GetJsonString()), Parsed) && Parsed.IsValid());
+
+	// A server sending the same value with other spacing is not a change
+	Message->Payload = FPsDataJson(TEXT("{\"hp\": 7}"));
+	int32 Changes = 0;
+	FPsDataBindCollection Binds;
+	Binds.Add(Message->Payload.Bind(FPsDataDelegate::CreateLambda([&](UPsDataEvent*) { ++Changes; })));
+	FPsDataFastJsonDeserializer Patch(TEXT("{\"Payload\": {\"hp\":7}}"));
+	Message->DataDeserialize(&Patch, true);
+	TestEqual(TEXT("Same value, other spacing: no event"), Changes, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPsDataEscapesTest, "PsData.Serialization.Escapes",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+
+bool FPsDataEscapesTest::RunTest(const FString& Parameters)
+{
+	// What other JSON writers produce: \u escapes, an escaped slash, short forms
+	{
+		const auto Character = NewObject<UPsDataTestCharacter>();
+		FPsDataFastJsonDeserializer Deserializer(TEXT(R"({"Name": "café \/ A\tB"})"));
+		Character->DataDeserialize(&Deserializer, true);
+		TestEqual(TEXT("Escapes from other writers are read"), *Character->Name, FString(TEXT("café / A\tB")));
+	}
+
+	// Control characters, quotes and backslashes survive a round trip and leave valid JSON behind
+	{
+		const FString Name = TEXT("line\nnext\x01 \"quoted\" back\\slash é");
+		const auto Character = NewObject<UPsDataTestCharacter>();
+		Character->Name = Name;
+
+		FPsDataFastJsonSerializer Serializer;
+		Character->DataSerialize(&Serializer);
+		const FString Json = Serializer.GetJsonString();
+		TestTrue(TEXT("A control character is written as \\u00XX"), Json.Contains(TEXT("\\u0001")));
+
+		TSharedPtr<FJsonObject> Parsed;
+		TestTrue(TEXT("The engine's parser accepts the output"), FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Json), Parsed) && Parsed.IsValid());
+
+		const auto Target = NewObject<UPsDataTestCharacter>();
+		FPsDataFastJsonDeserializer Deserializer(Json);
+		Target->DataDeserialize(&Deserializer);
+		TestEqual(TEXT("The string comes back unchanged"), *Target->Name, Name);
+	}
+
+	// Keys are escaped too: in a free-form payload they are arbitrary text
+	{
+		const FPsDataJson Payload(TEXT(R"({"café": "a\"b\\c\/d\u0001\b\f\n", "k\"ey": 1})"));
+		const FString Expected = TEXT("{\"café\":\"a\\\"b\\\\c/d\\u0001\\b\\f\\n\",\"k\\\"ey\":1}");
+		TestEqual(TEXT("Keys and values in canonical form"), Payload.GetJsonString(), Expected);
+
+		const auto Message = NewObject<UPsDataTestMessage>();
+		Message->Payload = Payload;
+		FPsDataFastJsonSerializer Serializer;
+		Message->DataSerialize(&Serializer);
+		const auto Target = NewObject<UPsDataTestMessage>();
+		FPsDataFastJsonDeserializer Deserializer(Serializer.GetJsonString());
+		Target->DataDeserialize(&Deserializer);
+		TestEqual(TEXT("A payload with escaped keys round-trips"), Target->Payload->GetJsonString(), Expected);
+	}
+
+	// Every int64 survives fast JSON and binary; past the int64 range a number is a double
+	{
+		const FString Ids = TEXT("{\"id\":1234567890123456789,\"max\":9223372036854775807,\"neg\":-9223372036854775807,\"big\":1.2345678901234567e+19}");
+		const auto Message = NewObject<UPsDataTestMessage>();
+		Message->Payload = FPsDataJson(TEXT("{\"id\": 1234567890123456789, \"max\": 9223372036854775807, \"neg\": -9223372036854775807, \"big\": 12345678901234567890}"));
+		TestEqual(TEXT("19-digit integers are kept exactly"), Message->Payload->GetJsonString(), Ids);
+
+		const auto Output = MakeShared<FPsDataBufferOutputStream>();
+		FPsDataBinarySerializer Serializer(Output);
+		Message->DataSerialize(&Serializer);
+		const auto Target = NewObject<UPsDataTestMessage>();
+		FPsDataBinaryDeserializer Deserializer(MakeShared<FPsDataBufferInputStream>(Output->GetBuffer()));
+		Target->DataDeserialize(&Deserializer);
+		TestEqual(TEXT("19-digit integers survive binary"), Target->Payload->GetJsonString(), Ids);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPsDataTruncatedTest, "PsData.Serialization.Truncated",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter)
+
+bool FPsDataTruncatedTest::RunTest(const FString& Parameters)
+{
+	// A cut-off server response must not take the game down: these used to read past the token list
+	const TArray<FString> Broken = {TEXT("{\"a\":"), TEXT("[1, 2"), TEXT("{\"a\": [1, {\"b\""), TEXT("{")};
+	AddExpectedError(TEXT("not valid JSON"), EAutomationExpectedErrorFlags::Contains, Broken.Num());
+	for (const auto& Text : Broken)
+	{
+		TestTrue(TEXT("Truncated payload is null: ") + Text, FPsDataJson(Text).IsNull());
+	}
+
+	const auto Character = NewObject<UPsDataTestCharacter>();
+	FPsDataFastJsonDeserializer Truncated(TEXT("{\"Name\": \"Alice\", \"Tags\": [\"a\", \"b\""));
+	Character->DataDeserialize(&Truncated, true);
+	TestEqual(TEXT("What arrived before the cut is applied"), *Character->Name, FString(TEXT("Alice")));
+
+	FPsDataFastJsonDeserializer Empty(TEXT(""));
+	Character->DataDeserialize(&Empty, true);
+	TestEqual(TEXT("An empty document changes nothing"), *Character->Name, FString(TEXT("Alice")));
 	return true;
 }
 

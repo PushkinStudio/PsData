@@ -29,7 +29,7 @@ PsData's reflection compiles at `PostEngineInit`, which in a packaged game is af
 
 - [PsDataAPI.h](https://github.com/PushkinStudio/PsData/blob/develop/Source/PsData/Public/PsDataAPI.h): the macros; the single include for users.
 - [PsData.h](https://github.com/PushkinStudio/PsData/blob/develop/Source/PsData/Public/PsData.h): `UPsData` — tree, events, serialization entry points.
-- [Test model](https://github.com/PushkinStudio/PsData/blob/develop/Source/PsDataTests/Private/PsDataTestModel.h): a compact, compiling example of every declaration style; the tests next to it are working usage examples.
+- [Test model](https://github.com/PushkinStudio/PsData/blob/develop/Tests/PsDataTests/Source/PsDataTests/Private/PsDataTestModel.h): a compact, compiling example of every declaration style; the tests next to it are working usage examples.
 
 ## For agents working on the plugin
 

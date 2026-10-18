@@ -36,13 +36,20 @@ those are not re-verified here.
   without a default).
 - `DMETA(CustomType)` removed the wrong tag from the parsed meta.
 - `PsDataTools::IsValidKey(const T*)` rejected every non-empty string.
+- Fast JSON strings: `\uXXXX`, `\/`, `\b` and `\f` from other writers were kept as a backslash and
+  letters, then doubled on the next write; control characters other than `\n\r\t` were written raw,
+  which is invalid JSON. Both directions now follow RFC 8259, and keys are escaped like values.
+- A truncated or empty fast-JSON document read past the end of its token list or hit `checkNoEntry`.
+  It is now read up to where it stops; `FPsDataFastJsonDeserializer::IsComplete()` reports whether
+  it was whole.
 
 ### Added
 
 - `FPsDataJson`, a property type for any JSON value whose shape the model does not own (server
   notifications, free-form attributes). Kept as compact text, written as real JSON in JSON documents
-  and as structure in binary; whole numbers up to 18 digits travel as `int64`, others as `double`
-  at full precision. Brought over from the copy of PsData that DAWG ships, with its fast-JSON array
+  and as structure in binary; stored in compact form, and text that is not JSON is refused (null and
+  an error) so a stored value can always be written. Whole numbers that fit an `int64` travel as
+  `int64`, others as `double` at full precision. Brought over from the copy of PsData that DAWG ships, with its fast-JSON array
   handling fixed (an array inside a payload was read as an object there).
 - `FPsDataDeserializer::Translate(FPsDataSerializer*)` copies a value with everything nested in it
   between any two formats without a model class, on top of a new `NextValueType()`.
@@ -50,9 +57,11 @@ those are not re-verified here.
   `WriteDouble`/`ReadDouble`). The new virtuals have default implementations, so serializers and
   streams written outside the plugin keep compiling.
 - The JSON schema marks `FPsDataJson` fields with `IsDynamic`.
-- `PsDataTests`, a `DeveloperTool` module with 17 automation tests (`PsData.*`) over a miniature
+- `Tests/PsDataTests`, a separate test plugin with 20 automation tests (`PsData.*`) over a miniature
   game model: reflection, properties, events, tree, collections, links, serialization, translation,
-  `FPsDataJson`, hashing, DataTable import, fixed-point and big-integer numbers.
+  escapes, truncated input, `FPsDataJson`, hashing, DataTable import, fixed-point and big-integer
+  numbers. Nested inside the PsData folder it is never discovered, so game projects never compile
+  or load its classes; `Tools/test.sh` installs it next to PsData in the host project.
 - `Tools/test.sh`: builds the plugin in a generated host project for any engine and runs the suite.
 - Documentation: `docs/` (getting started, model reference, events, serialization, Blueprints,
   cookbook), `docs/ai-guide.md` for AI agents using the plugin, `AGENTS.md` for agents working on

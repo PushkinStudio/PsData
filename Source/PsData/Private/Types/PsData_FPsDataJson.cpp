@@ -11,7 +11,27 @@ FPsDataJson::FPsDataJson()
 }
 
 FPsDataJson::FPsDataJson(const FString& InJsonString)
-	: JsonString(InJsonString.IsEmpty() ? FString(TEXT("null")) : InJsonString)
+	: JsonString(TEXT("null"))
+{
+	if (InJsonString.TrimStartAndEnd().IsEmpty())
+	{
+		return;
+	}
+
+	FPsDataFastJsonDeserializer Deserializer(InJsonString);
+	FPsDataFastJsonSerializer Serializer(false, 256);
+	if (Deserializer.Translate(&Serializer) && Deserializer.IsComplete())
+	{
+		JsonString = MoveTemp(Serializer.GetJsonString());
+	}
+	else
+	{
+		UE_LOG(LogData, Error, TEXT("FPsDataJson: not valid JSON, stored as null: %s"), *InJsonString);
+	}
+}
+
+FPsDataJson::FPsDataJson(FString&& InCompactJson, FCompact)
+	: JsonString(MoveTemp(InCompactJson))
 {
 }
 
@@ -132,12 +152,11 @@ DEFINE_FUNCTION(UPsDataFPsDataJsonLibrary::execGetArrayLinkValue)
 
 void UPsDataFPsDataJsonLibrary::TypeSerialize(const UPsData* const Instance, const FDataField* Field, FPsDataSerializer* Serializer, const FPsDataJson& Value)
 {
-	// The stored text is parsed and replayed into Serializer, so the value lands as JSON, not as a string
+	// The stored text is replayed into Serializer, so the value lands as JSON, not as a string. It was
+	// validated when it was stored, which is what keeps a broken value out of the surrounding document
 	FPsDataFastJsonDeserializer Deserializer(Value.GetJsonString());
-	if (!Deserializer.Translate(Serializer))
-	{
-		UE_LOG(LogData, Error, TEXT("Can't serialize \"%s::%s\": the stored value is not valid JSON: %s"), *Instance->GetClass()->GetName(), *Field->Name, *Value.GetJsonString());
-	}
+	const bool bTranslated = Deserializer.Translate(Serializer);
+	ensureMsgf(bTranslated, TEXT("FPsDataJson \"%s::%s\" holds text its own reader rejects: %s"), *Instance->GetClass()->GetName(), *Field->Name, *Value.GetJsonString());
 }
 
 FPsDataJson UPsDataFPsDataJsonLibrary::TypeDeserialize(const UPsData* const Instance, const FDataField* Field, FPsDataDeserializer* Deserializer, const FPsDataJson& Value)
@@ -145,7 +164,7 @@ FPsDataJson UPsDataFPsDataJsonLibrary::TypeDeserialize(const UPsData* const Inst
 	FPsDataFastJsonSerializer Serializer(false, 256);
 	if (Deserializer->Translate(&Serializer))
 	{
-		return FPsDataJson(Serializer.GetJsonString());
+		return FPsDataJson(MoveTemp(Serializer.GetJsonString()), FPsDataJson::FCompact());
 	}
 
 	UE_LOG(LogData, Warning, TEXT("Can't deserialize \"%s::%s\" as \"%s\""), *Instance->GetClass()->GetName(), *Field->Name, *PsDataTools::FType<FPsDataJson>::Type());

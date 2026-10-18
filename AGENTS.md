@@ -41,7 +41,9 @@ Source/
     Public/Types/              one file pair per supported value type
     Public/PsNetworkData.h     UPsNetworkData replication
   PsDataEditor/              UncookedOnly — Blueprint nodes, pin factory, details customizations
-  PsDataTests/               DeveloperTool — the automation suite and its test model
+Tests/PsDataTests/           a separate plugin: the automation suite and its test model. Nested inside
+                             PsData it is never discovered, so game projects never get its classes;
+                             Tools/test.sh installs it next to PsData in the host project
 Config/                      CoreRedirects for pre-2019 module names
 Resources/Icon128.png        plugin browser icon
 Tools/test.sh                build + test runner
@@ -70,7 +72,7 @@ docs/                        user documentation; docs/dev/ is for contributors; 
 7. **Game thread only.** The event scope guard and delegate tables are unsynchronized statics.
    Don't introduce PsData calls on other threads; `DataSerializeAsync` converts an already-taken
    snapshot off-thread and is the pattern to copy.
-8. **A fix comes with a test, and the test has been seen to fail.** Add it to `Source/PsDataTests`
+8. **A fix comes with a test, and the test has been seen to fail.** Add it to `Tests/PsDataTests`
    (one file per area), revert the fix, watch it fail, restore. Name tests `PsData.<Area>.<Case>`,
    and never give a test the name of another test's group (`PsData.Serialization` next to
    `PsData.Serialization.Translate`): the shorter one silently stops running. Check the count.
