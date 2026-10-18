@@ -92,11 +92,11 @@ TArray<TSharedPtr<FJsonValue>> DescribeEnums(const TArray<UEnum*>& PsUEnums)
 			if (IValue == DataEnum->GetMaxEnumValue())
 				continue;
 
-			UE_LOG(LogData, Log, TEXT("%s '%s' value %s=%d"), *PS_FUNC_LINE, *EnumName, *SValue, IValue);
+			UE_LOG(LogData, Log, TEXT("%s '%s' value %s=%lld"), *PS_FUNC_LINE, *EnumName, *SValue, IValue);
 
 			auto ValuePtr = MakeShared<FJsonObject>();
-			ValuePtr->SetStringField("Name", SValue);
-			ValuePtr->SetNumberField("Value", IValue);
+			ValuePtr->SetStringField(TEXT("Name"), SValue);
+			ValuePtr->SetNumberField(TEXT("Value"), IValue);
 			Values.Add(MakeShared<FJsonValueObject>(ValuePtr));
 		}
 		EnumJsonPtr->SetArrayField(TEXT("Values"), Values);

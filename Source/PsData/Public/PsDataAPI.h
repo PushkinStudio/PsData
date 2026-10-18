@@ -727,13 +727,17 @@ using TDPropSelector = typename TSelector<
 
 #define COMMA ,
 
+/** Token pasting that expands its arguments first; PREPROCESSOR_JOIN is deprecated since 5.8 and UE_JOIN's arity varies by engine */
+#define PSDATA_JOIN_INNER(A, B) A##B
+#define PSDATA_JOIN(A, B) PSDATA_JOIN_INNER(A, B)
+
 /***********************************
  * Macro DMETA
  ***********************************/
 
 #define DMETA(...) \
 private:           \
-	PsDataTools::TDMeta<ThisClass, __LINE__> PREPROCESSOR_JOIN(DMeta_, __LINE__){#__VA_ARGS__};
+	PsDataTools::TDMeta<ThisClass, __LINE__> PSDATA_JOIN(DMeta_, __LINE__){#__VA_ARGS__};
 
 /***********************************
  * Macro DPROP

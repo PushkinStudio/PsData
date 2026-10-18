@@ -4,6 +4,7 @@
 
 #include "PsData.h"
 #include "PsDataCore.h"
+#include "PsDataDefines.h"
 
 using namespace PsDataTools;
 
@@ -88,7 +89,7 @@ bool FDataRawMeta::Remove(const FDataStringViewChar& Key)
 	{
 		if (Items[i].Key.Equal<true>(Key))
 		{
-			Items.RemoveAt(i, 1, false);
+			Items.RemoveAt(i, 1, PSDATA_NO_SHRINK);
 			return true;
 		}
 	}
@@ -377,7 +378,7 @@ void ApplyMetaItems(FDataField* Field, FDataRawMeta& RawMeta)
 		PrintUnusedMetaValue(CustomType);
 		PrintApplyMeta(CustomType);
 
-		RawMeta.Remove(FDataMetaType::Hidden);
+		RawMeta.Remove(FDataMetaType::CustomType);
 	}
 
 	if (Field->Meta.bStrict && Field->Meta.bEvent)

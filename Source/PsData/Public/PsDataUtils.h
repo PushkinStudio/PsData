@@ -69,7 +69,7 @@ constexpr bool IsValidKey(const T* Data)
 {
 	if (*Data)
 	{
-		while (*Data++)
+		for (; *Data; ++Data)
 		{
 			if (!IsValidCharForKey(*Data))
 			{

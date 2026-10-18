@@ -3,6 +3,7 @@
 #include "Serialize/PsDataFastJsonSerialization.h"
 
 #include "PsData.h"
+#include "PsDataDefines.h"
 #include "PsDataUtils.h"
 
 #include <cmath>
@@ -500,6 +501,19 @@ FPsDataFastJsonDeserializer::FPsDataFastJsonDeserializer(const FString& InJsonSt
 	DepthStack.Reserve(10);
 }
 
+FPsDataFastJsonDeserializer::FPsDataFastJsonDeserializer(FString&& InJsonString)
+	: FPsDataDeserializer()
+	, OwnedJsonString(MoveTemp(InJsonString))
+	, Source(OwnedJsonString.GetCharArray().GetData())
+	, Size(OwnedJsonString.Len())
+	, PointerIndex(0)
+{
+	Pointers.Reserve(100);
+	Parse();
+
+	DepthStack.Reserve(10);
+}
+
 void FPsDataFastJsonDeserializer::Parse()
 {
 	int32 PrevIndex = -1;
@@ -802,7 +816,7 @@ bool FPsDataFastJsonDeserializer::ReadValue(UPsData*& OutValue, FPsDataAllocator
 
 void FPsDataFastJsonDeserializer::PopKey(const FString& Key)
 {
-	const int32 Depth = DepthStack.Pop(false);
+	const int32 Depth = DepthStack.Pop(PSDATA_NO_SHRINK);
 	for (int32 i = PointerIndex; i < Pointers.Num(); ++i)
 	{
 		const auto& Pointer = Pointers[i];
@@ -822,7 +836,7 @@ void FPsDataFastJsonDeserializer::PopIndex()
 
 void FPsDataFastJsonDeserializer::PopArray()
 {
-	const int32 Depth = DepthStack.Pop(false);
+	const int32 Depth = DepthStack.Pop(PSDATA_NO_SHRINK);
 	for (int32 i = PointerIndex; i < Pointers.Num(); ++i)
 	{
 		const auto& Pointer = Pointers[i];
@@ -838,7 +852,7 @@ void FPsDataFastJsonDeserializer::PopArray()
 
 void FPsDataFastJsonDeserializer::PopObject()
 {
-	const int32 Depth = DepthStack.Pop(false);
+	const int32 Depth = DepthStack.Pop(PSDATA_NO_SHRINK);
 	for (int32 i = PointerIndex; i < Pointers.Num(); ++i)
 	{
 		const auto& Pointer = Pointers[i];

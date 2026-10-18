@@ -5,7 +5,11 @@
 #include "PsDataDefines.h"
 
 #include "CoreMinimal.h"
+#if PSDATA_ENGINE_AT_LEAST(5, 5)
+#include "StructUtils/UserDefinedStruct.h"
+#else
 #include "Engine/UserDefinedStruct.h"
+#endif
 
 #include "PsDataStruct.generated.h"
 

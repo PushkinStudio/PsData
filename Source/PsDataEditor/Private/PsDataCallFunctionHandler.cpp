@@ -62,7 +62,11 @@ bool FPsDataHandler_CallFunction::IsCalledFunctionPure(UEdGraphNode* Node) const
 {
 	if (const auto CallFunctionNode = Cast<UK2Node_CallFunction>(Node))
 	{
+#if PSDATA_ENGINE_AT_LEAST(5, 5)
+		return CallFunctionNode->IsNodePure();
+#else
 		return CallFunctionNode->bIsPureFunc;
+#endif
 	}
 
 	return false;

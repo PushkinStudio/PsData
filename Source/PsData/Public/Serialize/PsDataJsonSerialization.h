@@ -59,7 +59,7 @@ private:
 	TSharedPtr<FJsonObject> RootJson;
 	TSharedPtr<FJsonValueObject> RootValue;
 	TArray<TSharedPtr<FJsonValue>> Values;
-	TMap<TSharedPtr<FJsonValue>, TMap<FString, TSharedPtr<FJsonValue>>::TIterator> KeysIterator;
+	TMap<TSharedPtr<FJsonValue>, decltype(FJsonObject::Values)::TIterator> KeysIterator;
 	TMap<TSharedPtr<FJsonValue>, TArray<TSharedPtr<FJsonValue>>::TIterator> IndicesIterator;
 
 #if WITH_EDITORONLY_DATA

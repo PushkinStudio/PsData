@@ -3,6 +3,7 @@
 #include "Serialize/PsDataJsonSerialization.h"
 
 #include "PsData.h"
+#include "PsDataDefines.h"
 
 /***********************************
  * FJsonDataSerializer
@@ -47,7 +48,7 @@ void FPsDataJsonSerializer::WriteJsonValue(TSharedPtr<FJsonValue> Value)
 	else if (Parent->Type == EJson::Object)
 	{
 		check(Keys.Num() > 0);
-		Parent->AsObject()->Values.Add(Keys.Last(), Value);
+		Parent->AsObject()->SetField(Keys.Last(), Value);
 	}
 
 	if (Value->Type == EJson::Array || Value->Type == EJson::Object)
@@ -127,19 +128,19 @@ void FPsDataJsonSerializer::PopKey(const FString& Key)
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Object);
 	check(Keys.Num() > 0 && Keys.Last() == Key);
-	Keys.Pop(false);
+	Keys.Pop(PSDATA_NO_SHRINK);
 }
 
 void FPsDataJsonSerializer::PopArray()
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Array);
-	Values.Pop(false);
+	Values.Pop(PSDATA_NO_SHRINK);
 }
 
 void FPsDataJsonSerializer::PopObject()
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Object);
-	Values.Pop(false);
+	Values.Pop(PSDATA_NO_SHRINK);
 }
 
 /***********************************
@@ -210,7 +211,8 @@ bool FPsDataJsonDeserializer::ReadKey(FString& OutKey)
 	auto& Iterator = KeysIterator.FindChecked(JsonValue);
 	if (Iterator)
 	{
-		OutKey = Iterator.Key();
+		// FJsonObject keys are FString before 5.8 and UE::FSharedString since; both dereference to TCHAR*
+		OutKey = *Iterator.Key();
 		return true;
 	}
 	else
@@ -352,7 +354,7 @@ void FPsDataJsonDeserializer::PopKey(const FString& Key)
 	const TSharedPtr<FJsonValue> JsonValue = Values.Last();
 	auto& Iterator = KeysIterator.FindChecked(JsonValue);
 	check(Iterator);
-	check(Iterator.Key() == Key);
+	check(Key == *Iterator.Key());
 	++Iterator;
 }
 
@@ -368,11 +370,11 @@ void FPsDataJsonDeserializer::PopIndex()
 void FPsDataJsonDeserializer::PopArray()
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Array);
-	Values.Pop(false);
+	Values.Pop(PSDATA_NO_SHRINK);
 }
 
 void FPsDataJsonDeserializer::PopObject()
 {
 	check(Values.Num() > 0 && Values.Last()->Type == EJson::Object);
-	Values.Pop(false);
+	Values.Pop(PSDATA_NO_SHRINK);
 }

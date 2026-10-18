@@ -401,7 +401,7 @@ bool FDataReflection::InitLinkProperty(UClass* Class, const char* Name, bool bAb
 
 		if (LinkPathFunctionByField.Contains(Field))
 		{
-			UE_LOG(LogDataReflection, Fatal, TEXT("Attempting to recreate link %s::%s"), *Class->GetName(), *Field->Name, Hash);
+			UE_LOG(LogDataReflection, Fatal, TEXT("Attempting to recreate link %s::%s (%d)"), *Class->GetName(), *Field->Name, Hash);
 		}
 
 		LinkPathFunctionByField.Add(Field, PathFunction);

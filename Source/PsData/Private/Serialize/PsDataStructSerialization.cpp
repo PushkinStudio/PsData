@@ -202,7 +202,8 @@ void FPsDataStructSerializer::StructDeserialize(const UStruct* Struct, uint8* Ou
 					for (auto& Pair : JsonMap->Values)
 					{
 						const auto Index = ScriptMapHelper.AddDefaultValue_Invalid_NeedsRehash();
-						PropertyDeserialize(MapProperty->KeyProp, ScriptMapHelper.GetKeyPtr(Index), MakeShared<FJsonValueString>(Pair.Key));
+						// FJsonObject keys are FString before 5.8 and UE::FSharedString since; both dereference to TCHAR*
+						PropertyDeserialize(MapProperty->KeyProp, ScriptMapHelper.GetKeyPtr(Index), MakeShared<FJsonValueString>(FString(*Pair.Key)));
 						PropertyDeserialize(MapProperty->ValueProp, ScriptMapHelper.GetValuePtr(Index), Pair.Value.ToSharedRef());
 					}
 				}
@@ -221,12 +222,7 @@ void FPsDataStructSerializer::StructDeserialize(const UStruct* Struct, uint8* Ou
 
 TSharedPtr<FJsonValue> FPsDataStructSerializer::FindJsonValueByProperty(const FProperty* Property, const TSharedRef<FJsonObject>& JsonObject)
 {
-	if (auto Find = JsonObject->Values.Find(Property->GetAuthoredName()))
-	{
-		return *Find;
-	}
-
-	return nullptr;
+	return JsonObject->TryGetField(Property->GetAuthoredName());
 }
 
 /***********************************

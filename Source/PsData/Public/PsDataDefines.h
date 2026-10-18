@@ -13,6 +13,17 @@
 #define OLD_CSV_IMPORT_FACTORY ENGINE_MINOR_VERSION < 25 && ENGINE_MAJOR_VERSION == 4
 #define OLD_PROPERTY_STYLE ENGINE_MINOR_VERSION < 25 && ENGINE_MAJOR_VERSION == 4
 
+/** True when the engine building this is Major.Minor or newer */
+#define PSDATA_ENGINE_AT_LEAST(Major, Minor) (ENGINE_MAJOR_VERSION > (Major) || (ENGINE_MAJOR_VERSION == (Major) && ENGINE_MINOR_VERSION >= (Minor)))
+
+/** "Don't shrink" for TArray::RemoveAt/Pop/SetNum: a bool until 5.4, EAllowShrinking since; 5.8 removed the bool overloads */
+#if PSDATA_ENGINE_AT_LEAST(5, 4)
+#define PSDATA_SHRINK(bAllowShrinking) ((bAllowShrinking) ? EAllowShrinking::Yes : EAllowShrinking::No)
+#else
+#define PSDATA_SHRINK(bAllowShrinking) (bAllowShrinking)
+#endif
+#define PSDATA_NO_SHRINK PSDATA_SHRINK(false)
+
 #if OLD_PROPERTY_STYLE
 using FProperty = UProperty;
 using FNumericProperty = UNumericProperty;
@@ -93,10 +104,16 @@ FieldType* DuplicateProperty(FieldType* Target, UField* Owner, const FName& Name
 
 #else
 
+// 5.8 dropped object flags from FField: the constructors and FField::Duplicate stop taking them and
+// FField::SetFlags became a no-op, so ObjectFlags is only honoured on older engines
 template <typename FieldType>
 FieldType* NewProperty(const FFieldVariant& Owner, const FName& Name, EObjectFlags ObjectFlags, EPropertyFlags PropertyFlags = EPropertyFlags::CPF_None)
 {
+#if PSDATA_ENGINE_AT_LEAST(5, 8)
+	FieldType* Property = new FieldType(Owner, Name);
+#else
 	FieldType* Property = new FieldType(Owner, Name, ObjectFlags);
+#endif
 	Property->SetPropertyFlags(PropertyFlags);
 	return Property;
 }
@@ -104,8 +121,12 @@ FieldType* NewProperty(const FFieldVariant& Owner, const FName& Name, EObjectFla
 template <typename FieldType>
 FieldType* DuplicateProperty(FieldType* Target, const FFieldVariant& Owner, const FName& Name, EObjectFlags ObjectFlags, EPropertyFlags PropertyFlags = EPropertyFlags::CPF_None)
 {
+#if PSDATA_ENGINE_AT_LEAST(5, 8)
+	FieldType* Property = CastFieldChecked<FieldType>(FField::Duplicate(Target, Owner, Name));
+#else
 	FieldType* Property = CastFieldChecked<FieldType>(FField::Duplicate(Target, Owner, Name, ObjectFlags));
 	Property->SetFlags(ObjectFlags);
+#endif
 	Property->PropertyFlags = PropertyFlags;
 	return Property;
 }

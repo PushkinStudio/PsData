@@ -330,19 +330,19 @@ void FPsDataBigInteger::AllocateExtraWord()
 
 void FPsDataBigInteger::Set(PsDataBigIntegerWordType Value)
 {
-	Words.SetNum(1, false);
+	Words.SetNum(1, PSDATA_NO_SHRINK);
 	Words[0] = Value;
 }
 
 void FPsDataBigInteger::Set(int32 Value)
 {
-	Words.SetNum(1, false);
+	Words.SetNum(1, PSDATA_NO_SHRINK);
 	Words[0] = static_cast<PsDataBigIntegerWordType>(Value & MaxWordMask);
 }
 
 void FPsDataBigInteger::Set(int64 Value)
 {
-	Words.SetNum(2, false);
+	Words.SetNum(2, PSDATA_NO_SHRINK);
 	Words[0] = static_cast<PsDataBigIntegerWordType>(Value & MaxWordMask);
 	Words[1] = static_cast<PsDataBigIntegerWordType>(Value >> NumBitsPerWord);
 }
@@ -599,7 +599,7 @@ void FPsDataBigInteger::BitwiseNot()
 
 void FPsDataBigInteger::Normalize()
 {
-	Words.SetNum(GetActualNumWords(), false);
+	Words.SetNum(GetActualNumWords(), PSDATA_NO_SHRINK);
 }
 
 void FPsDataBigInteger::Shrink()
@@ -1020,7 +1020,7 @@ void FPsDataBigInteger::ShiftRightInternal(const int32 Count)
 	const auto RShift = Count % NumBitsPerWord;
 
 	AllocateExtraWord();
-	Words.RemoveAt(0, FMath::Min(WordsShift, Words.Num() - 1), false);
+	Words.RemoveAt(0, FMath::Min(WordsShift, Words.Num() - 1), PSDATA_NO_SHRINK);
 
 	if (RShift > 0)
 	{

@@ -96,11 +96,20 @@ private:
 struct PSDATA_API FPsDataFastJsonDeserializer : public FPsDataDeserializer
 {
 public:
+	/** Parses the string in place: it must outlive the deserializer */
 	FPsDataFastJsonDeserializer(const FString& InJsonString);
+
+	/** Takes the string over, so a temporary is safe to pass */
+	FPsDataFastJsonDeserializer(FString&& InJsonString);
+
+	/** Source may point into OwnedJsonString: a copy would point into the original */
+	FPsDataFastJsonDeserializer(const FPsDataFastJsonDeserializer&) = delete;
+	FPsDataFastJsonDeserializer& operator=(const FPsDataFastJsonDeserializer&) = delete;
 
 	virtual ~FPsDataFastJsonDeserializer(){};
 
 private:
+	FString OwnedJsonString;
 	const TCHAR* Source;
 	int32 Size;
 	TArray<FPsDataFastJsonPointer> Pointers;
