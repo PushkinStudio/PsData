@@ -88,9 +88,9 @@ def render(p):
         add(box(60, y, 220, 50, p["panel"], highlight, rx=8))
         add(text(76, y + 21, key, p["text"], size=15, weight=600, family=MONO))
         add(text(76, y + 39, detail, p["muted"], size=12, family=MONO))
-    add(text(60, 372, "read by everyone,", p["muted"], size=12.5))
-    add(text(60, 390, "written only by its loader", p["muted"], size=12.5))
-    add(text(60, 408, "(DPROP_CONST)", p["muted"], size=12.5, family=MONO))
+    add(text(60, 372, "live state keeps keys;", p["muted"], size=12.5))
+    add(text(60, 390, "links resolve them here", p["muted"], size=12.5))
+    add(text(60, 408, "(DLINK, Validation())", p["muted"], size=12.5, family=MONO))
 
     # Battle branch: live state
     add(box(420, 114, 540, 350, p["panel_alt"], p["stroke"], rx=14))
